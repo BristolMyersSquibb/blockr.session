@@ -36,7 +36,8 @@ We can start up an app that uses the `manage_session()` plugin by swapping out t
 ```r
 library(blockr.core)
 library(blockr.session)
-serve(new_board(), plugins = c(board_plugins(-1), manage_session()))
+board <- new_board()
+serve(board, plugins = c(board_plugins(board, -1), manage_session()))
 ```
 
 The default storage backend is [pins::board_local()] which can be configured by setting the `session_mgmt_backend` [blockr_option()].
