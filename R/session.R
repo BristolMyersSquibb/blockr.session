@@ -30,33 +30,96 @@ manage_session_server <- function(id, board, ...) {
       observeEvent(
         input$save,
         {
-          json <- board_to_json(board$board, board$blocks, session)
-          pins::pin_write(backend, json, board$board_id, type = "json",
-                          versioned = TRUE)
+          tryCatch(
+            pins::pin_write(
+              backend,
+              board_to_json(board$board, board$blocks, session),
+              board$board_id,
+              type = "json",
+              versioned = TRUE
+            ),
+            error = cnd_to_notif(type = "error")
+          )
         }
       )
 
       res <- reactiveVal()
 
+      output$pin_meta <- renderPrint(
+        {
+          req(input$pin_name, input$pin_version)
+          meta <- tryCatch(
+            pins::pin_meta(backend, input$pin_name, input$pin_version),
+            error = cnd_to_notif()
+          )
+          req(meta)
+          print(meta)
+        }
+      )
+
+      observeEvent(
+        input$browse,
+        showModal(
+          pins_modal(session$ns, board, input, backend)
+        )
+      )
+
+      observeEvent(
+        input$pin_name,
+        {
+          updateSelectInput(
+            session,
+            "pin_version",
+            choices = pin_versions(input$pin_name, backend),
+            selected = character(0)
+          )
+        }
+      )
+
+      observeEvent(
+        input$delete_board,
+        {
+          req(input$pin_name)
+          tryCatch(
+            pins::pin_delete(backend, input$pin_name),
+            error = cnd_to_notif()
+          )
+        }
+      )
+
+      observeEvent(
+        input$delete_version,
+        {
+          req(input$pin_name, input$pin_version)
+          tryCatch(
+            pins::pin_version_delete(
+              backend,
+              input$pin_name,
+              input$pin_version
+            ),
+            error = cnd_to_notif()
+          )
+        }
+      )
+
       observeEvent(
         input$restore,
         {
+          req(input$pin_name, input$pin_version)
           json <- tryCatch(
-            pins::pin_read(backend, board$board_id),
-            pins_pin_missing = function(e) {
-              showNotification(
-                HTML(cli::ansi_html(conditionMessage(e))),
-                type = "warning",
-                session = session
-              )
-              NULL
-            }
+            pins::pin_read(backend, input$pin_name, input$pin_version),
+            error = cnd_to_notif()
           )
 
           if (not_null(json)) {
             res(from_json(json))
           }
         }
+      )
+
+      observeEvent(
+        input$cancel,
+        removeModal(session)
       )
 
       res
@@ -74,8 +137,8 @@ manage_session_ui <- function(id, board) {
       "Save"
     ),
     actionButton(
-      NS(id, "restore"),
-      "Restore"
+      NS(id, "browse"),
+      "Browse"
     )
   )
 }
@@ -96,5 +159,46 @@ board_to_json <- function(board, blocks, session) {
 
   jsonlite::prettify(
     to_json(board, blocks = blocks, options = opts)
+  )
+}
+
+pins_modal <- function(ns, board, input, backend) {
+  modalDialog(
+    title = "Browse boards",
+    selectInput(
+      ns("pin_name"),
+      "Boards",
+      choices = pins::pin_list(backend),
+      selected = board$board_id
+    ),
+    selectInput(
+      ns("pin_version"),
+      "Versions",
+      choices = pin_versions(input$pin_name, backend),
+      selected = character(0)
+    ),
+    verbatimTextOutput(ns("pin_meta")),
+    footer = tagList(
+      actionButton(
+        ns("restore"),
+        "Restore",
+        class = "btn-success"
+      ),
+      actionButton(
+        ns("delete_board"),
+        "Delete board",
+        class = "btn-danger"
+      ),
+      actionButton(
+        ns("delete_version"),
+        "Delete version",
+        class = "btn-danger"
+      ),
+      actionButton(
+        ns("cancel"),
+        "Cancel"
+      )
+    ),
+    size = "l"
   )
 }
