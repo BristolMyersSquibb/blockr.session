@@ -26,6 +26,6 @@ See \code{\link[blockr.core:preserve_board]{blockr.core::preserve_board()}}.
 }
 \description{
 Provides a \code{\link[blockr.core:preserve_board]{blockr.core::preserve_board()}} using a \code{\link[pins:board_folder]{pins::board_local()}} as
-storage backend. The \code{\link[=blockr_option]{blockr_option()}} \code{session_mgmt_backend} can be set
-to swap out this default pin board for another.
+storage backend. The \code{\link[blockr.core:blockr_option]{blockr.core::blockr_option()}} \code{session_mgmt_backend}
+can be set to swap out this default pin board for another.
 }

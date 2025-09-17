@@ -1,8 +1,8 @@
 #' Session management
 #'
 #' Provides a [blockr.core::preserve_board()] using a [pins::board_local()] as
-#' storage backend. The [blockr_option()] `session_mgmt_backend` can be set
-#' to swap out this default pin board for another.
+#' storage backend. The [blockr.core::blockr_option()] `session_mgmt_backend`
+#' can be set to swap out this default pin board for another.
 #'
 #' @inheritParams blockr.core::preserve_board
 #'
@@ -30,17 +30,24 @@ manage_session_server <- function(id, board, ...) {
       observeEvent(
         input$save,
         {
-          tryCatch(
+          res <- tryCatch(
             pins::pin_write(
               backend,
               board_to_json(board$board, board$blocks, session),
               board$board_id,
               type = "json",
               versioned = TRUE,
-              tags = "blockr"
+              tags = blockr_session_tags()
             ),
             error = cnd_to_notif(type = "error")
           )
+          if (not_null(res)) {
+            showNotification(
+              paste("Successfully saved", res),
+              type = "message",
+              session = session
+            )
+          }
         }
       )
 
@@ -169,7 +176,7 @@ pins_modal <- function(ns, board, input, backend) {
     selectInput(
       ns("pin_name"),
       "Boards",
-      choices = pins::pin_list(backend),
+      choices = pin_list(backend),
       selected = board$board_id
     ),
     selectInput(
