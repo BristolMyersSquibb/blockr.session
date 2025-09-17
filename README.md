@@ -25,7 +25,7 @@ We can start up an app that uses the `manage_session()` plugin by
 swapping out the default `preserve_board()` plugin.
 
 ``` r
-library(blockr.code)
+library(blockr.core)
 library(blockr.session)
 serve(new_board(), plugins = c(board_plugins(-1), manage_session()))
 ```
