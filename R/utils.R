@@ -29,7 +29,7 @@ pin_list <- function(backend) {
       res <- pins::pin_list(backend)
 
       if (inherits(backend, "pins_board_connect")) {
-        res[lgl_ply(res, has_tags, backend)]
+        res <- res[lgl_ply(res, has_tags, backend)]
       }
 
       res
@@ -39,7 +39,7 @@ pin_list <- function(backend) {
 }
 
 has_tags <- function(x, backend, tags = blockr_session_tags()) {
-  all(tags %in% pins::pin_meta(backend, x)[["tag"]])
+  all(tags %in% pins::pin_meta(backend, x)[["tags"]])
 }
 
 cnd_to_notif <- function(return_val = NULL, type = "warning",
