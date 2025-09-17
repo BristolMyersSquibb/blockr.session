@@ -36,7 +36,8 @@ manage_session_server <- function(id, board, ...) {
               board_to_json(board$board, board$blocks, session),
               board$board_id,
               type = "json",
-              versioned = TRUE
+              versioned = TRUE,
+              tags = "blockr"
             ),
             error = cnd_to_notif(type = "error")
           )
@@ -174,8 +175,7 @@ pins_modal <- function(ns, board, input, backend) {
     selectInput(
       ns("pin_version"),
       "Versions",
-      choices = pin_versions(input$pin_name, backend),
-      selected = character(0)
+      choices = character(0)
     ),
     verbatimTextOutput(ns("pin_meta")),
     footer = tagList(
