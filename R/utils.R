@@ -25,15 +25,7 @@ pin_versions <- function(name, board) {
 
 pin_list <- function(backend) {
   tryCatch(
-    {
-      res <- pins::pin_list(backend)
-
-      if (inherits(backend, "pins_board_connect")) {
-        res <- res[lgl_ply(res, has_tags, backend)]
-      }
-
-      res
-    },
+    pins::pin_list(backend),
     error = cnd_to_notif()
   )
 }

@@ -40,7 +40,10 @@ manage_session_server <- function(id, board, ...) {
                 board_to_json,
                 c(list(board), dot_args, list(session = session))
               ),
-              board$board_id,
+              coal(
+                get_board_option_or_null("board_name", session),
+                board$board_id
+              ),
               type = "json",
               versioned = TRUE,
               tags = blockr_session_tags()
