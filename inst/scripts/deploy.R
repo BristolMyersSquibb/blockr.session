@@ -1,6 +1,6 @@
 deploy_to_connect <- function() {
 
-  withr::local_temp_libpaths()
+  withr::local_temp_libpaths("replace")
 
   install_github("BristolMyersSquibb/blockr.core")
   install_github("BristolMyersSquibb/blockr.session")

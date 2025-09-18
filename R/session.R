@@ -21,6 +21,9 @@ manage_session <- function(server = manage_session_server,
 #' @rdname manage_session
 #' @export
 manage_session_server <- function(id, board, ...) {
+
+  dot_args <- list(...)
+
   moduleServer(
     id,
     function(input, output, session) {
@@ -33,7 +36,10 @@ manage_session_server <- function(id, board, ...) {
           res <- tryCatch(
             pins::pin_write(
               backend,
-              board_to_json(board$board, board$blocks, session),
+              do.call(
+                board_to_json,
+                c(list(board), dot_args, list(session = session))
+              ),
               board$board_id,
               type = "json",
               versioned = TRUE,
@@ -120,7 +126,10 @@ manage_session_server <- function(id, board, ...) {
           )
 
           if (not_null(json)) {
-            res(from_json(json))
+            do.call(
+              restore_board,
+              c(list(board$board, json, res), dot_args, list(session = session))
+            )
           }
         }
       )
@@ -151,22 +160,9 @@ manage_session_ui <- function(id, board) {
   )
 }
 
-board_to_json <- function(board, blocks, session) {
-
-  blocks <- lapply(
-    lst_xtr(blocks, "server", "state"),
-    lapply,
-    reval_if
-  )
-
-  opts <- lapply(
-    set_names(nm = names(as_board_options(board))),
-    get_board_option_or_null,
-    session
-  )
-
+board_to_json <- function(rv, ..., session) {
   jsonlite::prettify(
-    to_json(board, blocks = blocks, options = opts)
+    serialize_board(rv$board, rv$blocks, ..., session = session)
   )
 }
 
