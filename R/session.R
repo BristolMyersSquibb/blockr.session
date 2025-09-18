@@ -62,17 +62,22 @@ manage_session_server <- function(id, board, ...) {
 
       res <- reactiveVal()
 
-      output$pin_meta <- renderPrint(
+      meta <- reactiveVal("")
+
+      observeEvent(
+        input$pin_version,
         {
           req(input$pin_name, input$pin_version)
-          meta <- tryCatch(
+          out <- tryCatch(
             pins::pin_meta(backend, input$pin_name, input$pin_version),
             error = cnd_to_notif()
           )
-          req(meta)
-          print(meta)
+          req(out)
+          meta(out)
         }
       )
+
+      output$pin_meta <- renderPrint(print(req(meta())))
 
       observeEvent(
         input$browse,
@@ -84,12 +89,8 @@ manage_session_server <- function(id, board, ...) {
       observeEvent(
         input$pin_name,
         {
-          updateSelectInput(
-            session,
-            "pin_version",
-            choices = pin_versions(input$pin_name, backend),
-            selected = character(0)
-          )
+          meta("")
+          update_versions(input$pin_name, backend, session)
         }
       )
 
@@ -97,10 +98,20 @@ manage_session_server <- function(id, board, ...) {
         input$delete_board,
         {
           req(input$pin_name)
-          tryCatch(
+          res <- tryCatch(
             pins::pin_delete(backend, input$pin_name),
             error = cnd_to_notif()
           )
+          if (not_null(res)) {
+            showNotification(
+              "Successfully removed board",
+              type = "message",
+              session = session
+            )
+            meta("")
+            update_pins(backend, session)
+            reset_versions(session)
+          }
         }
       )
 
@@ -108,7 +119,7 @@ manage_session_server <- function(id, board, ...) {
         input$delete_version,
         {
           req(input$pin_name, input$pin_version)
-          tryCatch(
+          res <- tryCatch(
             pins::pin_version_delete(
               backend,
               input$pin_name,
@@ -116,6 +127,15 @@ manage_session_server <- function(id, board, ...) {
             ),
             error = cnd_to_notif()
           )
+          if (not_null(res)) {
+            showNotification(
+              "Successfully removed version",
+              type = "message",
+              session = session
+            )
+            meta("")
+            update_versions(input$pin_name, backend, session)
+          }
         }
       )
 
@@ -133,6 +153,7 @@ manage_session_server <- function(id, board, ...) {
               restore_board,
               c(list(board$board, json, res), dot_args, list(session = session))
             )
+            removeModal(session)
           }
         }
       )
@@ -181,7 +202,7 @@ pins_modal <- function(ns, board, input, backend) {
     selectInput(
       ns("pin_version"),
       "Versions",
-      choices = character(0)
+      choices = c(`Select board` = "")
     ),
     verbatimTextOutput(ns("pin_meta")),
     footer = tagList(

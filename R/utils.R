@@ -14,6 +14,8 @@ pin_versions <- function(name, board) {
     return(character())
   }
 
+  res <- res[order(res$created, decreasing = TRUE), ]
+
   if ("hash" %in% colnames(res)) {
     names <- paste0(res$created, " (", res$hash, ")")
   } else {
@@ -24,10 +26,13 @@ pin_versions <- function(name, board) {
 }
 
 pin_list <- function(backend) {
-  tryCatch(
+
+  res <- tryCatch(
     pins::pin_list(backend),
     error = cnd_to_notif()
   )
+
+  c(`Select board` = "", res)
 }
 
 has_tags <- function(x, backend, tags = blockr_session_tags()) {
@@ -49,3 +54,29 @@ cnd_to_notif <- function(return_val = NULL, type = "warning",
 }
 
 blockr_session_tags <- function() "blockr-session"
+
+update_versions <- function(name, backend, session = get_session()) {
+  if (nchar(name)) {
+    updateSelectInput(
+      session,
+      "pin_version",
+      choices = pin_versions(name, backend)
+    )
+  }
+}
+
+reset_versions <- function(session = get_session()) {
+  updateSelectInput(
+    session,
+    "pin_version",
+    choices = c(`Select board` = "")
+  )
+}
+
+update_pins <- function(backend, session = get_session()) {
+  updateSelectInput(
+    session,
+    "pin_name",
+    choices = pin_list(backend)
+  )
+}
