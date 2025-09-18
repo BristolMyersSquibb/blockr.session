@@ -18,6 +18,7 @@ Imports:
     shiny,
     pins,
     jsonlite,
-    cli
+    cli,
+    shinyjs
 Remotes:
     BristolMyersSquibb/blockr.core

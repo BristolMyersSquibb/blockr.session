@@ -35,8 +35,8 @@ pin_list <- function(backend) {
   c(`Select board` = "", res)
 }
 
-has_tags <- function(x, backend, tags = blockr_session_tags()) {
-  all(tags %in% pins::pin_meta(backend, x)[["tags"]])
+has_tags <- function(x, tags = blockr_session_tags()) {
+  all(tags %in% x[["tags"]])
 }
 
 cnd_to_notif <- function(return_val = NULL, type = "warning",

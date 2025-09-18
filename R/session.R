@@ -68,12 +68,30 @@ manage_session_server <- function(id, board, ...) {
         input$pin_version,
         {
           req(input$pin_name, input$pin_version)
+
           out <- tryCatch(
             pins::pin_meta(backend, input$pin_name, input$pin_version),
             error = cnd_to_notif()
           )
+
           req(out)
-          meta(out)
+
+          if (has_tags(out)) {
+
+            shinyjs::enable("restore")
+            shinyjs::enable("delete_board")
+            shinyjs::enable("delete_version")
+
+            meta(out)
+
+          } else {
+
+            shinyjs::disable("restore")
+            shinyjs::disable("delete_board")
+            shinyjs::disable("delete_version")
+
+            meta("Pin not compatible with blockr")
+          }
         }
       )
 
@@ -143,17 +161,36 @@ manage_session_server <- function(id, board, ...) {
         input$restore,
         {
           req(input$pin_name, input$pin_version)
-          json <- tryCatch(
-            pins::pin_read(backend, input$pin_name, input$pin_version),
-            error = cnd_to_notif()
-          )
 
-          if (not_null(json)) {
-            do.call(
-              restore_board,
-              c(list(board$board, json, res), dot_args, list(session = session))
+          meda <- meta()
+
+          if (!is.list(meda) && "tags" %in% names(meda) && has_tags(meda)) {
+
+            showNotification(
+              "Pin not compatible with blockr",
+              type = "warning",
+              session = session
             )
-            removeModal(session)
+
+          } else {
+
+            json <- tryCatch(
+              pins::pin_read(backend, input$pin_name, input$pin_version),
+              error = cnd_to_notif()
+            )
+
+            if (not_null(json)) {
+              do.call(
+                restore_board,
+                c(
+                  list(board$board, json, res),
+                  dot_args,
+                  list(session = session)
+                )
+              )
+
+              removeModal(session)
+            }
           }
         }
       )
@@ -192,6 +229,7 @@ board_to_json <- function(rv, ..., session) {
 
 pins_modal <- function(ns, board, input, backend) {
   modalDialog(
+    shinyjs::useShinyjs(),
     title = "Browse boards",
     selectInput(
       ns("pin_name"),
@@ -206,20 +244,26 @@ pins_modal <- function(ns, board, input, backend) {
     ),
     verbatimTextOutput(ns("pin_meta")),
     footer = tagList(
-      actionButton(
-        ns("restore"),
-        "Restore",
-        class = "btn-success"
+      shinyjs::disabled(
+        actionButton(
+          ns("restore"),
+          "Restore",
+          class = "btn-success"
+        )
       ),
-      actionButton(
-        ns("delete_board"),
-        "Delete board",
-        class = "btn-danger"
+      shinyjs::disabled(
+        actionButton(
+          ns("delete_board"),
+          "Delete board",
+          class = "btn-danger"
+        )
       ),
-      actionButton(
-        ns("delete_version"),
-        "Delete version",
-        class = "btn-danger"
+      shinyjs::disabled(
+        actionButton(
+          ns("delete_version"),
+          "Delete version",
+          class = "btn-danger"
+        )
       ),
       actionButton(
         ns("cancel"),
