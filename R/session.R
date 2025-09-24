@@ -34,19 +34,9 @@ manage_session_server <- function(id, board, ...) {
         input$save,
         {
           res <- tryCatch(
-            pins::pin_write(
-              backend,
-              do.call(
-                board_to_json,
-                c(list(board), dot_args, list(session = session))
-              ),
-              coal(
-                get_board_option_or_null("board_name", session),
-                board$board_id
-              ),
-              type = "json",
-              versioned = TRUE,
-              tags = blockr_session_tags()
+            do.call(
+              upload_board,
+              c(list(backend, board), dot_args, list(session = session))
             ),
             error = cnd_to_notif(type = "error")
           )
@@ -173,17 +163,22 @@ manage_session_server <- function(id, board, ...) {
             )
 
           } else {
-
-            json <- tryCatch(
-              pins::pin_read(backend, input$pin_name, input$pin_version),
+            board_ser <- tryCatch(
+              download_board(
+                backend,
+                input$pin_name,
+                input$pin_version,
+                meda$pin_hash,
+                meda$user$format
+              ),
               error = cnd_to_notif()
             )
 
-            if (not_null(json)) {
+            if (not_null(board_ser)) {
               do.call(
                 restore_board,
                 c(
-                  list(board$board, json, res),
+                  list(board$board, board_ser, res),
                   dot_args,
                   list(session = session)
                 )
@@ -221,9 +216,47 @@ manage_session_ui <- function(id, board) {
   )
 }
 
-board_to_json <- function(rv, ..., session) {
-  jsonlite::prettify(
-    serialize_board(rv$board, rv$blocks, ..., session = session)
+upload_board <- function(backend, rv, ..., session) {
+
+  tmp <- tempfile(fileext = ".json")
+  on.exit(unlink(tmp))
+
+  jsonlite::write_json(
+    serialize_board(rv$board, rv$blocks, ..., session = session),
+    tmp,
+    null = "null"
+  )
+
+  name <- coal(
+    get_board_option_or_null("board_name", session),
+    rv$board_id
+  )
+
+  pins::pin_upload(
+    backend,
+    tmp,
+    name,
+    versioned = TRUE,
+    metadata = list(format = "v1"),
+    tags = blockr_session_tags()
+  )
+}
+
+download_board <- function(backend, name, version, hash, format) {
+
+  dat <- pins::pin_download(backend, name, version, hash)
+
+  switch(
+    format,
+    v1 = jsonlite::fromJSON(
+      dat,
+      simplifyDataFrame = FALSE,
+      simplifyMatrix = FALSE
+    ),
+    blockr_abort(
+      "Unrecognized file format {format}.",
+      class = "unknown_file_format"
+    )
   )
 }
 
