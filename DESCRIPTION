@@ -16,7 +16,7 @@ RoxygenNote: 7.3.2
 Imports:
     blockr.core (>= 0.1.1),
     shiny,
-    pins,
+    pins (>= 1.4.0),
     jsonlite,
     cli,
     shinyjs
