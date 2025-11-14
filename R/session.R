@@ -218,8 +218,6 @@ manage_session_ui <- function(id, board) {
 
 upload_board <- function(backend, rv, ..., session) {
 
-  browser()
-
   tmp <- tempfile(fileext = ".json")
   on.exit(unlink(tmp))
 
