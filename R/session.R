@@ -218,11 +218,13 @@ manage_session_ui <- function(id, board) {
 
 upload_board <- function(backend, rv, ..., session) {
 
+  browser()
+
   tmp <- tempfile(fileext = ".json")
   on.exit(unlink(tmp))
 
   jsonlite::write_json(
-    serialize_board(rv$board, rv$board_id, rv$blocks, ..., session = session),
+    serialize_board(rv$board, rv$blocks, rv$board_id, ..., session = session),
     tmp,
     null = "null"
   )
