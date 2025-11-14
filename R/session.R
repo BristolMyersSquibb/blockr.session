@@ -222,7 +222,7 @@ upload_board <- function(backend, rv, ..., session) {
   on.exit(unlink(tmp))
 
   jsonlite::write_json(
-    serialize_board(rv$board, rv$blocks, ..., session = session),
+    serialize_board(rv$board, rv$board_id, rv$blocks, ..., session = session),
     tmp,
     null = "null"
   )
