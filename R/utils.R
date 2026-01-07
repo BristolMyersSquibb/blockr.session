@@ -67,6 +67,21 @@ list_workflows <- function(backend) {
   df
 }
 
+#' Get initials from username
+#' @param username Character string
+#' @return 1-2 character initials
+#' @keywords internal
+get_initials <- function(username) {
+  if (is.null(username) || username == "") return("U")
+  parts <- strsplit(username, "[._@ -]")[[1]]
+  parts <- parts[parts != ""]
+  if (length(parts) >= 2) {
+    paste0(toupper(substr(parts[1], 1, 1)), toupper(substr(parts[2], 1, 1)))
+  } else {
+    toupper(substr(username, 1, min(2, nchar(username))))
+  }
+}
+
 pin_versions <- function(name, board) {
 
   res <- tryCatch(

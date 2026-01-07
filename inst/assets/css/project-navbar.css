@@ -304,6 +304,21 @@
   height: 14px;
 }
 
+/* --- User Avatar --- */
+.blockr-navbar-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+}
+
 /* --- Empty State --- */
 .blockr-workflows-empty {
   padding: 24px 12px;

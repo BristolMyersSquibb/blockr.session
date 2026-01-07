@@ -191,7 +191,11 @@ manage_project_ui <- function(id, x) {
           ),
           bsicons::bs_icon("plus"),
         "New"
-      )
+      ),
+      # Spacer to push avatar to the right
+      tags$span(class = "manage-project-spacer"),
+      # User avatar
+      uiOutput(ns("user_avatar"), inline = TRUE)
     )
   )
 }
@@ -684,6 +688,13 @@ manage_project_server <- function(id, board, ...) {
     observe({
       title <- coal(get_board_option_or_null("board_name", session), board$board_id, "Untitled")
       session$sendCustomMessage("blockr-update-navbar-title", title)
+    })
+
+    # User avatar
+    output$user_avatar <- renderUI({
+      username <- coal(session$user, Sys.getenv("USER"), Sys.getenv("USERNAME"), "User")
+      initials <- get_initials(username)
+      tags$div(class = "blockr-navbar-avatar", initials)
     })
 
     # Return the reactiveVal for preserve_board
