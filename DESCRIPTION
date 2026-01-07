@@ -19,6 +19,10 @@ Imports:
     pins (>= 1.4.0),
     jsonlite,
     cli,
-    shinyjs
+    shinyjs,
+    bsicons,
+    htmltools
+Suggests:
+    blockr.dock
 Remotes:
     BristolMyersSquibb/blockr.core
