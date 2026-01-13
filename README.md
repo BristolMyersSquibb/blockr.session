@@ -27,8 +27,11 @@ swapping out the default `preserve_board()` plugin.
 ``` r
 library(blockr.core)
 library(blockr.session)
-board <- new_board()
-serve(board, plugins = c(board_plugins(board, -1), manage_session()))
+
+serve(
+  new_board(),
+  plugins = custom_plugins(manage_project())
+)
 ```
 
 The default storage backend is \[pins::board_local()\] which can be
