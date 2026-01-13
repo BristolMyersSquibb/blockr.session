@@ -208,7 +208,6 @@ manage_project_ui <- function(id, x) {
 manage_project_server <- function(id, board, ...) {
 
   dot_args <- list(...)
-  dock <- dot_args$dock
 
   moduleServer(
     id,
@@ -246,11 +245,18 @@ manage_project_server <- function(id, board, ...) {
         input$save_btn,
         {
           res <- tryCatch(
-            upload_board(backend, board, dock = dock, session = session),
-            error = function(e) { showNotification(e$message, type = "error"); NULL }
+            do.call(
+              upload_board,
+              c(list(backend, board), dot_args, list(session = session))
+            ),
+            error = cnd_to_notif(type = "error")
           )
-          if (!is.null(res)) {
-            showNotification(paste("Saved:", res), type = "message")
+          if (not_null(res)) {
+            showNotification(
+              paste("Successfully saved", res),
+              type = "message",
+              session = session
+            )
             session$sendCustomMessage("blockr-update-save-status", "Just now")
             refresh_trigger(refresh_trigger() + 1)
           }
