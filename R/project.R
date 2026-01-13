@@ -266,7 +266,11 @@ manage_project_server <- function(id, board, ...) {
       # NEW button
       observeEvent(
         input$new_btn,
-        restore_result(clear_board(board$board))
+        {
+          new <- clear_board(board$board)
+          attr(new, "id") <- rand_names()
+          restore_result(new)
+        }
       )
 
       # Recent workflows list (uses efficient pin_search via list_workflows)
