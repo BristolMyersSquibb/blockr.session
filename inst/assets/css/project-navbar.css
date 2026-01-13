@@ -1,0 +1,481 @@
+/* ============================================
+   Project Navbar Styles
+   ============================================ */
+
+/* Full-width navbar container - single flex row */
+.manage-project-navbar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Spacer for future navbar items */
+.manage-project-spacer {
+  flex: 1;
+}
+
+/* --- Tabbed Dropdown Menu --- */
+.blockr-tabbed-dropdown {
+  width: 320px;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
+  border: 1px solid #e5e7eb !important;
+  margin-top: 8px !important;
+  overflow: hidden;
+  background: white;
+}
+
+/* Tab bar */
+.blockr-tab-bar {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
+.blockr-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.blockr-tab:hover {
+  color: #111827;
+}
+
+.blockr-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+}
+
+.blockr-tab svg {
+  width: 16px;
+  height: 16px;
+}
+
+.blockr-tab.active svg {
+  color: #2563eb;
+}
+
+/* Tab panels */
+.blockr-tab-panel {
+  padding: 8px;
+  max-height: 384px;
+  overflow-y: auto;
+}
+
+.blockr-tab-panel-hidden {
+  position: absolute;
+  left: -9999px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Workflows section */
+.blockr-workflows-section {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+.blockr-workflows-list {
+  margin-bottom: 16px;
+}
+
+/* Individual workflow item */
+.blockr-workflow-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.blockr-workflow-item:hover {
+  background-color: #f3f4f6;
+}
+
+.blockr-workflow-item.active {
+  background-color: #f3f4f6;
+}
+
+.blockr-workflow-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  margin-bottom: 2px;
+}
+
+.blockr-workflow-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.blockr-workflow-empty {
+  color: #9ca3af;
+  font-style: italic;
+  cursor: default;
+  padding: 10px 12px;
+}
+
+.blockr-workflow-empty:hover {
+  background-color: transparent;
+}
+
+/* Footer link */
+.blockr-tab-footer {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.blockr-workflows-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.blockr-workflows-link:hover {
+  text-decoration: underline;
+}
+
+.blockr-workflows-link svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* History panel */
+.blockr-history-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+}
+
+/* --- Editable Title --- */
+.blockr-navbar-title-wrapper {
+  position: relative;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+}
+
+.blockr-navbar-title {
+  display: block;
+  padding: 6px 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: text;
+  transition: border-color 0.15s ease;
+  line-height: 1.2;
+}
+
+.blockr-navbar-title:hover {
+  border-color: hsl(220, 3%, 85%);
+}
+
+.blockr-navbar-title-input {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+  border: 2px solid #4a7dff;
+  border-radius: 6px;
+  background: white;
+  opacity: 0;
+  pointer-events: none;
+  line-height: 1.2;
+  box-sizing: border-box;
+}
+
+.blockr-navbar-title-input:focus {
+  outline: none;
+  border-color: #4a7dff;
+  box-shadow: 0 0 0 3px rgba(74, 125, 255, 0.15);
+}
+
+.blockr-navbar-title-wrapper.editing .blockr-navbar-title {
+  opacity: 0;
+}
+
+.blockr-navbar-title-wrapper.editing .blockr-navbar-title-input {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --- Divider --- */
+.blockr-navbar-divider {
+  display: block;
+  width: 1px;
+  height: 20px;
+  background: hsl(220, 3%, 85%);
+}
+
+/* --- Save Section --- */
+.blockr-navbar-save-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.blockr-navbar-meta {
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.blockr-navbar-save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid hsl(220, 3%, 91%);
+  border-radius: 4px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.blockr-navbar-save-btn:hover {
+  background: hsl(220, 3%, 97%);
+  border-color: hsl(220, 3%, 85%);
+  color: #333;
+}
+
+.blockr-navbar-save-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* --- New Button --- */
+.blockr-navbar-btn-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid hsl(220, 3%, 91%);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.blockr-navbar-btn-new:hover {
+  background: hsl(220, 3%, 97%);
+  border-color: hsl(220, 3%, 85%);
+  color: #333;
+}
+
+.blockr-navbar-btn-new svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* --- User Avatar --- */
+.blockr-navbar-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  text-transform: uppercase;
+}
+
+/* --- Empty State --- */
+.blockr-workflows-empty {
+  padding: 24px 12px;
+  text-align: center;
+  color: #999;
+  font-size: 0.8125rem;
+}
+
+/* --- Version History Items --- */
+.blockr-version-badge {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #6b7280;
+  background: transparent;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.blockr-history-empty {
+  padding: 16px 12px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  font-style: italic;
+}
+
+/* ============================================
+   All Workflows Modal
+   ============================================ */
+
+.blockr-workflows-modal {
+  padding: 0;
+}
+
+.blockr-wf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0 16px 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0;
+}
+
+.blockr-wf-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.blockr-wf-header h5 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.blockr-wf-search {
+  width: 240px;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.blockr-wf-search:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.blockr-wf-search::placeholder {
+  color: #9ca3af;
+}
+
+.blockr-wf-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.blockr-wf-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.blockr-wf-table thead {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}
+
+.blockr-wf-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.blockr-wf-table th:last-child {
+  width: 80px;
+}
+
+.blockr-wf-checkbox {
+  width: 40px;
+  text-align: center;
+}
+
+.blockr-wf-checkbox input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.blockr-workflow-row {
+  transition: background-color 0.1s ease;
+}
+
+.blockr-workflow-row:hover {
+  background-color: #f9fafb;
+}
+
+.blockr-wf-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.blockr-wf-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+.blockr-wf-time {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.blockr-wf-action {
+  text-align: right;
+}
+
+.blockr-wf-action .btn {
+  padding: 4px 12px;
+  font-size: 0.8125rem;
+}
+
+/* Modal overrides */
+.modal-dialog:has(.blockr-workflows-modal) .modal-content {
+  border-radius: 12px;
+  border: none;
+  box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+}
+
+.modal-dialog:has(.blockr-workflows-modal) .modal-body {
+  padding: 20px 24px;
+}
