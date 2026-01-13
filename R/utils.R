@@ -2,13 +2,6 @@ reval <- function(x) x()
 
 reval_if <- function(x) if (is.function(x)) x() else x
 
-#' Format time ago
-#'
-#' Converts a timestamp to a human-readable "time ago" string.
-#'
-#' @param time POSIXct or character timestamp
-#' @return Character string like "2 hours ago", "3 days ago"
-#' @keywords internal
 format_time_ago <- function(time) {
   if (is.character(time)) {
     time <- as.POSIXct(time)
@@ -34,13 +27,6 @@ format_time_ago <- function(time) {
   }
 }
 
-#' List all workflows
-#'
-#' Returns a data frame of all saved workflows with metadata.
-#'
-#' @param backend A pins board
-#' @return Data frame with columns: name, created, time_ago
-#' @keywords internal
 list_workflows <- function(backend) {
   df <- tryCatch(
     pins::pin_search(backend),
@@ -67,10 +53,6 @@ list_workflows <- function(backend) {
   df
 }
 
-#' Get initials from username
-#' @param username Character string
-#' @return 1-2 character initials
-#' @keywords internal
 get_initials <- function(username) {
   if (is.null(username) || username == "") return("U")
   parts <- strsplit(username, "[._@ -]")[[1]]

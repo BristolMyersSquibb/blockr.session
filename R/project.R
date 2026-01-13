@@ -252,12 +252,7 @@ manage_project_server <- function(id, board, ...) {
 
     # NEW button
     observeEvent(input$new_btn, {
-      if (requireNamespace("blockr.dock", quietly = TRUE)) {
-        all_extensions <- as.list(blockr.dock::dock_extensions(board$board))
-        new_board <- blockr.dock::new_dock_board(extensions = all_extensions)
-        blockr.core:::update_serve_obj(new_board, "reload")
-        session$reload()
-      }
+      restore_result(clear_board(board$board))
     })
 
     # Recent workflows list (uses efficient pin_search via list_workflows)
