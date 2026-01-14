@@ -5,9 +5,15 @@
 
 <!-- badges: start -->
 
+[![lifecycle](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![status](https://github.com/BristolMyersSquibb/blockr.session/actions/workflows/ci.yaml/badge.svg)](https://github.com/BristolMyersSquibb/blockr.session/actions/workflows/ci.yaml)
+[![coverage](https://codecov.io/gh/BristolMyersSquibb/blockr.session/graph/badge.svg?token=SA9116N8LN)](https://app.codecov.io/gh/BristolMyersSquibb/blockr.session)
 <!-- badges: end -->
 
-The goal of blockr.session is to …
+Project (i.e. board) management provided by blockr.core via the
+`preserve_board` plugin is a simple file upload/download-based
+mechanism. More user-friendly alternatives using the pins package are
+available as `manage_project` plugin.
 
 ## Installation
 
@@ -26,10 +32,11 @@ swapping out the default `preserve_board()` plugin.
 
 ``` r
 library(blockr.core)
+library(blockr.dock)
 library(blockr.session)
 
 serve(
-  new_board(),
+  new_dock_board(),
   plugins = custom_plugins(manage_project())
 )
 ```
