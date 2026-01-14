@@ -23,6 +23,8 @@ Imports:
     bsicons,
     htmltools
 Suggests:
+    testthat (>= 3.0.0),
     blockr.dock
+Config/testthat/edition: 3
 Remotes:
     BristolMyersSquibb/blockr.core

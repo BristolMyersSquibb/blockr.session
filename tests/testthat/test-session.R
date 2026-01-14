@@ -6,12 +6,10 @@ test_that("manage_session plugin", {
   expect_s3_class(a, "preserve_board")
   expect_true(is_plugin(a))
 
-  expect_output(print(a), "preserve_board")
+  expect_snapshot(print(a))
 })
 
 test_that("manage_session server", {
-
-  skip_if_not_installed("pins")
 
   test_board <- new_board(
     blocks = c(
