@@ -10,9 +10,3 @@ Shiny.addCustomMessageHandler('blockr-update-navbar-title', function(title) {
   });
 });
 
-// Update save status from server
-Shiny.addCustomMessageHandler('blockr-update-save-status', function(status) {
-  document.querySelectorAll('.blockr-navbar-meta').forEach(function(el) {
-    el.textContent = status;
-  });
-});

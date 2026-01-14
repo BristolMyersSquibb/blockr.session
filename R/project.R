@@ -164,11 +164,11 @@ manage_project_ui <- function(id, x) {
         # Save status
         tags$div(
           class = "blockr-navbar-save-section",
-          tags$span(
-            id = ns("save_status"),
-            class = "blockr-navbar-meta",
-            "Not saved"
-          ),
+          textOutput(
+            ns("save_status"),
+            container = tags$span,
+            inline = TRUE
+          ) |> tagAppendAttributes(class = "blockr-navbar-meta"),
           tags$button(
             id = ns("save_btn"),
             class = "blockr-navbar-save-btn shiny-bound-input",
@@ -216,6 +216,7 @@ manage_project_server <- function(id, board, ...) {
       backend <- blockr_option("session_mgmt_backend", pins::board_local())
       restore_result <- reactiveVal()
       refresh_trigger <- reactiveVal(0)
+      save_status <- reactiveVal("Not saved")
 
       # Track last known board name to detect changes
       last_board_name <- reactiveVal(NULL)
@@ -231,9 +232,9 @@ manage_project_server <- function(id, board, ...) {
               meta <- tryCatch(pins::pin_meta(backend, name), error = function(e) NULL)
               if (!is.null(meta) && !is.null(meta$created)) {
                 time_ago <- format_time_ago(meta$created)
-                session$sendCustomMessage("blockr-update-save-status", time_ago)
+                save_status(time_ago)
               } else {
-                session$sendCustomMessage("blockr-update-save-status", "Not saved")
+                save_status("Not saved")
               }
             }
           }
@@ -257,7 +258,7 @@ manage_project_server <- function(id, board, ...) {
               type = "message",
               session = session
             )
-            session$sendCustomMessage("blockr-update-save-status", "Just now")
+            save_status("Just now")
             refresh_trigger(refresh_trigger() + 1)
           }
         }
@@ -298,6 +299,11 @@ manage_project_server <- function(id, board, ...) {
             )
           )
         }
+      )
+
+      # Save status output
+      output$save_status <- renderText(
+        save_status()
       )
 
       # LOAD workflow
