@@ -59,8 +59,8 @@
 <div class="page-header"><h1 id="blockrsession">blockr.session<a class="anchor" aria-label="anchor" href="#blockrsession"></a>
 </h1></div>
 <!-- badges: start -->
-<!-- badges: end -->
-<p>The goal of blockr.session is to …</p>
+
+<p>Project (i.e. board) management provided by blockr.core via the <code>preserve_board</code> plugin is a simple file upload/download-based mechanism. More user-friendly alternatives using the pins package are available as <code>manage_project</code> plugin.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -75,10 +75,11 @@
 <p>We can start up an app that uses the <code><a href="reference/manage_session.html">manage_session()</a></code> plugin by swapping out the default <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/preserve_board.html" class="external-link">preserve_board()</a></code> plugin.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bristolmyerssquibb.github.io/blockr.core/" class="external-link">blockr.core</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bristolmyerssquibb.github.io/blockr.dock/" class="external-link">blockr.dock</a></span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">blockr.session</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">serve</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/new_board.html" class="external-link">new_board</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.html" class="external-link">new_dock_board</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  plugins <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">custom_plugins</a></span><span class="op">(</span><span class="fu"><a href="reference/manage_project.html">manage_project</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
 <p>The default storage backend is [pins::board_local()] which can be configured by setting the <code>session_mgmt_backend</code> [blockr_option()].</p>
@@ -109,7 +110,14 @@
 </ul>
 </div>
 
-
+<div class="dev-status">
+<h2 data-toc-skip>Dev status</h2>
+<ul class="list-unstyled">
+<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="lifecycle"></a></li>
+<li><a href="https://github.com/BristolMyersSquibb/blockr.session/actions/workflows/ci.yaml" class="external-link"><img src="https://github.com/BristolMyersSquibb/blockr.session/actions/workflows/ci.yaml/badge.svg" alt="status"></a></li>
+<li><a href="https://app.codecov.io/gh/BristolMyersSquibb/blockr.session" class="external-link"><img src="https://codecov.io/gh/BristolMyersSquibb/blockr.session/graph/badge.svg?token=SA9116N8LN" alt="coverage"></a></li>
+</ul>
+</div>
 
   </div>
 </div>
