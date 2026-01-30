@@ -9,8 +9,10 @@
 #' @return See [blockr.core::preserve_board()].
 #'
 #' @export
-manage_project <- function(server = manage_project_server,
-                           ui = manage_project_ui) {
+manage_project <- function(
+  server = manage_project_server,
+  ui = manage_project_ui
+) {
   preserve_board(server, ui)
 }
 
@@ -212,7 +214,8 @@ manage_project_ui <- function(id, x) {
           ns("save_status"),
           container = tags$span,
           inline = TRUE
-        ) |> tagAppendAttributes(class = "blockr-navbar-meta"),
+        ) |>
+          tagAppendAttributes(class = "blockr-navbar-meta"),
         tags$button(
           id = ns("save_btn"),
           class = "blockr-navbar-save-btn shiny-bound-input",
@@ -340,7 +343,8 @@ manage_project_server <- function(id, board, ...) {
                 class = "blockr-workflow-item",
                 onclick = sprintf(
                   "Shiny.setInputValue('%s', '%s', {priority: 'event'})",
-                  session$ns("load_workflow"), info$name
+                  session$ns("load_workflow"),
+                  info$name
                 ),
                 tags$div(class = "blockr-workflow-name", info$name),
                 tags$div(class = "blockr-workflow-meta", info$time_ago)
@@ -624,7 +628,8 @@ manage_project_server <- function(id, board, ...) {
         versions <- versions[order(versions$created, decreasing = TRUE), ]
 
         items <- lapply(
-          seq_len(min(nrow(versions), 4)), function(i) {
+          seq_len(min(nrow(versions), 4)),
+          function(i) {
             v <- versions[i, ]
             time_ago <- format_time_ago(v$created)
             is_current <- i == 1
@@ -949,6 +954,41 @@ manage_project_server <- function(id, board, ...) {
         )
         initials <- get_initials(username)
         tags$div(class = "blockr-navbar-avatar", initials)
+      })
+
+      observe({
+        query <- shiny::parseQueryString(session$clientData$url_search)
+        workflow_id <- query$id
+        if (!is.null(workflow_id) && nzchar(workflow_id)) {
+          wf_name <- gsub("-", "/", workflow_id, fixed = TRUE)
+          versions <- tryCatch(
+            pins::pin_versions(backend, wf_name),
+            error = function(e) NULL
+          )
+          version <- NULL
+          if (!is.null(versions) && nrow(versions) > 0) {
+            version <- versions$version[1]
+          }
+          meta <- tryCatch(
+            pins::pin_meta(backend, wf_name, version),
+            error = function(e) NULL
+          )
+          if (!is.null(meta)) {
+            board_ser <- download_board(
+              backend,
+              wf_name,
+              version,
+              meta$pin_hash,
+              meta$user$format
+            )
+            restore_board(
+              board$board,
+              board_ser,
+              restore_result,
+              session = session
+            )
+          }
+        }
       })
 
       # Return the reactiveVal for preserve_board
