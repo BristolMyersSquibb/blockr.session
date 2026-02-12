@@ -45,15 +45,6 @@ manage_project_server <- function(id, board, ...) {
             } else {
               save_status("Not saved")
             }
-
-            updateQueryString(
-              paste0(
-                "?board_name=",
-                utils::URLencode(name, reserved = TRUE)
-              ),
-              mode = "push",
-              session = session
-            )
           }
         }
       )
@@ -108,8 +99,7 @@ manage_project_server <- function(id, board, ...) {
                 info <- workflows[i, ]
                 tags$div(
                   class = "blockr-workflow-item",
-                  onclick = sprintf(
-                    "Shiny.setInputValue('%s', '%s', {priority: 'event'})",
+                  onclick = shiny_input_js(
                     session$ns("load_workflow"),
                     info$name
                   ),
@@ -168,165 +158,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          rows <- lapply(
-            seq_len(nrow(workflows)),
-            function(i) {
-              info <- workflows[i, ]
-              tags$tr(
-                class = "blockr-workflow-row",
-                `data-name` = tolower(info$name),
-                tags$td(
-                  class = "blockr-wf-checkbox",
-                  tags$input(
-                    type = "checkbox",
-                    class = "blockr-wf-select",
-                    value = info$name
-                  )
-                ),
-                tags$td(class = "blockr-wf-name", info$name),
-                tags$td(class = "blockr-wf-time", info$time_ago),
-                tags$td(
-                  class = "blockr-wf-action",
-                  tags$button(
-                    class = "btn btn-sm btn-primary",
-                    onclick = sprintf(
-                      "Shiny.setInputValue('%s', '%s', {priority: 'event'});
-                      bootstrap.Modal.getInstance(
-                        document.getElementById('%s')
-                      ).hide();",
-                      session$ns("load_workflow"),
-                      info$name,
-                      session$ns("workflows_modal")
-                    ),
-                    "Load"
-                  )
-                )
-              )
-            }
-          )
-
-          modal_js <- sprintf(
-            "document.getElementById('%s').addEventListener(
-              'input',
-              function(e) {
-                var filter = e.target.value.toLowerCase();
-                var rows = document.querySelectorAll('.blockr-workflow-row');
-                rows.forEach(
-                  function(row) {
-                    var name = row.getAttribute('data-name');
-                    row.style.display = name.includes(filter) ? '' : 'none';
-                  }
-                );
-              }
-            );
-
-            document.getElementById('%s').addEventListener(
-              'change',
-              function(e) {
-                var checkboxes = document.querySelectorAll('.blockr-wf-select');
-                checkboxes.forEach(
-                  function(cb) {
-                    cb.checked = e.target.checked
-                  }
-                )
-                updateDeleteButton();
-              }
-            );
-
-            function updateDeleteButton() {
-              var selected = document.querySelectorAll(
-                '.blockr-wf-select:checked'
-              );
-              var btn = document.getElementById('%s');
-              btn.style.display = selected.length > 0 ? '' : 'none';
-              btn.textContent = 'Delete (' + selected.length + ')';
-            }
-
-            document.querySelectorAll('.blockr-wf-select').forEach(
-              function(cb) {
-                cb.addEventListener('change', updateDeleteButton);
-              }
-            );
-
-            document.getElementById('%s').addEventListener(
-              'click',
-              function() {
-                var selected = [];
-                document.querySelectorAll(
-                  '.blockr-wf-select:checked'
-                ).forEach(
-                  function(cb) {
-                    selected.push(cb.value);
-                  }
-                );
-                if (selected.length > 0 &&
-                      confirm('Delete ' + selected.length + ' workflow(s)?')) {
-                  Shiny.setInputValue('%s', selected, {priority: 'event'});
-                }
-              }
-            );
-
-            updateDeleteButton();",
-            session$ns("workflow_search"),
-            session$ns("select_all"),
-            session$ns("delete_workflows_btn"),
-            session$ns("delete_workflows_btn"),
-            session$ns("delete_workflows")
-          )
-
-          showModal(
-            modalDialog(
-              title = NULL,
-              size = "l",
-              easyClose = TRUE,
-              footer = NULL,
-              tags$div(
-                id = session$ns("workflows_modal"),
-                class = "blockr-workflows-modal",
-                tags$div(
-                  class = "blockr-wf-header",
-                  tags$h5("All Workflows"),
-                  tags$div(
-                    class = "blockr-wf-header-actions",
-                    tags$button(
-                      id = session$ns("delete_workflows_btn"),
-                      class = "btn btn-sm btn-outline-danger",
-                      style = "display: none;",
-                      "Delete"
-                    ),
-                    tags$input(
-                      type = "text",
-                      id = session$ns("workflow_search"),
-                      class = "blockr-wf-search",
-                      placeholder = "Search workflows..."
-                    )
-                  )
-                ),
-                tags$div(
-                  class = "blockr-wf-table-container",
-                  tags$table(
-                    class = "blockr-wf-table",
-                    tags$thead(
-                      tags$tr(
-                        tags$th(
-                          class = "blockr-wf-checkbox",
-                          tags$input(
-                            type = "checkbox",
-                            id = session$ns("select_all")
-                          )
-                        ),
-                        tags$th("Name"),
-                        tags$th("Last Modified"),
-                        tags$th("")
-                      )
-                    ),
-                    tags$tbody(rows)
-                  )
-                ),
-                tags$script(HTML(modal_js))
-              )
-            )
-          )
+          show_workflows_modal(workflows, session)
         }
       )
 
@@ -406,20 +238,10 @@ manage_project_server <- function(id, board, ...) {
                   if (is_current) "current" else ""
                 ),
                 onclick = if (!is_current) {
-                  sprintf(
-                    "Shiny.setInputValue(
-                        '%s',
-                        {
-                          name: '%s',
-                          version: '%s'
-                        },
-                        {
-                          priority: 'event'
-                        }
-                      )",
+                  shiny_input_obj_js(
                     session$ns("load_version"),
-                    name,
-                    v$version
+                    name = name,
+                    version = v$version
                   )
                 },
                 tags$div(class = "blockr-workflow-name", time_ago),
@@ -494,167 +316,7 @@ manage_project_server <- function(id, board, ...) {
 
           versions <- versions[order(versions$created, decreasing = TRUE), ]
 
-          rows <- lapply(
-            seq_len(nrow(versions)),
-            function(i) {
-              v <- versions[i, ]
-              time_ago <- format_time_ago(v$created)
-              is_current <- i == 1
-
-              tags$tr(
-                class = "blockr-workflow-row",
-                tags$td(
-                  class = "blockr-wf-checkbox",
-                  tags$input(
-                    type = "checkbox",
-                    class = "blockr-version-select",
-                    value = v$version,
-                    disabled = if (is_current) "disabled" else NULL
-                  )
-                ),
-                tags$td(
-                  class = "blockr-wf-name",
-                  time_ago,
-                  if (is_current) {
-                    tags$span(class = "blockr-version-badge", "(Current)")
-                  }
-                ),
-                tags$td(
-                  class = "blockr-wf-action",
-                  if (!is_current) {
-                    tags$button(
-                      class = "btn btn-sm btn-primary",
-                      onclick = sprintf(
-                        "Shiny.setInputValue(
-                          '%s',
-                          {
-                            name: '%s',
-                            version: '%s'
-                          },
-                          {
-                            priority: 'event'
-                          }
-                        );
-                        bootstrap.Modal.getInstance(
-                          document.getElementById('%s')
-                        ).hide();",
-                        session$ns("load_version"),
-                        name,
-                        v$version,
-                        session$ns("versions_modal")
-                      ),
-                      "Load"
-                    )
-                  }
-                )
-              )
-            }
-          )
-
-          modal_js <- sprintf(
-            "document.getElementById('%s').addEventListener(
-              'change',
-              function(e) {
-                var checkboxes = document.querySelectorAll(
-                  '.blockr-version-select:not(:disabled)'
-                );
-                checkboxes.forEach(
-                  function(cb) {
-                    cb.checked = e.target.checked
-                  }
-                )
-                updateVersionDeleteButton();
-              }
-            );
-
-            function updateVersionDeleteButton() {
-              var selected = document.querySelectorAll(
-                '.blockr-version-select:checked'
-              );
-              var btn = document.getElementById('%s');
-              btn.style.display = selected.length > 0 ? '' : 'none';
-              btn.textContent = 'Delete (' + selected.length + ')';
-            }
-
-            document.querySelectorAll(
-              '.blockr-version-select'
-            ).forEach(
-              function(cb) {
-                cb.addEventListener('change', updateVersionDeleteButton);
-              }
-            );
-
-            document.getElementById('%s').addEventListener(
-              'click',
-              function() {
-                var selected = [];
-                document.querySelectorAll(
-                  '.blockr-version-select:checked'
-                ).forEach(
-                  function(cb) {
-                    selected.push(cb.value);
-                  }
-                );
-                if (selected.length > 0 &&
-                    confirm('Delete ' + selected.length + ' version(s)?')) {
-                  Shiny.setInputValue('%s', selected, {priority: 'event'});
-                }
-              }
-            );
-
-            updateVersionDeleteButton();",
-            session$ns("select_all_versions"),
-            session$ns("delete_versions_btn"),
-            session$ns("delete_versions_btn"),
-            session$ns("delete_versions")
-          )
-
-          showModal(
-            modalDialog(
-              title = NULL,
-              size = "l",
-              easyClose = TRUE,
-              footer = NULL,
-              tags$div(
-                id = session$ns("versions_modal"),
-                class = "blockr-workflows-modal",
-                tags$div(
-                  class = "blockr-wf-header",
-                  tags$h5(paste("Version History:", name)),
-                  tags$div(
-                    class = "blockr-wf-header-actions",
-                    tags$button(
-                      id = session$ns("delete_versions_btn"),
-                      class = "btn btn-sm btn-outline-danger",
-                      style = "display: none;",
-                      "Delete"
-                    )
-                  )
-                ),
-                tags$div(
-                  class = "blockr-wf-table-container",
-                  tags$table(
-                    class = "blockr-wf-table",
-                    tags$thead(
-                      tags$tr(
-                        tags$th(
-                          class = "blockr-wf-checkbox",
-                          tags$input(
-                            type = "checkbox",
-                            id = session$ns("select_all_versions")
-                          )
-                        ),
-                        tags$th("Version"),
-                        tags$th("")
-                      )
-                    ),
-                    tags$tbody(rows)
-                  )
-                ),
-                tags$script(HTML(modal_js))
-              )
-            )
-          )
+          show_versions_modal(name, versions, session)
         }
       )
 
@@ -720,5 +382,313 @@ manage_project_server <- function(id, board, ...) {
       # Return the reactiveVal for preserve_board
       restore_result
     }
+  )
+}
+
+shiny_input_js <- function(ns_id, value) {
+  sprintf(
+    "Shiny.setInputValue('%s', '%s', {priority: 'event'})",
+    ns_id,
+    value
+  )
+}
+
+shiny_input_obj_js <- function(ns_id, ...) {
+  props <- list(...)
+  obj_parts <- vapply(
+    names(props),
+    function(k) sprintf("%s: '%s'", k, props[[k]]),
+    character(1)
+  )
+  sprintf(
+    "Shiny.setInputValue('%s', {%s}, {priority: 'event'})",
+    ns_id,
+    paste(obj_parts, collapse = ", ")
+  )
+}
+
+hide_modal_js <- function(modal_id) {
+  sprintf(
+    "bootstrap.Modal.getInstance(document.getElementById('%s')).hide()",
+    modal_id
+  )
+}
+
+show_workflows_modal <- function(workflows, session) {
+
+  rows <- lapply(
+    seq_len(nrow(workflows)),
+    function(i) {
+      info <- workflows[i, ]
+      tags$tr(
+        class = "blockr-workflow-row",
+        `data-name` = tolower(info$name),
+        tags$td(
+          class = "blockr-wf-checkbox",
+          tags$input(
+            type = "checkbox",
+            class = "blockr-wf-select",
+            value = info$name
+          )
+        ),
+        tags$td(class = "blockr-wf-name", info$name),
+        tags$td(class = "blockr-wf-time", info$time_ago),
+        tags$td(
+          class = "blockr-wf-action",
+          tags$button(
+            class = "btn btn-sm btn-primary",
+            onclick = paste0(
+              shiny_input_js(
+                session$ns("load_workflow"),
+                info$name
+              ),
+              "\n",
+              hide_modal_js(session$ns("workflows_modal"))
+            ),
+            "Load"
+          )
+        )
+      )
+    }
+  )
+
+  modal_js <- modal_table_js(
+    select_all_id = session$ns("select_all"),
+    checkbox_class = "blockr-wf-select",
+    delete_btn_id = session$ns("delete_workflows_btn"),
+    delete_input_id = session$ns("delete_workflows"),
+    item_type = "workflow",
+    search_id = session$ns("workflow_search")
+  )
+
+  showModal(
+    modalDialog(
+      title = NULL,
+      size = "l",
+      easyClose = TRUE,
+      footer = NULL,
+      tags$div(
+        id = session$ns("workflows_modal"),
+        class = "blockr-workflows-modal",
+        tags$div(
+          class = "blockr-wf-header",
+          tags$h5("All Workflows"),
+          tags$div(
+            class = "blockr-wf-header-actions",
+            tags$button(
+              id = session$ns("delete_workflows_btn"),
+              class = "btn btn-sm btn-outline-danger",
+              style = "display: none;",
+              "Delete"
+            ),
+            tags$input(
+              type = "text",
+              id = session$ns("workflow_search"),
+              class = "blockr-wf-search",
+              placeholder = "Search workflows..."
+            )
+          )
+        ),
+        tags$div(
+          class = "blockr-wf-table-container",
+          tags$table(
+            class = "blockr-wf-table",
+            tags$thead(
+              tags$tr(
+                tags$th(
+                  class = "blockr-wf-checkbox",
+                  tags$input(
+                    type = "checkbox",
+                    id = session$ns("select_all")
+                  )
+                ),
+                tags$th("Name"),
+                tags$th("Last Modified"),
+                tags$th("")
+              )
+            ),
+            tags$tbody(rows)
+          )
+        ),
+        tags$script(HTML(modal_js))
+      )
+    )
+  )
+}
+
+show_versions_modal <- function(name, versions, session) {
+
+  rows <- lapply(
+    seq_len(nrow(versions)),
+    function(i) {
+      v <- versions[i, ]
+      time_ago <- format_time_ago(v$created)
+      is_current <- i == 1
+
+      tags$tr(
+        class = "blockr-workflow-row",
+        tags$td(
+          class = "blockr-wf-checkbox",
+          tags$input(
+            type = "checkbox",
+            class = "blockr-version-select",
+            value = v$version,
+            disabled = if (is_current) "disabled" else NULL
+          )
+        ),
+        tags$td(
+          class = "blockr-wf-name",
+          time_ago,
+          if (is_current) {
+            tags$span(class = "blockr-version-badge", "(Current)")
+          }
+        ),
+        tags$td(
+          class = "blockr-wf-action",
+          if (!is_current) {
+            tags$button(
+              class = "btn btn-sm btn-primary",
+              onclick = paste0(
+                shiny_input_obj_js(
+                  session$ns("load_version"),
+                  name = name,
+                  version = v$version
+                ),
+                "\n",
+                hide_modal_js(session$ns("versions_modal"))
+              ),
+              "Load"
+            )
+          }
+        )
+      )
+    }
+  )
+
+  modal_js <- modal_table_js(
+    select_all_id = session$ns("select_all_versions"),
+    checkbox_class = "blockr-version-select",
+    delete_btn_id = session$ns("delete_versions_btn"),
+    delete_input_id = session$ns("delete_versions"),
+    item_type = "version",
+    has_disabled = TRUE
+  )
+
+  showModal(
+    modalDialog(
+      title = NULL,
+      size = "l",
+      easyClose = TRUE,
+      footer = NULL,
+      tags$div(
+        id = session$ns("versions_modal"),
+        class = "blockr-workflows-modal",
+        tags$div(
+          class = "blockr-wf-header",
+          tags$h5(paste("Version History:", name)),
+          tags$div(
+            class = "blockr-wf-header-actions",
+            tags$button(
+              id = session$ns("delete_versions_btn"),
+              class = "btn btn-sm btn-outline-danger",
+              style = "display: none;",
+              "Delete"
+            )
+          )
+        ),
+        tags$div(
+          class = "blockr-wf-table-container",
+          tags$table(
+            class = "blockr-wf-table",
+            tags$thead(
+              tags$tr(
+                tags$th(
+                  class = "blockr-wf-checkbox",
+                  tags$input(
+                    type = "checkbox",
+                    id = session$ns("select_all_versions")
+                  )
+                ),
+                tags$th("Version"),
+                tags$th("")
+              )
+            ),
+            tags$tbody(rows)
+          )
+        ),
+        tags$script(HTML(modal_js))
+      )
+    )
+  )
+}
+
+modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
+                           delete_input_id, item_type = "item",
+                           search_id = NULL, has_disabled = FALSE) {
+
+  if (!is.null(search_id)) {
+    search_block <- sprintf(
+      "document.getElementById('%s').addEventListener('input', function(e) {
+        var filter = e.target.value.toLowerCase();
+        var rows = document.querySelectorAll('.blockr-workflow-row');
+        rows.forEach(function(row) {
+          var name = row.getAttribute('data-name');
+          row.style.display = name.includes(filter) ? '' : 'none';
+        });
+      });",
+      search_id
+    )
+  } else {
+    search_block <- ""
+  }
+
+  if (has_disabled) {
+    disabled_filter <- ":not(:disabled)"
+  } else {
+    disabled_filter <- ""
+  }
+
+  sprintf(
+    "%s
+    document.getElementById('%s').addEventListener('change', function(e) {
+      var checkboxes = document.querySelectorAll('.%s%s');
+      checkboxes.forEach(function(cb) { cb.checked = e.target.checked });
+      updateDeleteBtn();
+    });
+
+    function updateDeleteBtn() {
+      var selected = document.querySelectorAll('.%s:checked');
+      var btn = document.getElementById('%s');
+      btn.style.display = selected.length > 0 ? '' : 'none';
+      btn.textContent = 'Delete (' + selected.length + ')';
+    }
+
+    document.querySelectorAll('.%s').forEach(function(cb) {
+      cb.addEventListener('change', updateDeleteBtn);
+    });
+
+    document.getElementById('%s').addEventListener('click', function() {
+      var selected = [];
+      document.querySelectorAll('.%s:checked').forEach(function(cb) {
+        selected.push(cb.value);
+      });
+      if (selected.length > 0 &&
+          confirm('Delete ' + selected.length + ' %s(s)?')) {
+        Shiny.setInputValue('%s', selected, {priority: 'event'});
+      }
+    });
+
+    updateDeleteBtn();",
+    search_block,
+    select_all_id,
+    checkbox_class,
+    disabled_filter,
+    checkbox_class,
+    delete_btn_id,
+    checkbox_class,
+    delete_btn_id,
+    checkbox_class,
+    item_type,
+    delete_input_id
   )
 }
