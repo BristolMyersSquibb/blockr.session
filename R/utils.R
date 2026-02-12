@@ -3,9 +3,11 @@ reval <- function(x) x()
 reval_if <- function(x) if (is.function(x)) x() else x
 
 format_time_ago <- function(time) {
+
   if (is.character(time)) {
     time <- as.POSIXct(time)
   }
+
   diff_secs <- as.numeric(difftime(Sys.time(), time, units = "secs"))
 
   if (diff_secs < 60) {
@@ -54,9 +56,14 @@ list_workflows <- function(backend) {
 }
 
 get_initials <- function(username) {
-  if (is.null(username) || username == "") return("U")
+
+  if (is.null(username) || username == "") {
+    return("U")
+  }
+
   parts <- strsplit(username, "[._@ -]")[[1]]
   parts <- parts[parts != ""]
+
   if (length(parts) >= 2) {
     paste0(toupper(substr(parts[1], 1, 1)), toupper(substr(parts[2], 1, 1)))
   } else {
@@ -105,7 +112,7 @@ cnd_to_notif <- function(return_val = NULL, type = "warning",
                          session = get_session()) {
 
   function(cnd) {
-    showNotification(
+    notify(
       HTML(cli::ansi_html(conditionMessage(cnd))),
       type = type,
       session = session
