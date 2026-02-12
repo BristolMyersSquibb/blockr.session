@@ -25,7 +25,8 @@ Imports:
     utils
 Suggests:
     testthat (>= 3.0.0),
-    blockr.dock
+    blockr.dock,
+    withr
 Config/testthat/edition: 3
 Remotes:
     BristolMyersSquibb/blockr.core
