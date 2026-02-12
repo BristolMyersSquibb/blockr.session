@@ -379,6 +379,63 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      previous_url_search <- reactiveVal("")
+
+      observeEvent(
+        req(!identical(session$clientData$url_search, previous_url_search())),
+        {
+          previous_url_search(session$clientData$url_search)
+
+          query <- getQueryString(session)
+
+          stopifnot("board_name" %in% names(query))
+
+          board_name <- query$board_name
+
+          if (identical(board_name, board_name())) {
+            return()
+          }
+
+          cands <- pin_versions(board_name, backend)
+
+          if (!length(cands)) {
+            notify("No stored project found for name {board_name}.")
+            return()
+          }
+
+          if (!is.null(workflow_id) && nzchar(workflow_id)) {
+            wf_name <- gsub("-", "/", workflow_id, fixed = TRUE)
+            versions <- tryCatch(
+              pins::pin_versions(backend, wf_name),
+              error = function(e) NULL
+            )
+            version <- NULL
+            if (!is.null(versions) && nrow(versions) > 0) {
+              version <- versions$version[1]
+            }
+            meta <- tryCatch(
+              pins::pin_meta(backend, wf_name, version),
+              error = function(e) NULL
+            )
+            if (!is.null(meta)) {
+              board_ser <- download_board(
+                backend,
+                wf_name,
+                version,
+                meta$pin_hash,
+                meta$user$format
+              )
+              restore_board(
+                board$board,
+                board_ser,
+                restore_result,
+                session = session
+              )
+            }
+          }
+        }
+      )
+
       # Return the reactiveVal for preserve_board
       restore_result
     }
