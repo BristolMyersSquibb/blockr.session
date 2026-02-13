@@ -260,6 +260,109 @@ test_that("delete_versions removes specific version", {
   expect_false(older_version %in% remaining$version)
 })
 
+test_that("pin_versions returns named version vector", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      Sys.sleep(1)
+      session$setInputs(save_btn = 2)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "pv-test")
+    )
+  )
+
+  versions <- pin_versions("pv-test", backend)
+  expect_type(versions, "character")
+  expect_length(versions, 2)
+  expect_false(is.null(names(versions)))
+})
+
+test_that("pin_versions returns empty vector for missing pin", {
+  backend <- pins::board_temp(versioned = TRUE)
+  versions <- pin_versions("nonexistent", backend)
+  expect_identical(versions, character())
+})
+
+test_that("version_history output shows versions after save", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      Sys.sleep(1)
+      session$setInputs(save_btn = 2)
+
+      html <- output$version_history
+      expect_true(any(grepl("Current", html)))
+      expect_true(any(grepl("blockr-workflow-item", html)))
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "vh-test")
+    )
+  )
+})
+
+test_that("version_history output shows empty message for unsaved board", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      html <- output$version_history
+      expect_true(
+        any(grepl("No versions found", html)) ||
+          any(grepl("Save workflow to see history", html))
+      )
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "vh-empty-test")
+    )
+  )
+})
+
+test_that("view_all_versions triggers modal", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      Sys.sleep(1)
+      session$setInputs(save_btn = 2)
+      session$setInputs(view_all_versions = 1)
+      expect_no_error(session$flushReact())
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "vav-test")
+    )
+  )
+})
+
 test_that("new_btn sets restore_result to cleared board", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
