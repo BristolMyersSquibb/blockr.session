@@ -2,6 +2,29 @@ reval <- function(x) x()
 
 reval_if <- function(x) if (is.function(x)) x() else x
 
+get_session_backend <- function() {
+
+  val <- blockr_option("session_mgmt_backend", pins::board_local)
+
+  if (!is.function(val)) {
+    return(val)
+  }
+
+  res <- val()
+
+  if (!inherits(res, "pins_board")) {
+    blockr_abort(
+      paste(
+        "The `session_mgmt_backend` option must be a pins board or a",
+        "function that returns one, got {class(res)[[1L]]}."
+      ),
+      class = "invalid_session_backend"
+    )
+  }
+
+  res
+}
+
 format_time_ago <- function(time) {
 
   if (is.character(time)) {

@@ -28,7 +28,7 @@ manage_session_server <- function(id, board, ...) {
     id,
     function(input, output, session) {
 
-      backend <- blockr_option("session_mgmt_backend", pins::board_local())
+      backend <- get_session_backend()
 
       observeEvent(
         input$save,

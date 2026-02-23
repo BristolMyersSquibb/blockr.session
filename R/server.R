@@ -11,7 +11,7 @@ manage_project_server <- function(id, board, ...) {
     id,
     function(input, output, session) {
 
-      backend <- blockr_option("session_mgmt_backend", pins::board_local())
+      backend <- get_session_backend()
       restore_result <- reactiveVal()
 
       refresh_trigger <- reactiveVal(0)

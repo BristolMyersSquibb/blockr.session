@@ -1,4 +1,4 @@
-deploy_to_connect <- function(app = "app.R", name = "blockr-core-session",
+deploy_to_connect <- function(app, name,
                               pkgs = c("blockr.core", "blockr.session")) {
 
   if (length(pkgs)) {
@@ -26,16 +26,14 @@ deploy_to_connect <- function(app = "app.R", name = "blockr-core-session",
     connectapi::poll_task()
 }
 
-deploy_to_connect()
-
 deploy_to_connect(
-  app = "app-md.R",
-  name = "blockr-md-session",
+  app = "app-full.R",
+  name = "blockr-project",
   pkgs = c(
     "blockr.core",
-    "blockr.ui#133",
-    "blockr.session",
-    "blockr.ai",
-    "blockr.md#10"
+    "blockr.dock",
+    "blockr.dag",
+    "blockr",
+    "blockr.session@14-user"
   )
 )
