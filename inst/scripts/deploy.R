@@ -21,10 +21,22 @@ deploy_to_connect <- function(app, name,
 
   bundle <- connectapi::bundle_dir(dir)
 
-  connectapi::connect() |>
+  con <- connectapi::connect()
+
+  task <- con |>
     connectapi::deploy(bundle, name = name) |>
     connectapi::poll_task()
+
+  connectapi::content_update_access_type(task, access_type = "logged_in")
+
+  invisible(task)
 }
+
+deploy_to_connect(
+  app = "app-creds-test.R",
+  name = "blockr-creds-test",
+  pkgs = "blockr.session@14-user"
+)
 
 deploy_to_connect(
   app = "app-full.R",
