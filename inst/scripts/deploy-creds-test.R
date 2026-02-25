@@ -12,7 +12,7 @@ Sys.setenv(CONNECT_API_KEY = args[[2L]])
 
 # --- App (inlined so no local package install required) ---
 
-app <- r"(
+app <- r"[
 library(shiny)
 library(connectapi)
 
@@ -58,7 +58,7 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
-)"
+]"
 
 # --- Deploy ---
 
