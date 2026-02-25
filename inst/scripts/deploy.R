@@ -33,12 +33,6 @@ deploy_to_connect <- function(app, name,
 }
 
 deploy_to_connect(
-  app = "app-creds-test.R",
-  name = "blockr-creds-test",
-  pkgs = "blockr.session@14-user"
-)
-
-deploy_to_connect(
   app = "app-full.R",
   name = "blockr-project",
   pkgs = c(
