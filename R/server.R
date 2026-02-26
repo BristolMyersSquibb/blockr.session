@@ -35,13 +35,13 @@ manage_project_server <- function(id, board, ...) {
 
             prev_board_name(name)
 
-            meta <- tryCatch(
-              pins::pin_meta(backend, name),
+            info <- tryCatch(
+              rack_info(rack_id_pins(name), backend),
               error = function(e) NULL
             )
 
-            if (!is.null(meta) && !is.null(meta$created)) {
-              save_status(format_time_ago(meta$created))
+            if (!is.null(info) && nrow(info) > 0L) {
+              save_status(format_time_ago(info$created[1L]))
             } else {
               save_status("Not saved")
             }
@@ -53,15 +53,22 @@ manage_project_server <- function(id, board, ...) {
         input$save_btn,
         {
           res <- tryCatch(
-            do.call(
-              upload_board,
-              c(list(backend, board), dot_args, list(session = session))
-            ),
+            {
+              data <- do.call(
+                serialize_board,
+                c(
+                  list(board$board, board$blocks, board$board_id),
+                  dot_args,
+                  list(session = session)
+                )
+              )
+              rack_save(backend, data, name = board_name())
+            },
             error = cnd_to_notif(type = "error")
           )
           if (not_null(res)) {
             notify(
-              paste("Successfully saved", res),
+              paste("Successfully saved", display_name(res)),
               type = "message",
               session = session
             )
@@ -84,9 +91,12 @@ manage_project_server <- function(id, board, ...) {
         {
           refresh_trigger()
 
-          workflows <- list_workflows(backend)
+          workflows <- tryCatch(
+            rack_list(backend),
+            error = function(e) list()
+          )
 
-          if (nrow(workflows) == 0) {
+          if (length(workflows) == 0L) {
             return(
               tags$div(class = "blockr-workflow-empty", "No saved workflows")
             )
@@ -94,17 +104,19 @@ manage_project_server <- function(id, board, ...) {
 
           tagList(
             lapply(
-              seq_len(min(nrow(workflows), 4)),
+              seq_len(min(length(workflows), 4L)),
               function(i) {
-                info <- workflows[i, ]
+                wf <- workflows[[i]]
+                wf_name <- display_name(wf)
+                wf_time <- format_time_ago(last_saved(wf))
                 tags$div(
                   class = "blockr-workflow-item",
                   onclick = shiny_input_js(
                     session$ns("load_workflow"),
-                    info$name
+                    wf_name
                   ),
-                  tags$div(class = "blockr-workflow-name", info$name),
-                  tags$div(class = "blockr-workflow-meta", info$time_ago)
+                  tags$div(class = "blockr-workflow-name", wf_name),
+                  tags$div(class = "blockr-workflow-meta", wf_time)
                 )
               }
             )
@@ -122,21 +134,15 @@ manage_project_server <- function(id, board, ...) {
         input$load_workflow,
         {
           name <- input$load_workflow
-          versions <- pin_versions(name, backend)
 
-          if (length(versions) == 0) {
+          board_ser <- tryCatch(
+            rack_load(rack_id_pins(name), backend),
+            error = cnd_to_notif(type = "error")
+          )
+
+          if (is.null(board_ser)) {
             return()
           }
-
-          meta <- pins::pin_meta(backend, name, versions[1])
-
-          board_ser <- download_board(
-            backend,
-            name,
-            versions[1],
-            meta$pin_hash,
-            meta$user$format
-          )
 
           restore_board(
             board$board,
@@ -151,9 +157,12 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$view_all_workflows,
         {
-          workflows <- list_workflows(backend)
+          workflows <- tryCatch(
+            rack_list(backend),
+            error = function(e) list()
+          )
 
-          if (nrow(workflows) == 0) {
+          if (length(workflows) == 0L) {
             notify("No saved workflows", type = "message")
             return()
           }
@@ -170,7 +179,7 @@ manage_project_server <- function(id, board, ...) {
           for (name in input$delete_workflows) {
             res <- tryCatch(
               {
-                pins::pin_delete(backend, name)
+                rack_delete(rack_id_pins(name), backend)
                 deleted <- deleted + 1
                 TRUE
               },
@@ -213,17 +222,15 @@ manage_project_server <- function(id, board, ...) {
           }
 
           versions <- tryCatch(
-            pins::pin_versions(backend, name),
+            rack_info(rack_id_pins(name), backend),
             error = function(e) NULL
           )
 
-          if (is.null(versions) || nrow(versions) == 0) {
+          if (is.null(versions) || nrow(versions) == 0L) {
             return(
               tags$div(class = "blockr-history-empty", "No versions found")
             )
           }
-
-          versions <- versions[order(versions$created, decreasing = TRUE), ]
 
           items <- lapply(
             seq_len(min(nrow(versions), 4)),
@@ -264,24 +271,15 @@ manage_project_server <- function(id, board, ...) {
           name <- input$load_version$name
           version <- input$load_version$version
 
-          meta <- tryCatch(
-            pins::pin_meta(backend, name, version),
-            error = function(e) {
-              notify(e$message, type = "error")
-              NULL
-            }
+          board_ser <- tryCatch(
+            rack_load(rack_id_pins(name, version), backend),
+            error = cnd_to_notif(type = "error")
           )
-          if (is.null(meta)) {
+
+          if (is.null(board_ser)) {
             return()
           }
 
-          board_ser <- download_board(
-            backend,
-            name,
-            version,
-            meta$pin_hash,
-            meta$user$format
-          )
           restore_board(
             board$board,
             board_ser,
@@ -305,16 +303,14 @@ manage_project_server <- function(id, board, ...) {
           }
 
           versions <- tryCatch(
-            pins::pin_versions(backend, name),
+            rack_info(rack_id_pins(name), backend),
             error = function(e) NULL
           )
 
-          if (is.null(versions) || nrow(versions) == 0) {
+          if (is.null(versions) || nrow(versions) == 0L) {
             notify("No versions found", type = "message")
             return()
           }
-
-          versions <- versions[order(versions$created, decreasing = TRUE), ]
 
           show_versions_modal(name, versions, session)
         }
@@ -330,7 +326,7 @@ manage_project_server <- function(id, board, ...) {
           for (version in input$delete_versions) {
             res <- tryCatch(
               {
-                pins::pin_version_delete(backend, name, version)
+                rack_delete(rack_id_pins(name, version), backend)
                 deleted <- deleted + 1
                 TRUE
               },
@@ -379,63 +375,6 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      previous_url_search <- reactiveVal("")
-
-      observeEvent(
-        req(!identical(session$clientData$url_search, previous_url_search())),
-        {
-          previous_url_search(session$clientData$url_search)
-
-          query <- getQueryString(session)
-
-          stopifnot("board_name" %in% names(query))
-
-          board_name <- query$board_name
-
-          if (identical(board_name, board_name())) {
-            return()
-          }
-
-          cands <- pin_versions(board_name, backend)
-
-          if (!length(cands)) {
-            notify("No stored project found for name {board_name}.")
-            return()
-          }
-
-          if (!is.null(workflow_id) && nzchar(workflow_id)) {
-            wf_name <- gsub("-", "/", workflow_id, fixed = TRUE)
-            versions <- tryCatch(
-              pins::pin_versions(backend, wf_name),
-              error = function(e) NULL
-            )
-            version <- NULL
-            if (!is.null(versions) && nrow(versions) > 0) {
-              version <- versions$version[1]
-            }
-            meta <- tryCatch(
-              pins::pin_meta(backend, wf_name, version),
-              error = function(e) NULL
-            )
-            if (!is.null(meta)) {
-              board_ser <- download_board(
-                backend,
-                wf_name,
-                version,
-                meta$pin_hash,
-                meta$user$format
-              )
-              restore_board(
-                board$board,
-                board_ser,
-                restore_result,
-                session = session
-              )
-            }
-          }
-        }
-      )
-
       # Return the reactiveVal for preserve_board
       restore_result
     }
@@ -474,22 +413,24 @@ hide_modal_js <- function(modal_id) {
 show_workflows_modal <- function(workflows, session) {
 
   rows <- lapply(
-    seq_len(nrow(workflows)),
+    seq_along(workflows),
     function(i) {
-      info <- workflows[i, ]
+      wf <- workflows[[i]]
+      wf_name <- display_name(wf)
+      wf_time <- format_time_ago(last_saved(wf))
       tags$tr(
         class = "blockr-workflow-row",
-        `data-name` = tolower(info$name),
+        `data-name` = tolower(wf_name),
         tags$td(
           class = "blockr-wf-checkbox",
           tags$input(
             type = "checkbox",
             class = "blockr-wf-select",
-            value = info$name
+            value = wf_name
           )
         ),
-        tags$td(class = "blockr-wf-name", info$name),
-        tags$td(class = "blockr-wf-time", info$time_ago),
+        tags$td(class = "blockr-wf-name", wf_name),
+        tags$td(class = "blockr-wf-time", wf_time),
         tags$td(
           class = "blockr-wf-action",
           tags$button(
@@ -497,7 +438,7 @@ show_workflows_modal <- function(workflows, session) {
             onclick = paste0(
               shiny_input_js(
                 session$ns("load_workflow"),
-                info$name
+                wf_name
               ),
               "\n",
               hide_modal_js(session$ns("workflows_modal"))
