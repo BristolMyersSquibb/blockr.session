@@ -117,7 +117,7 @@ test_that("rack_list reflects saved boards", {
   )
 
   workflows <- rack_list(backend)
-  wf_names <- vapply(workflows, display_name, character(1))
+  wf_names <- chr_ply(workflows, display_name)
   expect_true("wf-list-test" %in% wf_names)
   expect_length(workflows, 1L)
 })
@@ -281,7 +281,7 @@ test_that("rack_info returns version data.frame", {
     )
   )
 
-  info <- rack_info(rack_id_pins("pv-test"), backend)
+  info <- rack_info(new_rack_id_pins("pv-test"), backend)
   expect_s3_class(info, "data.frame")
   expect_equal(nrow(info), 2)
   expect_true(all(c("version", "created", "hash") %in% colnames(info)))
@@ -289,7 +289,7 @@ test_that("rack_info returns version data.frame", {
 
 test_that("rack_info returns empty data.frame for missing pin", {
   backend <- pins::board_temp(versioned = TRUE)
-  info <- rack_info(rack_id_pins("nonexistent"), backend)
+  info <- rack_info(new_rack_id_pins("nonexistent"), backend)
   expect_s3_class(info, "data.frame")
   expect_equal(nrow(info), 0L)
 })

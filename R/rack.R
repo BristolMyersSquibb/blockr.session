@@ -1,10 +1,27 @@
-# rack_id_pins -----------------------------------------------------------------
+# new_rack_id / new_rack_id_pins ------------------------------------------------
 
-rack_id_pins <- function(name, version = NULL, created = NULL) {
-  structure(
-    list(name = name, version = version, created = created),
-    class = c("rack_id_pins", "rack_id")
-  )
+new_rack_id <- function(name, ..., class = character()) {
+
+  if (!is_string(name) || !nzchar(name)) {
+    blockr_abort(
+      "rack id name must be a non-empty string, got {class(name)[[1L]]}.",
+      class = "rack_id_invalid_name"
+    )
+  }
+
+  structure(list(name = name, ...), class = c(class, "rack_id"))
+}
+
+new_rack_id_pins <- function(name, version = NULL) {
+
+  if (not_null(version) && (!is_string(version) || !nzchar(version))) {
+    blockr_abort(
+      "rack_id_pins version must be a non-empty string.",
+      class = "rack_id_pins_invalid_version"
+    )
+  }
+
+  new_rack_id(name, version = version, class = "rack_id_pins")
 }
 
 # Accessor generics ------------------------------------------------------------
@@ -12,21 +29,30 @@ rack_id_pins <- function(name, version = NULL, created = NULL) {
 display_name <- function(id, ...) UseMethod("display_name")
 
 #' @export
-display_name.rack_id_pins <- function(id, ...) id$name
+display_name.rack_id <- function(id, ...) id$name
 
 last_saved <- function(id, ...) UseMethod("last_saved")
 
 #' @export
-last_saved.rack_id_pins <- function(id, ...) id$created
+last_saved.rack_id_pins <- function(id, backend, ...) {
+  info <- rack_info(id, backend)
+  if (nrow(info) == 0L) return(NULL)
+  info$created[1L]
+}
 
 #' @export
 format.rack_id_pins <- function(x, ...) {
-  v <- if (!is.null(x$version)) paste0("@", x$version) else ""
+  v <- if (not_null(x$version)) paste0("@", x$version) else ""
   paste0("<rack_id_pins: ", x$name, v, ">")
 }
 
 #' @export
-print.rack_id_pins <- function(x, ...) {
+format.rack_id <- function(x, ...) {
+  paste0("<rack_id: ", x$name, ">")
+}
+
+#' @export
+print.rack_id <- function(x, ...) {
   cat(format(x), "\n")
   invisible(x)
 }
@@ -44,12 +70,8 @@ rack_list.pins_board <- function(backend, ...) {
     return(list())
   }
 
-  # Filter by blockr-session tags when the column is available
-  if ("tags" %in% colnames(df)) {
-    tags <- blockr_session_tags()
-    keep <- vapply(df$tags, function(t) all(tags %in% t), logical(1))
-    df <- df[keep, , drop = FALSE]
-  }
+  keep <- lgl_ply(df$meta, has_tags)
+  df <- df[keep, , drop = FALSE]
 
   if (nrow(df) == 0L) {
     return(list())
@@ -57,9 +79,7 @@ rack_list.pins_board <- function(backend, ...) {
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
 
-  lapply(seq_len(nrow(df)), function(i) {
-    rack_id_pins(name = df$name[i], created = df$created[i])
-  })
+  lapply(df$name, new_rack_id_pins)
 }
 
 # rack_info --------------------------------------------------------------------
@@ -109,27 +129,25 @@ rack_load.rack_id_pins <- function(id, backend, ...) {
   version <- id$version
 
   if (is.null(version)) {
-    versions <- pins::pin_versions(backend, id$name)
+    info <- rack_info(id, backend)
 
-    if (nrow(versions) == 0L) {
+    if (nrow(info) == 0L) {
       blockr_abort(
         "No versions found for pin {id$name}.",
         class = "rack_load_no_versions"
       )
     }
 
-    versions <- versions[order(versions$created, decreasing = TRUE), ]
-    version <- versions$version[1L]
+    version <- info$version[1L]
   }
 
   meta <- pins::pin_meta(backend, id$name, version)
 
   if (!has_tags(meta)) {
-    blockr_warn(
+    blockr_abort(
       "Pin {id$name} is not compatible with blockr (missing session tags).",
       class = "rack_load_invalid_tags"
     )
-    return(NULL)
   }
 
   dat <- pins::pin_download(backend, id$name, version, meta$pin_hash)
@@ -169,13 +187,11 @@ rack_save.pins_board <- function(backend, data, ..., name) {
     tags = blockr_session_tags()
   )
 
-  versions <- pins::pin_versions(backend, name)
-  versions <- versions[order(versions$created, decreasing = TRUE), ]
+  info <- rack_info(new_rack_id_pins(name), backend)
 
-  rack_id_pins(
+  new_rack_id_pins(
     name = name,
-    version = versions$version[1L],
-    created = versions$created[1L]
+    version = info$version[1L]
   )
 }
 
@@ -185,10 +201,30 @@ rack_delete <- function(id, backend, ...) UseMethod("rack_delete")
 
 #' @export
 rack_delete.rack_id_pins <- function(id, backend, ...) {
-  if (!is.null(id$version)) {
-    pins::pin_version_delete(backend, id$name, id$version)
-  } else {
-    pins::pin_delete(backend, id$name)
+
+  version <- id$version
+
+  if (is.null(version)) {
+    info <- rack_info(id, backend)
+
+    if (nrow(info) == 0L) {
+      blockr_abort(
+        "No versions found for pin {id$name}.",
+        class = "rack_delete_no_versions"
+      )
+    }
+
+    version <- info$version[1L]
   }
+
+  pins::pin_version_delete(backend, id$name, version)
+  invisible(TRUE)
+}
+
+rack_purge <- function(id, backend, ...) UseMethod("rack_purge")
+
+#' @export
+rack_purge.rack_id_pins <- function(id, backend, ...) {
+  pins::pin_delete(backend, id$name)
   invisible(TRUE)
 }

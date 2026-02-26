@@ -36,7 +36,7 @@ manage_project_server <- function(id, board, ...) {
             prev_board_name(name)
 
             info <- tryCatch(
-              rack_info(rack_id_pins(name), backend),
+              rack_info(new_rack_id_pins(name), backend),
               error = function(e) NULL
             )
 
@@ -108,7 +108,7 @@ manage_project_server <- function(id, board, ...) {
               function(i) {
                 wf <- workflows[[i]]
                 wf_name <- display_name(wf)
-                wf_time <- format_time_ago(last_saved(wf))
+                wf_time <- format_time_ago(last_saved(wf, backend))
                 tags$div(
                   class = "blockr-workflow-item",
                   onclick = shiny_input_js(
@@ -136,7 +136,7 @@ manage_project_server <- function(id, board, ...) {
           name <- input$load_workflow
 
           board_ser <- tryCatch(
-            rack_load(rack_id_pins(name), backend),
+            rack_load(new_rack_id_pins(name), backend),
             error = cnd_to_notif(type = "error")
           )
 
@@ -167,7 +167,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_workflows_modal(workflows, session)
+          show_workflows_modal(workflows, backend, session)
         }
       )
 
@@ -179,7 +179,7 @@ manage_project_server <- function(id, board, ...) {
           for (name in input$delete_workflows) {
             res <- tryCatch(
               {
-                rack_delete(rack_id_pins(name), backend)
+                rack_purge(new_rack_id_pins(name), backend)
                 deleted <- deleted + 1
                 TRUE
               },
@@ -222,7 +222,7 @@ manage_project_server <- function(id, board, ...) {
           }
 
           versions <- tryCatch(
-            rack_info(rack_id_pins(name), backend),
+            rack_info(new_rack_id_pins(name), backend),
             error = function(e) NULL
           )
 
@@ -272,7 +272,7 @@ manage_project_server <- function(id, board, ...) {
           version <- input$load_version$version
 
           board_ser <- tryCatch(
-            rack_load(rack_id_pins(name, version), backend),
+            rack_load(new_rack_id_pins(name, version), backend),
             error = cnd_to_notif(type = "error")
           )
 
@@ -303,7 +303,7 @@ manage_project_server <- function(id, board, ...) {
           }
 
           versions <- tryCatch(
-            rack_info(rack_id_pins(name), backend),
+            rack_info(new_rack_id_pins(name), backend),
             error = function(e) NULL
           )
 
@@ -326,7 +326,7 @@ manage_project_server <- function(id, board, ...) {
           for (version in input$delete_versions) {
             res <- tryCatch(
               {
-                rack_delete(rack_id_pins(name, version), backend)
+                rack_delete(new_rack_id_pins(name, version), backend)
                 deleted <- deleted + 1
                 TRUE
               },
@@ -391,10 +391,9 @@ shiny_input_js <- function(ns_id, value) {
 
 shiny_input_obj_js <- function(ns_id, ...) {
   props <- list(...)
-  obj_parts <- vapply(
+  obj_parts <- chr_ply(
     names(props),
-    function(k) sprintf("%s: '%s'", k, props[[k]]),
-    character(1)
+    function(k) sprintf("%s: '%s'", k, props[[k]])
   )
   sprintf(
     "Shiny.setInputValue('%s', {%s}, {priority: 'event'})",
@@ -410,14 +409,14 @@ hide_modal_js <- function(modal_id) {
   )
 }
 
-show_workflows_modal <- function(workflows, session) {
+show_workflows_modal <- function(workflows, backend, session) {
 
   rows <- lapply(
     seq_along(workflows),
     function(i) {
       wf <- workflows[[i]]
       wf_name <- display_name(wf)
-      wf_time <- format_time_ago(last_saved(wf))
+      wf_time <- format_time_ago(last_saved(wf, backend))
       tags$tr(
         class = "blockr-workflow-row",
         `data-name` = tolower(wf_name),
