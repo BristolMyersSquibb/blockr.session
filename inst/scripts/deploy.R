@@ -1,4 +1,4 @@
-deploy_to_connect <- function(app = "app.R", name = "blockr-core-session",
+deploy_to_connect <- function(app, name,
                               pkgs = c("blockr.core", "blockr.session")) {
 
   if (length(pkgs)) {
@@ -21,21 +21,25 @@ deploy_to_connect <- function(app = "app.R", name = "blockr-core-session",
 
   bundle <- connectapi::bundle_dir(dir)
 
-  connectapi::connect() |>
+  con <- connectapi::connect()
+
+  task <- con |>
     connectapi::deploy(bundle, name = name) |>
     connectapi::poll_task()
+
+  connectapi::content_update_access_type(task, access_type = "logged_in")
+
+  invisible(task)
 }
 
-deploy_to_connect()
-
 deploy_to_connect(
-  app = "app-md.R",
-  name = "blockr-md-session",
+  app = "app-full.R",
+  name = "blockr-project",
   pkgs = c(
     "blockr.core",
-    "blockr.ui#133",
-    "blockr.session",
-    "blockr.ai",
-    "blockr.md#10"
+    "blockr.dock",
+    "blockr.dag",
+    "blockr",
+    "blockr.session@14-user"
   )
 )

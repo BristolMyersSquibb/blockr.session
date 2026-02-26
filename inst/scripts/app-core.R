@@ -2,7 +2,7 @@ library(blockr.core)
 library(blockr.session)
 
 options(
-  blockr.session_mgmt_backend = pins::board_connect()
+  blockr.session_mgmt_backend = pins::board_connect
 )
 
 board <- new_board()

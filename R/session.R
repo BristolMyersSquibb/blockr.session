@@ -28,7 +28,7 @@ manage_session_server <- function(id, board, ...) {
     id,
     function(input, output, session) {
 
-      backend <- blockr_option("session_mgmt_backend", pins::board_local())
+      backend <- get_session_backend()
 
       observeEvent(
         input$save,
@@ -41,7 +41,7 @@ manage_session_server <- function(id, board, ...) {
             error = cnd_to_notif(type = "error")
           )
           if (not_null(res)) {
-            showNotification(
+            notify(
               paste("Successfully saved", res),
               type = "message",
               session = session
@@ -111,7 +111,7 @@ manage_session_server <- function(id, board, ...) {
             error = cnd_to_notif()
           )
           if (not_null(res)) {
-            showNotification(
+            notify(
               "Successfully removed board",
               type = "message",
               session = session
@@ -136,7 +136,7 @@ manage_session_server <- function(id, board, ...) {
             error = cnd_to_notif()
           )
           if (not_null(res)) {
-            showNotification(
+            notify(
               "Successfully removed version",
               type = "message",
               session = session
@@ -156,7 +156,7 @@ manage_session_server <- function(id, board, ...) {
 
           if (!is.list(meda) && "tags" %in% names(meda) && has_tags(meda)) {
 
-            showNotification(
+            notify(
               "Pin not compatible with blockr",
               type = "warning",
               session = session
