@@ -50,9 +50,9 @@ workflows, version history, and editable title.</p>
     <div id="ref-usage">
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">manage_project</span><span class="op">(</span>server <span class="op">=</span> <span class="va">manage_project_server</span>, ui <span class="op">=</span> <span class="va">manage_project_ui</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">manage_project_ui</span><span class="op">(</span><span class="va">id</span>, <span class="va">x</span><span class="op">)</span></span>
+<span><span class="fu">manage_project_server</span><span class="op">(</span><span class="va">id</span>, <span class="va">board</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">manage_project_server</span><span class="op">(</span><span class="va">id</span>, <span class="va">board</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">manage_project_ui</span><span class="op">(</span><span class="va">id</span>, <span class="va">x</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div id="arguments">
@@ -67,16 +67,16 @@ workflows, version history, and editable title.</p>
 <dd><p>Namespace ID</p></dd>
 
 
-<dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
-<dd><p>Board object</p></dd>
-
-
 <dt id="arg-board">board<a class="anchor" aria-label="anchor" href="#arg-board"></a></dt>
 <dd><p>Reactive values object containing board state</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Extra arguments (may include dock object)</p></dd>
+
+
+<dt id="arg-x">x<a class="anchor" aria-label="anchor" href="#arg-x"></a></dt>
+<dd><p>Board object</p></dd>
 
 </dl></div>
     <div id="value">

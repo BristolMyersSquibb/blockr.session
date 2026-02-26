@@ -84,6 +84,25 @@
 <span><span class="op">)</span></span></code></pre></div>
 <p>The default storage backend is [pins::board_local()] which can be configured by setting the <code>session_mgmt_backend</code> [blockr_option()].</p>
 </div>
+<div class="section level2">
+<h2 id="deploying-to-posit-connect">Deploying to Posit Connect<a class="anchor" aria-label="anchor" href="#deploying-to-posit-connect"></a>
+</h2>
+<p>When deploying to Posit Connect, use <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">pins::board_connect</a></code> as the backend so that a fresh board is created per user session (picking up the correct credentials at runtime rather than at deploy time):</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>blockr.session_mgmt_backend <span class="op">=</span> <span class="fu">pins</span><span class="fu">::</span><span class="va"><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect</a></span><span class="op">)</span></span></code></pre></div>
+<p>Note the absence of <code>()</code>: the value is the <strong>function itself</strong>, not its result. <code>get_session_backend()</code> calls it once per session, which is what allows per-user pin storage to work correctly.</p>
+<div class="section level3">
+<h3 id="per-user-pins-with-the-connect-api-integration">Per-user pins with the Connect API Integration<a class="anchor" aria-label="anchor" href="#per-user-pins-with-the-connect-api-integration"></a>
+</h3>
+<p>By default, pins are stored under the deploying user’s namespace. To have each viewer’s pins saved under their own account, enable the <strong>Connect API Integration</strong> for the content:</p>
+<ol style="list-style-type: decimal">
+<li>In Connect, open the content’s <strong>Settings → Access</strong> tab.</li>
+<li>Under <em>API Integrations</em>, enable the <strong>Posit Connect</strong> integration.</li>
+<li>Set the maximum role to <strong>Viewer</strong> (sufficient for reading and writing pins).</li>
+</ol>
+<p>With the integration enabled, Connect injects an ephemeral <code>CONNECT_API_KEY</code> into each user’s session. Because <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">pins::board_connect</a></code> is called fresh per session, it automatically picks up that key via its default <code>auth = "auto"</code>. No additional packages or configuration are needed — in particular, the <a href="https://github.com/posit-dev/connectcreds" class="external-link"><code>connectcreds</code></a> package is <strong>not</strong> required here; that package is for exchanging session credentials for third-party OAuth tokens (e.g. GitHub, Salesforce), which is a separate use case.</p>
+</div>
+</div>
 </div>
   </div>
 
