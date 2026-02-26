@@ -6,23 +6,21 @@ get_session_backend <- function() {
 
   val <- blockr_option("session_mgmt_backend", pins::board_local)
 
-  if (!is.function(val)) {
-    return(val)
+  if (is.function(val)) {
+    val <- val()
   }
 
-  res <- val()
-
-  if (!inherits(res, "pins_board")) {
+  if (!inherits(val, "pins_board")) {
     blockr_abort(
       paste(
         "The `session_mgmt_backend` option must be a pins board or a",
-        "function that returns one, got {class(res)[[1L]]}."
+        "function that returns one, got {class(val)[[1L]]}."
       ),
       class = "invalid_session_backend"
     )
   }
 
-  res
+  val
 }
 
 format_time_ago <- function(time) {
