@@ -154,7 +154,7 @@ test_that("rack_info returns version data.frame", {
   )
 
   rack_save(backend, data, name = "info-test")
-  Sys.sleep(1)
+  data$v <- 2L
   rack_save(backend, data, name = "info-test")
 
   info <- rack_info(new_rack_id_pins("info-test"), backend)
@@ -202,7 +202,6 @@ test_that("rack_load with specific version", {
   )
 
   rack_save(backend, v1_data, name = "ver-load")
-  Sys.sleep(1)
   rack_save(backend, v2_data, name = "ver-load")
 
   info <- rack_info(new_rack_id_pins("ver-load"), backend)
@@ -269,7 +268,7 @@ test_that("rack_delete removes specific version", {
   )
 
   rack_save(backend, data, name = "del-ver")
-  Sys.sleep(1)
+  data$v <- 2L
   rack_save(backend, data, name = "del-ver")
 
   info <- rack_info(new_rack_id_pins("del-ver"), backend)
@@ -328,12 +327,7 @@ test_that("rack_list on Connect returns rack_id_pins_connect, filters tags", {
   board <- mock_board_connect()
 
   record_search <- function() {
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-board")
     upload_blockr_json(
       board_a, list(x = 1), "blockr-fixture-plain",
       versioned = TRUE,
@@ -373,12 +367,7 @@ test_that("rack_list on Connect splits user/name from qualified names", {
   board <- mock_board_connect()
 
   record_search <- function() {
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-board")
     upload_blockr_json(
       board_a, list(x = 1), "blockr-fixture-plain",
       versioned = TRUE,
@@ -402,20 +391,12 @@ test_that("rack_list on Connect splits user/name from qualified names", {
 
   result <- rack_list(board)
 
-  actual_users <- chr_ply(result, function(x) x$user)
-  expected_users <- chr_ply(
-    strsplit(tagged_names, "/", fixed = TRUE),
-    `[[`,
-    1L
-  )
+  actual_users <- chr_xtr(result, "user")
+  expected_users <- chr_xtr(strsplit(tagged_names, "/", fixed = TRUE), 1L)
   expect_setequal(actual_users, expected_users)
 
   actual_names <- chr_ply(result, display_name)
-  expected_names <- chr_ply(
-    strsplit(tagged_names, "/", fixed = TRUE),
-    `[[`,
-    2L
-  )
+  expected_names <- chr_xtr(strsplit(tagged_names, "/", fixed = TRUE), 2L)
   expect_setequal(actual_names, expected_names)
 })
 
@@ -425,21 +406,10 @@ test_that("rack_info on Connect returns version data.frame", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
-    Sys.sleep(1)
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-board")
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    upload_blockr_json(
-      board_a, modified, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, modified, name = "blockr-fixture-board")
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
@@ -472,21 +442,10 @@ test_that("rack_load on Connect uses qualified pin name", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
-    Sys.sleep(1)
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-board")
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    upload_blockr_json(
-      board_a, modified, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, modified, name = "blockr-fixture-board")
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
@@ -612,21 +571,10 @@ test_that("rack_save on Connect returns rack_id_pins_connect", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
-    Sys.sleep(1)
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-board")
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    upload_blockr_json(
-      board_a, modified, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, modified, name = "blockr-fixture-board")
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
@@ -668,12 +616,7 @@ test_that("rack_save on Connect passes bare name to pin_upload", {
     qualified <- paste0(board_a$account, "/blockr-fixture-new")
     try(pins::pin_delete(board_a, qualified), silent = TRUE)
 
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-new",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-new")
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
@@ -708,21 +651,10 @@ test_that("rack_save on Connect queries versions with qualified name", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
-    Sys.sleep(1)
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-board")
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    upload_blockr_json(
-      board_a, modified, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, modified, name = "blockr-fixture-board")
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
@@ -753,21 +685,10 @@ test_that("rack_load on Connect loads specific version directly", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
-    Sys.sleep(1)
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-board")
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    upload_blockr_json(
-      board_a, modified, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, modified, name = "blockr-fixture-board")
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
@@ -826,21 +747,10 @@ test_that("rack_load on Connect from another user uses qualified name", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
-    Sys.sleep(1)
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-board")
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    upload_blockr_json(
-      board_a, modified, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, modified, name = "blockr-fixture-board")
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
@@ -894,21 +804,10 @@ test_that("rack_delete on Connect deletes latest version when none specified", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    upload_blockr_json(
-      board_a, blockr_test_session, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
-    Sys.sleep(1)
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-board")
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    upload_blockr_json(
-      board_a, modified, "blockr-fixture-board",
-      versioned = TRUE,
-      metadata = list(format = "v1"),
-      tags = "blockr-session"
-    )
+    rack_save(board_a, modified, name = "blockr-fixture-board")
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
