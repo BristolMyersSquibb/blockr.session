@@ -21,7 +21,7 @@ mock_board_connect <- function(account = "user_a",
 
 connect_fixture <- function(name, record = NULL, cleanup = NULL) {
 
-  fixtures_dir <- testthat::test_path("fixtures", "connect")
+  fixtures_dir <- testthat::test_path("_fixtures", "connect")
   json_name <- paste0(name, ".json")
   json_path <- file.path(fixtures_dir, json_name)
 
