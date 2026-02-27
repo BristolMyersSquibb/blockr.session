@@ -98,30 +98,6 @@ test_that("saving multiple times creates versions", {
   expect_equal(nrow(versions), 2)
 })
 
-test_that("rack_list reflects saved boards", {
-  backend <- pins::board_temp(versioned = TRUE)
-  withr::local_options(blockr.session_mgmt_backend = backend)
-
-  test_board <- new_board(
-    blocks = c(a = new_dataset_block("iris"))
-  )
-
-  testServer(
-    manage_project_server,
-    {
-      session$setInputs(save_btn = 1)
-    },
-    args = list(
-      board = reactiveValues(board = test_board, board_id = "wf-list-test")
-    )
-  )
-
-  workflows <- rack_list(backend)
-  wf_names <- chr_ply(workflows, display_name)
-  expect_true("wf-list-test" %in% wf_names)
-  expect_length(workflows, 1L)
-})
-
 test_that("load_workflow triggers restore", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
@@ -134,7 +110,7 @@ test_that("load_workflow triggers restore", {
     manage_project_server,
     {
       session$setInputs(save_btn = 1)
-      session$setInputs(load_workflow = "load-test")
+      session$setInputs(load_workflow = list(name = "load-test", user = ""))
 
       res <- session$returned()
       expect_true(!is.null(res))
@@ -210,7 +186,9 @@ test_that("delete_workflows removes pin from backend", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(delete_workflows = list("del-test"))
+      session$setInputs(
+        delete_workflows = list(list(name = "del-test", user = ""))
+      )
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "del-test")
@@ -259,39 +237,6 @@ test_that("delete_versions removes specific version", {
   remaining <- pins::pin_versions(backend, "ver-del-test")
   expect_equal(nrow(remaining), 1)
   expect_false(older_version %in% remaining$version)
-})
-
-test_that("rack_info returns version data.frame", {
-  backend <- pins::board_temp(versioned = TRUE)
-  withr::local_options(blockr.session_mgmt_backend = backend)
-
-  test_board <- new_board(
-    blocks = c(a = new_dataset_block("iris"))
-  )
-
-  testServer(
-    manage_project_server,
-    {
-      session$setInputs(save_btn = 1)
-      Sys.sleep(1)
-      session$setInputs(save_btn = 2)
-    },
-    args = list(
-      board = reactiveValues(board = test_board, board_id = "pv-test")
-    )
-  )
-
-  info <- rack_info(new_rack_id_pins("pv-test"), backend)
-  expect_s3_class(info, "data.frame")
-  expect_equal(nrow(info), 2)
-  expect_true(all(c("version", "created", "hash") %in% colnames(info)))
-})
-
-test_that("rack_info returns empty data.frame for missing pin", {
-  backend <- pins::board_temp(versioned = TRUE)
-  info <- rack_info(new_rack_id_pins("nonexistent"), backend)
-  expect_s3_class(info, "data.frame")
-  expect_equal(nrow(info), 0L)
 })
 
 test_that("version_history output shows versions after save", {

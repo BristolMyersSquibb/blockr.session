@@ -56,7 +56,10 @@ get_initials <- function(username) {
   parts <- parts[parts != ""]
 
   if (length(parts) >= 2) {
-    paste0(toupper(substr(parts[1], 1, 1)), toupper(substr(parts[2], 1, 1)))
+    paste0(
+      toupper(substr(parts[1], 1, 1)),
+      toupper(substr(parts[2], 1, 1))
+    )
   } else {
     toupper(substr(username, 1, min(2, nchar(username))))
   }

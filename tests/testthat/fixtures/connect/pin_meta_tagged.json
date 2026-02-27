@@ -1,0 +1,22 @@
+{
+  "file": "file17d2811cb19b0.json",
+  "file_size": 103,
+  "pin_hash": "f7f4b74c84a86462",
+  "type": "file",
+  "title": "blockr-fixture-board: a pinned .json file",
+  "description": null,
+  "tags": "blockr-session",
+  "urls": null,
+  "created": "2026-02-27T08:38:58",
+  "api_version": 1,
+  "user": {
+    "format": "v1"
+  },
+  "name": "user_a/blockr-fixture-board",
+  "local": {
+    "dir": "~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/4480ffc1-e288-4682-96e7-29a4d61a2ff4/81",
+    "url": "https://connect.example.com/content/4480ffc1-e288-4682-96e7-29a4d61a2ff4/_rev81/",
+    "version": "81",
+    "content_id": "4480ffc1-e288-4682-96e7-29a4d61a2ff4"
+  }
+}

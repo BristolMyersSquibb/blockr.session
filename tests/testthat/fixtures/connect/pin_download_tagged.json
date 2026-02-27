@@ -1,0 +1,18 @@
+{
+  "blocks": {
+    "a": {
+      "type": [
+        "dataset_block"
+      ]
+    },
+    "b": {
+      "type": [
+        "filter_block"
+      ]
+    }
+  },
+  "links": [],
+  "format": [
+    "test"
+  ]
+}

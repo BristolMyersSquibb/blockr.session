@@ -36,7 +36,7 @@ manage_project_server <- function(id, board, ...) {
             prev_board_name(name)
 
             info <- tryCatch(
-              rack_info(new_rack_id_pins(name), backend),
+              rack_info(rack_id_for_board(name, backend), backend),
               error = function(e) NULL
             )
 
@@ -107,15 +107,18 @@ manage_project_server <- function(id, board, ...) {
               seq_len(min(length(workflows), 4L)),
               function(i) {
                 wf <- workflows[[i]]
-                wf_name <- display_name(wf)
                 wf_time <- format_time_ago(last_saved(wf, backend))
                 tags$div(
                   class = "blockr-workflow-item",
-                  onclick = shiny_input_js(
+                  onclick = shiny_input_obj_js(
                     session$ns("load_workflow"),
-                    wf_name
+                    name = display_name(wf),
+                    user = coal(wf$user, "")
                   ),
-                  tags$div(class = "blockr-workflow-name", wf_name),
+                  tags$div(
+                    class = "blockr-workflow-name",
+                    display_name(wf)
+                  ),
                   tags$div(class = "blockr-workflow-meta", wf_time)
                 )
               }
@@ -133,10 +136,10 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$load_workflow,
         {
-          name <- input$load_workflow
+          id <- rack_id_from_input(input$load_workflow)
 
           board_ser <- tryCatch(
-            rack_load(new_rack_id_pins(name), backend),
+            rack_load(id, backend),
             error = cnd_to_notif(type = "error")
           )
 
@@ -176,16 +179,17 @@ manage_project_server <- function(id, board, ...) {
         {
           req(input$delete_workflows)
           deleted <- 0
-          for (name in input$delete_workflows) {
+          for (wf in input$delete_workflows) {
+            id <- rack_id_from_input(wf)
             res <- tryCatch(
               {
-                rack_purge(new_rack_id_pins(name), backend)
+                rack_purge(id, backend)
                 deleted <- deleted + 1
                 TRUE
               },
               error = function(e) {
                 notify(
-                  paste("Failed to delete:", name),
+                  paste("Failed to delete:", display_name(id)),
                   type = "error"
                 )
                 FALSE
@@ -221,8 +225,10 @@ manage_project_server <- function(id, board, ...) {
             )
           }
 
+          id <- rack_id_for_board(name, backend)
+
           versions <- tryCatch(
-            rack_info(new_rack_id_pins(name), backend),
+            rack_info(id, backend),
             error = function(e) NULL
           )
 
@@ -248,6 +254,7 @@ manage_project_server <- function(id, board, ...) {
                   shiny_input_obj_js(
                     session$ns("load_version"),
                     name = name,
+                    user = coal(id$user, ""),
                     version = v$version
                   )
                 },
@@ -268,11 +275,11 @@ manage_project_server <- function(id, board, ...) {
         input$load_version,
         {
           req(input$load_version$name, input$load_version$version)
-          name <- input$load_version$name
-          version <- input$load_version$version
+
+          id <- rack_id_from_input(input$load_version)
 
           board_ser <- tryCatch(
-            rack_load(new_rack_id_pins(name, version), backend),
+            rack_load(id, backend),
             error = cnd_to_notif(type = "error")
           )
 
@@ -302,8 +309,10 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
+          id <- rack_id_for_board(name, backend)
+
           versions <- tryCatch(
-            rack_info(new_rack_id_pins(name), backend),
+            rack_info(id, backend),
             error = function(e) NULL
           )
 
@@ -312,7 +321,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_versions_modal(name, versions, session)
+          show_versions_modal(id, versions, session)
         }
       )
 
@@ -321,12 +330,15 @@ manage_project_server <- function(id, board, ...) {
         input$delete_versions,
         {
           req(input$delete_versions)
-          name <- board_name()
+          id <- rack_id_for_board(board_name(), backend)
           deleted <- 0
           for (version in input$delete_versions) {
+            ver_id <- rack_id_from_input(
+              list(name = id$name, user = id$user, version = version)
+            )
             res <- tryCatch(
               {
-                rack_delete(new_rack_id_pins(name, version), backend)
+                rack_delete(ver_id, backend)
                 deleted <- deleted + 1
                 TRUE
               },
@@ -415,29 +427,31 @@ show_workflows_modal <- function(workflows, backend, session) {
     seq_along(workflows),
     function(i) {
       wf <- workflows[[i]]
-      wf_name <- display_name(wf)
       wf_time <- format_time_ago(last_saved(wf, backend))
       tags$tr(
         class = "blockr-workflow-row",
-        `data-name` = tolower(wf_name),
+        `data-name` = tolower(display_name(wf)),
+        `data-user` = coal(wf$user, ""),
         tags$td(
           class = "blockr-wf-checkbox",
           tags$input(
             type = "checkbox",
             class = "blockr-wf-select",
-            value = wf_name
+            `data-name` = display_name(wf),
+            `data-user` = coal(wf$user, "")
           )
         ),
-        tags$td(class = "blockr-wf-name", wf_name),
+        tags$td(class = "blockr-wf-name", display_name(wf)),
         tags$td(class = "blockr-wf-time", wf_time),
         tags$td(
           class = "blockr-wf-action",
           tags$button(
             class = "btn btn-sm btn-primary",
             onclick = paste0(
-              shiny_input_js(
+              shiny_input_obj_js(
                 session$ns("load_workflow"),
-                wf_name
+                name = display_name(wf),
+                user = coal(wf$user, "")
               ),
               "\n",
               hide_modal_js(session$ns("workflows_modal"))
@@ -513,7 +527,7 @@ show_workflows_modal <- function(workflows, backend, session) {
   )
 }
 
-show_versions_modal <- function(name, versions, session) {
+show_versions_modal <- function(id, versions, session) {
 
   rows <- lapply(
     seq_len(nrow(versions)),
@@ -548,7 +562,8 @@ show_versions_modal <- function(name, versions, session) {
               onclick = paste0(
                 shiny_input_obj_js(
                   session$ns("load_version"),
-                  name = name,
+                  name = id$name,
+                  user = coal(id$user, ""),
                   version = v$version
                 ),
                 "\n",
@@ -582,7 +597,7 @@ show_versions_modal <- function(name, versions, session) {
         class = "blockr-workflows-modal",
         tags$div(
           class = "blockr-wf-header",
-          tags$h5(paste("Version History:", name)),
+          tags$h5(paste("Version History:", display_name(id))),
           tags$div(
             class = "blockr-wf-header-actions",
             tags$button(
@@ -667,7 +682,10 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
     document.getElementById('%s').addEventListener('click', function() {
       var selected = [];
       document.querySelectorAll('.%s:checked').forEach(function(cb) {
-        selected.push(cb.value);
+        var item = cb.dataset && cb.dataset.name
+          ? {name: cb.dataset.name, user: cb.dataset.user || ''}
+          : cb.value;
+        selected.push(item);
       });
       if (selected.length > 0 &&
           confirm('Delete ' + selected.length + ' %s(s)?')) {

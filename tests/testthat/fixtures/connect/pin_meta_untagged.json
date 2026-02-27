@@ -1,0 +1,22 @@
+{
+  "file": "file17d285ec621b3.json",
+  "file_size": 10,
+  "pin_hash": "d0f69eaa30717b2b",
+  "type": "file",
+  "title": "blockr-fixture-plain: a pinned .json file",
+  "description": null,
+  "tags": null,
+  "urls": null,
+  "created": "2026-02-27T08:38:57",
+  "api_version": 1,
+  "user": {
+    "format": "v1"
+  },
+  "name": "user_a/blockr-fixture-plain",
+  "local": {
+    "dir": "~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/6baef472-653f-45e8-b59f-39bfe738877d/80",
+    "url": "https://connect.example.com/content/6baef472-653f-45e8-b59f-39bfe738877d/_rev80/",
+    "version": "80",
+    "content_id": "6baef472-653f-45e8-b59f-39bfe738877d"
+  }
+}

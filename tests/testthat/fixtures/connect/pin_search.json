@@ -1,0 +1,89 @@
+[
+  {
+    "name": "user_a/blockr-fixture-board",
+    "type": "file",
+    "title": "blockr-fixture-board: a pinned .json file",
+    "created": "2026-02-27T08:38:58",
+    "file_size": 103,
+    "meta": {
+      "file": "file17d2811cb19b0.json",
+      "file_size": 103,
+      "pin_hash": "f7f4b74c84a86462",
+      "type": "file",
+      "title": "blockr-fixture-board: a pinned .json file",
+      "description": null,
+      "tags": "blockr-session",
+      "urls": null,
+      "created": "2026-02-27T08:38:58",
+      "api_version": 1,
+      "user": {
+        "format": "v1"
+      },
+      "name": "user_a/blockr-fixture-board",
+      "local": {
+        "dir": "~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/4480ffc1-e288-4682-96e7-29a4d61a2ff4/81",
+        "url": "https://connect.example.com/content/4480ffc1-e288-4682-96e7-29a4d61a2ff4/_rev81/",
+        "version": "81",
+        "content_id": "4480ffc1-e288-4682-96e7-29a4d61a2ff4"
+      }
+    }
+  },
+  {
+    "name": "user_a/blockr-fixture-plain",
+    "type": "file",
+    "title": "blockr-fixture-plain: a pinned .json file",
+    "created": "2026-02-27T08:38:57",
+    "file_size": 10,
+    "meta": {
+      "file": "file17d285ec621b3.json",
+      "file_size": 10,
+      "pin_hash": "d0f69eaa30717b2b",
+      "type": "file",
+      "title": "blockr-fixture-plain: a pinned .json file",
+      "description": null,
+      "tags": null,
+      "urls": null,
+      "created": "2026-02-27T08:38:57",
+      "api_version": 1,
+      "user": {
+        "format": "v1"
+      },
+      "name": "user_a/blockr-fixture-plain",
+      "local": {
+        "dir": "~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/6baef472-653f-45e8-b59f-39bfe738877d/80",
+        "url": "https://connect.example.com/content/6baef472-653f-45e8-b59f-39bfe738877d/_rev80/",
+        "version": "80",
+        "content_id": "6baef472-653f-45e8-b59f-39bfe738877d"
+      }
+    }
+  },
+  {
+    "name": "user_a/test-user_a",
+    "type": "file",
+    "title": "test-user_a: a pinned .json file",
+    "created": "2026-02-23T16:38:53",
+    "file_size": 1790,
+    "meta": {
+      "file": "file1e141dc66b.json",
+      "file_size": 1790,
+      "pin_hash": "e85ff2ee47271db9",
+      "type": "file",
+      "title": "test-user_a: a pinned .json file",
+      "description": null,
+      "tags": "blockr-session",
+      "urls": null,
+      "created": "2026-02-23T16:38:53",
+      "api_version": 1,
+      "user": {
+        "format": "v1"
+      },
+      "name": "user_a/test-user_a",
+      "local": {
+        "dir": "~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/e70879b5-87d1-4be1-bb5f-ffea32ab0af6/6",
+        "url": "https://connect.example.com/content/e70879b5-87d1-4be1-bb5f-ffea32ab0af6/_rev6/",
+        "version": "6",
+        "content_id": "e70879b5-87d1-4be1-bb5f-ffea32ab0af6"
+      }
+    }
+  }
+]
