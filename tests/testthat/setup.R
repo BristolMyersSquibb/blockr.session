@@ -23,9 +23,10 @@ if (all(nzchar(Sys.getenv(connect_vars)))) {
         setNames("connect.example.com", server_host)
       )
 
-      options(
+      withr::local_options(
         blockr.connect_fixture_subs = subs,
-        blockr.connect_recording = TRUE
+        blockr.connect_recording = TRUE,
+        .local_envir = testthat::teardown_env()
       )
     },
     error = function(e) message(conditionMessage(e))
