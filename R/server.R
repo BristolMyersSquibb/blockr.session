@@ -50,6 +50,46 @@ manage_project_server <- function(id, board, ...) {
       )
 
       observeEvent(
+        session$clientData$url_search,
+        {
+          query <- getQueryString(session)
+          if (is.null(query$board_name)) return()
+
+          id <- rack_id_from_input(
+            list(
+              name = query$board_name,
+              user = query$user,
+              version = query$version
+            )
+          )
+
+          board_ser <- tryCatch(
+            rack_load(id, backend),
+            error = cnd_to_notif(type = "error")
+          )
+
+          if (is.null(board_ser)) return()
+
+          restore_board(
+            board$board,
+            board_ser,
+            restore_result,
+            session = session
+          )
+
+          set_board_option_value("board_name", query$board_name, session)
+
+          updateQueryString(
+            board_query_string(id, backend),
+            mode = "replace",
+            session = session
+          )
+        },
+        once = TRUE,
+        ignoreNULL = FALSE
+      )
+
+      observeEvent(
         input$save_btn,
         {
           res <- tryCatch(
@@ -74,6 +114,15 @@ manage_project_server <- function(id, board, ...) {
             )
             save_status("Just now")
             refresh_trigger(refresh_trigger() + 1)
+
+            updateQueryString(
+              board_query_string(
+                rack_id_for_board(board_name(), backend),
+                backend
+              ),
+              mode = "replace",
+              session = session
+            )
           }
         }
       )
@@ -84,6 +133,8 @@ manage_project_server <- function(id, board, ...) {
           new <- clear_board(board$board)
           attr(new, "id") <- rand_names()
           restore_result(new)
+
+          updateQueryString("?", mode = "replace", session = session)
         }
       )
 
@@ -151,6 +202,12 @@ manage_project_server <- function(id, board, ...) {
             board$board,
             board_ser,
             restore_result,
+            session = session
+          )
+
+          updateQueryString(
+            board_query_string(id, backend),
+            mode = "replace",
             session = session
           )
         }
@@ -291,6 +348,12 @@ manage_project_server <- function(id, board, ...) {
             board$board,
             board_ser,
             restore_result,
+            session = session
+          )
+
+          updateQueryString(
+            board_query_string(id, backend),
+            mode = "replace",
             session = session
           )
         }

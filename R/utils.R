@@ -84,3 +84,21 @@ cnd_to_notif <- function(return_val = NULL, type = "warning",
 }
 
 blockr_session_tags <- function() "blockr-session"
+
+board_query_string <- function(id, backend) {
+
+  params <- list(board_name = display_name(id))
+
+  if (not_null(id$user) && !identical(id$user, backend$account)) {
+    params$user <- id$user
+  }
+
+  if (not_null(id$version)) {
+    params$version <- id$version
+  }
+
+  paste0(
+    "?",
+    paste(names(params), params, sep = "=", collapse = "&")
+  )
+}
