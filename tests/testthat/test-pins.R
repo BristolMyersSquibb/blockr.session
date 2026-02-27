@@ -172,10 +172,7 @@ test_that("rack_info returns empty data.frame for missing pin", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
-  expect_warning(
-    info <- rack_info(new_rack_id_pins("nonexistent"), backend),
-    class = "rack_info_failed"
-  )
+  info <- rack_info(new_rack_id_pins("nonexistent"), backend)
 
   expect_s3_class(info, "data.frame")
   expect_equal(nrow(info), 0L)
@@ -322,10 +319,7 @@ test_that("last_saved returns NULL for missing pin", {
   backend <- pins::board_temp(versioned = TRUE)
   id <- new_rack_id_pins("no-such-pin")
 
-  expect_warning(
-    ts <- last_saved(id, backend),
-    class = "rack_info_failed"
-  )
+  ts <- last_saved(id, backend)
   expect_null(ts)
 })
 

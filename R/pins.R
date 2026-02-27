@@ -152,10 +152,15 @@ rack_info.rack_id_pins <- function(id, backend, ...) {
   versions <- tryCatch(
     pins::pin_versions(backend, pin_name(id)),
     error = function(e) {
-      blockr_warn(
-        "Could not retrieve versions for {pin_name(id)}: {conditionMessage(e)}",
-        class = "rack_info_failed"
-      )
+
+      if (!grepl("Can't find pin", conditionMessage(e), fixed = TRUE)) {
+        blockr_warn(
+          "Could not retrieve versions for {pin_name(id)}: ",
+          "{conditionMessage(e)}",
+          class = "rack_info_failed"
+        )
+      }
+
       NULL
     }
   )
