@@ -42,7 +42,7 @@ connect_fixture <- function(name, record = NULL, cleanup = NULL) {
 
     json_text <- jsonlite::serializeJSON(val, pretty = TRUE)
 
-    subs <- getOption("blockr.connect_fixture_subs")
+    subs <- connect_subs()
 
     if (not_null(subs)) {
       for (i in seq_along(subs)) {
@@ -69,4 +69,17 @@ connect_fixture <- function(name, record = NULL, cleanup = NULL) {
 
 connect_recording <- function() {
   isTRUE(getOption("blockr.connect_recording"))
+}
+
+connect_subs <- function() {
+  getOption("blockr.connect_fixture_subs")
+}
+
+local_connect_options <- function(subs, .local_envir = parent.frame()) {
+
+  withr::local_options(
+    blockr.connect_fixture_subs = subs,
+    blockr.connect_recording = TRUE,
+    .local_envir = .local_envir
+  )
 }

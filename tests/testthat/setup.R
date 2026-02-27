@@ -20,11 +20,7 @@ if (all(nzchar(Sys.getenv(connect_vars)))) {
         c(board_a$account, board_b$account, server_host)
       )
 
-      withr::local_options(
-        blockr.connect_fixture_subs = subs,
-        blockr.connect_recording = TRUE,
-        .local_envir = testthat::teardown_env()
-      )
+      local_connect_options(subs, .local_envir = testthat::teardown_env())
     },
     error = function(e) message(conditionMessage(e))
   )
