@@ -347,7 +347,11 @@ test_that("rack_list on Connect returns rack_id_pins_connect, filters tags", {
     )
     pins::pin_search(board_a)
   }
-  search_result <- connect_fixture("pin_search", record_search)
+  search_result <- connect_fixture(
+    "pin_search",
+    record_search,
+    pin_cleanup(board_a, "blockr-fixture-board", "blockr-fixture-plain")
+  )
 
   tagged <- lgl_ply(search_result$meta, has_tags)
   has_tagged <- any(tagged)
@@ -388,7 +392,11 @@ test_that("rack_list on Connect splits user/name from qualified names", {
     )
     pins::pin_search(board_a)
   }
-  search_result <- connect_fixture("pin_search", record_search)
+  search_result <- connect_fixture(
+    "pin_search",
+    record_search,
+    pin_cleanup(board_a, "blockr-fixture-board", "blockr-fixture-plain")
+  )
 
   tagged <- lgl_ply(search_result$meta, has_tags)
   tagged_names <- search_result$name[tagged]
@@ -422,6 +430,7 @@ test_that("rack_info on Connect returns version data.frame", {
   board <- mock_board_connect()
 
   record_versions <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
     upload_blockr_json(
       board_a, blockr_test_session, "blockr-fixture-board",
       versioned = TRUE,
@@ -437,9 +446,13 @@ test_that("rack_info on Connect returns version data.frame", {
       metadata = list(format = "v1"),
       tags = "blockr-session"
     )
-    pins::pin_versions(board_a, qualified_a_board)
+    pins::pin_versions(board_a, qualified)
   }
-  versions <- connect_fixture("pin_versions_tagged", record_versions)
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    record_versions,
+    pin_cleanup(board_a, "blockr-fixture-board")
+  )
 
   local_mocked_bindings(
     pin_versions = function(board, name, ...) versions,
@@ -464,6 +477,7 @@ test_that("rack_load on Connect uses qualified pin name", {
   board <- mock_board_connect()
 
   record_versions <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
     upload_blockr_json(
       board_a, blockr_test_session, "blockr-fixture-board",
       versioned = TRUE,
@@ -479,21 +493,27 @@ test_that("rack_load on Connect uses qualified pin name", {
       metadata = list(format = "v1"),
       tags = "blockr-session"
     )
-    pins::pin_versions(board_a, qualified_a_board)
+    pins::pin_versions(board_a, qualified)
   }
-  versions <- connect_fixture("pin_versions_tagged", record_versions)
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    record_versions,
+    pin_cleanup(board_a, "blockr-fixture-board")
+  )
 
   latest_ver <- versions$version[1L]
 
   record_meta <- function() {
-    pins::pin_meta(board_a, qualified_a_board, version = latest_ver)
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
+    pins::pin_meta(board_a, qualified, version = latest_ver)
   }
   meta <- connect_fixture("pin_meta_tagged", record_meta)
 
   record_download <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
 
     dl_path <- pins::pin_download(
-      board_a, qualified_a_board, latest_ver, meta$pin_hash
+      board_a, qualified, latest_ver, meta$pin_hash
     )
 
     jsonlite::fromJSON(dl_path, simplifyVector = FALSE)
@@ -559,19 +579,25 @@ test_that("rack_load on Connect errors for pin without blockr tags", {
   board <- mock_board_connect()
 
   record_versions <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-plain")
     upload_blockr_json(
       board_a, list(x = 1), "blockr-fixture-plain",
       versioned = TRUE,
       metadata = list(format = "v1")
     )
-    pins::pin_versions(board_a, qualified_a_plain)
+    pins::pin_versions(board_a, qualified)
   }
-  versions <- connect_fixture("pin_versions_untagged", record_versions)
+  versions <- connect_fixture(
+    "pin_versions_untagged",
+    record_versions,
+    pin_cleanup(board_a, "blockr-fixture-plain")
+  )
 
   untagged_ver <- versions$version[1L]
 
   record_meta <- function() {
-    pins::pin_meta(board_a, qualified_a_plain, version = untagged_ver)
+    qualified <- paste0(board_a$account, "/blockr-fixture-plain")
+    pins::pin_meta(board_a, qualified, version = untagged_ver)
   }
   meta <- connect_fixture("pin_meta_untagged", record_meta)
 
@@ -591,6 +617,7 @@ test_that("rack_save on Connect returns rack_id_pins_connect", {
   board <- mock_board_connect(account = "user_a")
 
   record_versions <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
     upload_blockr_json(
       board_a, blockr_test_session, "blockr-fixture-board",
       versioned = TRUE,
@@ -606,9 +633,13 @@ test_that("rack_save on Connect returns rack_id_pins_connect", {
       metadata = list(format = "v1"),
       tags = "blockr-session"
     )
-    pins::pin_versions(board_a, qualified_a_board)
+    pins::pin_versions(board_a, qualified)
   }
-  versions <- connect_fixture("pin_versions_tagged", record_versions)
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    record_versions,
+    pin_cleanup(board_a, "blockr-fixture-board")
+  )
 
   local_mocked_bindings(
     pin_upload = function(...) invisible(),

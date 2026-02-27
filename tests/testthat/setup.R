@@ -1,7 +1,6 @@
 connect_vars <- c("CONNECT_SERVER", "CONNECT_API_KEY_A", "CONNECT_API_KEY_B")
-all_set <- all(nzchar(Sys.getenv(connect_vars)))
 
-if (all_set) {
+if (all(nzchar(Sys.getenv(connect_vars)))) {
   tryCatch(
     {
       board_a <- pins::board_connect(
@@ -28,20 +27,7 @@ if (all_set) {
         blockr.connect_fixture_subs = subs,
         blockr.connect_recording = TRUE
       )
-
-      qualified_a_board <- paste0(board_a$account, "/blockr-fixture-board")
-      qualified_a_plain <- paste0(board_a$account, "/blockr-fixture-plain")
-      qualified_b_board <- paste0(board_b$account, "/blockr-fixture-board")
-
-      withr::defer(
-        {
-          try(pins::pin_delete(board_a, qualified_a_board), silent = TRUE)
-          try(pins::pin_delete(board_a, qualified_a_plain), silent = TRUE)
-          try(pins::pin_delete(board_b, qualified_b_board), silent = TRUE)
-        },
-        envir = testthat::teardown_env()
-      )
     },
-    error = function(e) NULL
+    error = function(e) message(conditionMessage(e))
   )
 }

@@ -19,7 +19,7 @@ mock_board_connect <- function(account = "user_a",
   )
 }
 
-connect_fixture <- function(name, record = NULL) {
+connect_fixture <- function(name, record = NULL, cleanup = NULL) {
 
   fixtures_dir <- testthat::test_path("fixtures", "connect")
   json_name <- paste0(name, ".json")
@@ -51,6 +51,10 @@ connect_fixture <- function(name, record = NULL) {
     }
 
     writeLines(json_text, json_path)
+
+    if (!is.null(cleanup)) {
+      withr::defer(cleanup(), envir = parent.frame())
+    }
   }
 
   if (!file.exists(json_path)) {
