@@ -753,7 +753,7 @@ test_that("rack_save on Connect queries versions with qualified name", {
   expect_equal(versions_name, "user_a/my_board")
 })
 
-test_that("rack_load on Connect loads a specific version without querying versions", {
+test_that("rack_load on Connect loads specific version directly", {
 
   board <- mock_board_connect()
 
@@ -944,7 +944,7 @@ test_that("rack_delete on Connect deletes latest version when none specified", {
   expect_equal(deleted_version, versions$version[1L])
 })
 
-test_that("rack_delete on Connect deletes a specific version without querying versions", {
+test_that("rack_delete on Connect deletes specific version directly", {
 
   board <- mock_board_connect()
 
