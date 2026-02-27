@@ -205,7 +205,8 @@ rack_load.rack_id_pins <- function(id, backend, ...) {
 
   if (!has_tags(meta)) {
     blockr_abort(
-      "Pin {pin_name(id)} is not compatible with blockr (missing session tags).",
+      "Pin {pin_name(id)} is not compatible with blockr ",
+      "(missing session tags).",
       class = "rack_load_invalid_tags"
     )
   }
