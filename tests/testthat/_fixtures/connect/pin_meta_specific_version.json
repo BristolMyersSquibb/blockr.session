@@ -16,7 +16,7 @@
     {
       "type": "character",
       "attributes": {},
-      "value": ["file7d52381f8993.json"]
+      "value": ["file7d52352b178c.json"]
     },
     {
       "type": "integer",
@@ -27,12 +27,12 @@
           "value": ["fs_bytes", "numeric"]
         }
       },
-      "value": [10]
+      "value": [103]
     },
     {
       "type": "character",
       "attributes": {},
-      "value": ["d0f69eaa30717b2b"]
+      "value": ["f7f4b74c84a86462"]
     },
     {
       "type": "character",
@@ -42,13 +42,15 @@
     {
       "type": "character",
       "attributes": {},
-      "value": ["blockr-fixture-plain: a pinned .json file"]
+      "value": ["blockr-fixture-board: a pinned .json file"]
     },
     {
       "type": "NULL"
     },
     {
-      "type": "NULL"
+      "type": "character",
+      "attributes": {},
+      "value": ["blockr-session"]
     },
     {
       "type": "NULL"
@@ -67,7 +69,7 @@
           "value": [""]
         }
       },
-      "value": [1772203459]
+      "value": [1772203473]
     },
     {
       "type": "integer",
@@ -94,7 +96,7 @@
     {
       "type": "character",
       "attributes": {},
-      "value": ["user_a/blockr-fixture-plain"]
+      "value": ["user_a/blockr-fixture-board"]
     },
     {
       "type": "list",
@@ -115,22 +117,22 @@
               "value": ["fs_path", "character"]
             }
           },
-          "value": ["~/.cache/pins/connect-e1eef568ecb025fd2f202366457db4f2/79080961-c003-4916-b92b-a3a07a0a10f5/192"]
+          "value": ["~/.cache/pins/connect-e1eef568ecb025fd2f202366457db4f2/2b3c0959-777d-4e73-ae36-e1069e8e94f5/198"]
         },
         {
           "type": "character",
           "attributes": {},
-          "value": ["https://connect.example.com/content/79080961-c003-4916-b92b-a3a07a0a10f5/_rev192/"]
+          "value": ["https://connect.example.com/content/2b3c0959-777d-4e73-ae36-e1069e8e94f5/_rev198/"]
         },
         {
           "type": "character",
           "attributes": {},
-          "value": ["192"]
+          "value": ["198"]
         },
         {
           "type": "character",
           "attributes": {},
-          "value": ["79080961-c003-4916-b92b-a3a07a0a10f5"]
+          "value": ["2b3c0959-777d-4e73-ae36-e1069e8e94f5"]
         }
       ]
     }

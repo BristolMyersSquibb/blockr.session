@@ -9,7 +9,7 @@
     "row.names": {
       "type": "integer",
       "attributes": {},
-      "value": [1, 2, 3, 4, 5, 6, 7, 8]
+      "value": [1, 2]
     },
     "names": {
       "type": "character",
@@ -21,7 +21,7 @@
     {
       "type": "character",
       "attributes": {},
-      "value": ["123", "122", "120", "119", "118", "117", "115", "113"]
+      "value": ["203", "202"]
     },
     {
       "type": "double",
@@ -37,17 +37,17 @@
           "value": [""]
         }
       },
-      "value": [1772183940, 1772183940, 1772183880, 1772183880, 1772183880, 1772183880, 1772183880, 1772183880]
+      "value": [1772203440, 1772203440]
     },
     {
       "type": "logical",
       "attributes": {},
-      "value": [true, false, false, false, false, false, false, false]
+      "value": [true, false]
     },
     {
       "type": "double",
       "attributes": {},
-      "value": [19404, 19404, 19409, 19409, 19410, 19407, 19405, 19408]
+      "value": [19409, 19404]
     }
   ]
 }
