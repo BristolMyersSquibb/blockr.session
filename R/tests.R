@@ -55,7 +55,7 @@ connect_fixture <- function(name, record = NULL) {
 
   if (!file.exists(json_path)) {
     msg <- paste0(
-      "Connect fixture '", name, "' not recorded (set CONNECT_SERVER)"
+      "Connect fixture '", name, "' not found"
     )
     testthat::skip(msg)
   }
@@ -64,5 +64,5 @@ connect_fixture <- function(name, record = NULL) {
 }
 
 connect_recording <- function() {
-  nzchar(Sys.getenv("CONNECT_SERVER"))
+  isTRUE(getOption("blockr.connect_recording"))
 }

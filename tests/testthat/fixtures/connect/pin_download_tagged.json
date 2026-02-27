@@ -14,7 +14,7 @@
         "names": {
           "type": "character",
           "attributes": {},
-          "value": ["a", "b"]
+          "value": ["a", "b", "c"]
         }
       },
       "value": [
@@ -59,6 +59,29 @@
                   "type": "character",
                   "attributes": {},
                   "value": ["filter_block"]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "attributes": {
+            "names": {
+              "type": "character",
+              "attributes": {},
+              "value": ["type"]
+            }
+          },
+          "value": [
+            {
+              "type": "list",
+              "attributes": {},
+              "value": [
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["plot_block"]
                 }
               ]
             }
