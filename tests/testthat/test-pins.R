@@ -664,3 +664,359 @@ test_that("rack_save on Connect returns rack_id_pins_connect", {
   has_version <- not_null(result$version)
   expect_true(has_version)
 })
+
+test_that("rack_save on Connect passes bare name to pin_upload", {
+
+  board <- mock_board_connect(account = "user_a")
+
+  record_versions <- function() {
+
+    qualified <- paste0(board_a$account, "/blockr-fixture-new")
+    try(pins::pin_delete(board_a, qualified), silent = TRUE)
+
+    upload_blockr_json(
+      board_a, blockr_test_session, "blockr-fixture-new",
+      versioned = TRUE,
+      metadata = list(format = "v1"),
+      tags = "blockr-session"
+    )
+    pins::pin_versions(board_a, qualified)
+  }
+  versions <- connect_fixture(
+    "pin_versions_single",
+    record_versions,
+    pin_cleanup(board_a, "blockr-fixture-new")
+  )
+
+  uploaded_name <- NULL
+
+  local_mocked_bindings(
+    pin_upload = function(board, paths, name, ...) {
+      uploaded_name <<- name
+      invisible()
+    },
+    pin_versions = function(...) versions,
+    .package = "pins"
+  )
+
+  result <- rack_save(board, blockr_test_session, name = "my_new_board")
+
+  expect_s3_class(result, "rack_id_pins_connect")
+  expect_equal(result$user, "user_a")
+  expect_equal(result$name, "my_new_board")
+  expect_equal(result$version, versions$version[1L])
+  expect_equal(uploaded_name, "my_new_board")
+})
+
+test_that("rack_save on Connect queries versions with qualified name", {
+
+  board <- mock_board_connect(account = "user_a")
+
+  record_versions <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
+    upload_blockr_json(
+      board_a, blockr_test_session, "blockr-fixture-board",
+      versioned = TRUE,
+      metadata = list(format = "v1"),
+      tags = "blockr-session"
+    )
+    Sys.sleep(1)
+    modified <- blockr_test_session
+    modified$blocks$c <- list(type = "plot_block")
+    upload_blockr_json(
+      board_a, modified, "blockr-fixture-board",
+      versioned = TRUE,
+      metadata = list(format = "v1"),
+      tags = "blockr-session"
+    )
+    pins::pin_versions(board_a, qualified)
+  }
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    record_versions,
+    pin_cleanup(board_a, "blockr-fixture-board")
+  )
+
+  versions_name <- NULL
+
+  local_mocked_bindings(
+    pin_upload = function(...) invisible(),
+    pin_versions = function(board, name, ...) {
+      versions_name <<- name
+      versions
+    },
+    .package = "pins"
+  )
+
+  rack_save(board, blockr_test_session, name = "my_board")
+
+  expect_equal(versions_name, "user_a/my_board")
+})
+
+test_that("rack_load on Connect loads a specific version without querying versions", {
+
+  board <- mock_board_connect()
+
+  record_versions <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
+    upload_blockr_json(
+      board_a, blockr_test_session, "blockr-fixture-board",
+      versioned = TRUE,
+      metadata = list(format = "v1"),
+      tags = "blockr-session"
+    )
+    Sys.sleep(1)
+    modified <- blockr_test_session
+    modified$blocks$c <- list(type = "plot_block")
+    upload_blockr_json(
+      board_a, modified, "blockr-fixture-board",
+      versioned = TRUE,
+      metadata = list(format = "v1"),
+      tags = "blockr-session"
+    )
+    pins::pin_versions(board_a, qualified)
+  }
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    record_versions,
+    pin_cleanup(board_a, "blockr-fixture-board")
+  )
+
+  older_ver <- versions$version[2L]
+
+  record_meta <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
+    pins::pin_meta(board_a, qualified, version = older_ver)
+  }
+  meta <- connect_fixture("pin_meta_specific_version", record_meta)
+
+  record_download <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
+    dl_path <- pins::pin_download(
+      board_a, qualified, older_ver, meta$pin_hash
+    )
+    jsonlite::fromJSON(dl_path, simplifyVector = FALSE)
+  }
+  download_data <- connect_fixture(
+    "pin_download_specific_version",
+    record_download
+  )
+
+  tmp <- withr::local_tempfile(fileext = ".json")
+  jsonlite::write_json(download_data, tmp, auto_unbox = TRUE, null = "null")
+
+  versions_called <- FALSE
+
+  local_mocked_bindings(
+    pin_versions = function(...) {
+      versions_called <<- TRUE
+      versions
+    },
+    pin_meta = function(...) meta,
+    pin_download = function(...) tmp,
+    .package = "pins"
+  )
+
+  id <- new_rack_id_pins_connect("user_a", "my_board", version = older_ver)
+  result <- rack_load(id, board)
+
+  expect_type(result, "list")
+  has_blocks <- not_null(result$blocks)
+  expect_true(has_blocks)
+  expect_false(versions_called)
+})
+
+test_that("rack_load on Connect from another user uses qualified name", {
+
+  board <- mock_board_connect(account = "user_b")
+
+  record_versions <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
+    upload_blockr_json(
+      board_a, blockr_test_session, "blockr-fixture-board",
+      versioned = TRUE,
+      metadata = list(format = "v1"),
+      tags = "blockr-session"
+    )
+    Sys.sleep(1)
+    modified <- blockr_test_session
+    modified$blocks$c <- list(type = "plot_block")
+    upload_blockr_json(
+      board_a, modified, "blockr-fixture-board",
+      versioned = TRUE,
+      metadata = list(format = "v1"),
+      tags = "blockr-session"
+    )
+    pins::pin_versions(board_a, qualified)
+  }
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    record_versions,
+    pin_cleanup(board_a, "blockr-fixture-board")
+  )
+
+  latest_ver <- versions$version[1L]
+
+  record_meta <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
+    pins::pin_meta(board_a, qualified, version = latest_ver)
+  }
+  meta <- connect_fixture("pin_meta_tagged", record_meta)
+
+  record_download <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
+    dl_path <- pins::pin_download(
+      board_a, qualified, latest_ver, meta$pin_hash
+    )
+    jsonlite::fromJSON(dl_path, simplifyVector = FALSE)
+  }
+  download_data <- connect_fixture("pin_download_tagged", record_download)
+
+  tmp <- withr::local_tempfile(fileext = ".json")
+  jsonlite::write_json(download_data, tmp, auto_unbox = TRUE, null = "null")
+
+  requested_names <- character()
+
+  local_mocked_bindings(
+    pin_versions = function(board, name, ...) {
+      requested_names[length(requested_names) + 1L] <<- name
+      versions
+    },
+    pin_meta = function(...) meta,
+    pin_download = function(...) tmp,
+    .package = "pins"
+  )
+
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+  result <- rack_load(id, board)
+
+  expect_type(result, "list")
+  expect_true("user_a/my_board" %in% requested_names)
+})
+
+test_that("rack_delete on Connect deletes latest version when none specified", {
+
+  board <- mock_board_connect()
+
+  record_versions <- function() {
+    qualified <- paste0(board_a$account, "/blockr-fixture-board")
+    upload_blockr_json(
+      board_a, blockr_test_session, "blockr-fixture-board",
+      versioned = TRUE,
+      metadata = list(format = "v1"),
+      tags = "blockr-session"
+    )
+    Sys.sleep(1)
+    modified <- blockr_test_session
+    modified$blocks$c <- list(type = "plot_block")
+    upload_blockr_json(
+      board_a, modified, "blockr-fixture-board",
+      versioned = TRUE,
+      metadata = list(format = "v1"),
+      tags = "blockr-session"
+    )
+    pins::pin_versions(board_a, qualified)
+  }
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    record_versions,
+    pin_cleanup(board_a, "blockr-fixture-board")
+  )
+
+  deleted_name <- NULL
+  deleted_version <- NULL
+
+  local_mocked_bindings(
+    pin_versions = function(...) versions,
+    pin_version_delete = function(board, name, version) {
+      deleted_name <<- name
+      deleted_version <<- version
+      invisible()
+    },
+    .package = "pins"
+  )
+
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+  result <- rack_delete(id, board)
+
+  expect_true(result)
+  expect_equal(deleted_name, "user_a/my_board")
+  expect_equal(deleted_version, versions$version[1L])
+})
+
+test_that("rack_delete on Connect deletes a specific version without querying versions", {
+
+  board <- mock_board_connect()
+
+  versions_called <- FALSE
+  deleted_name <- NULL
+  deleted_version <- NULL
+
+  local_mocked_bindings(
+    pin_versions = function(...) {
+      versions_called <<- TRUE
+      stop("should not be called")
+    },
+    pin_version_delete = function(board, name, version) {
+      deleted_name <<- name
+      deleted_version <<- version
+      invisible()
+    },
+    .package = "pins"
+  )
+
+  target_ver <- "20240101T000000Z-abc"
+  id <- new_rack_id_pins_connect("user_a", "my_board", version = target_ver)
+  result <- rack_delete(id, board)
+
+  expect_true(result)
+  expect_equal(deleted_name, "user_a/my_board")
+  expect_equal(deleted_version, target_ver)
+  expect_false(versions_called)
+})
+
+test_that("rack_delete on Connect errors for missing pin", {
+
+  board <- mock_board_connect()
+
+  record_error <- function() {
+    nonexistent <- paste0(board_a$account, "/nonexistent-pin")
+    tryCatch(
+      pins::pin_versions(board_a, nonexistent),
+      error = function(e) list(message = conditionMessage(e))
+    )
+  }
+  versions_err <- connect_fixture("pin_versions_error", record_error)
+
+  local_mocked_bindings(
+    pin_versions = function(...) stop(versions_err$message),
+    .package = "pins"
+  )
+
+  id <- new_rack_id_pins_connect("user_a", "nonexistent")
+
+  suppressWarnings(
+    expect_error(rack_delete(id, board), class = "rack_delete_no_versions")
+  )
+})
+
+test_that("rack_purge on Connect deletes entire pin", {
+
+  board <- mock_board_connect()
+
+  deleted_name <- NULL
+
+  local_mocked_bindings(
+    pin_delete = function(board, name) {
+      deleted_name <<- name
+      invisible()
+    },
+    .package = "pins"
+  )
+
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+  result <- rack_purge(id, board)
+
+  expect_true(result)
+  expect_equal(deleted_name, "user_a/my_board")
+})
