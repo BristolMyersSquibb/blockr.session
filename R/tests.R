@@ -19,38 +19,71 @@ mock_board_connect <- function(account = "user_a",
   )
 }
 
-.connect <- local({
+utils::globalVariables(
+  c(
+    "connect_test_recording",
+    "connect_test_substitutions"
+  )
+)
 
-  recording <- FALSE
-  subs <- NULL
+makeActiveBinding(
+  "connect_test_recording",
+  local(
+    {
+      state <- FALSE
 
-  env <- new.env(parent = emptyenv())
+      function(val) {
 
-  makeActiveBinding("recording", function(val) {
-    if (missing(val)) recording
-    else recording <<- val
-  }, env)
+        if (missing(val)) {
+          return(state)
+        }
 
-  makeActiveBinding("subs", function(val) {
-    if (missing(val)) subs
-    else subs <<- val
-  }, env)
+        stopifnot(is_bool(val))
+        state <<- val
+      }
+    }
+  ),
+  environment()
+)
 
-  env
-})
+makeActiveBinding(
+  "connect_test_substitutions",
+  local(
+    {
+      state <- character()
 
-connect_fixture <- function(name, record = NULL, cleanup = NULL) {
+      function(val) {
+
+        if (missing(val)) {
+          return(state)
+        }
+
+        stopifnot(
+          is.character(val),
+          length(unique(names(val))) == length(val)
+        )
+
+        state <<- val
+      }
+    }
+  ),
+  environment()
+)
+
+connect_fixture <- function(name, record = NULL, cleanup = NULL,
+                            envir = parent.frame()) {
 
   fixtures_dir <- testthat::test_path("_fixtures", "connect")
   json_name <- paste0(name, ".json")
   json_path <- file.path(fixtures_dir, json_name)
 
-  if (.connect$recording) {
+  if (connect_test_recording) {
 
     if (is.null(record)) {
-      blockr_abort(
-        "connect_fixture({name}) needs a record function in recording mode.",
-        class = "connect_fixture_no_recorder"
+      stop(
+        "connect_fixture(\"", name, "\") needs a `record` function in ",
+        "recording mode.",
+        call. = FALSE
       )
     }
 
@@ -62,18 +95,19 @@ connect_fixture <- function(name, record = NULL, cleanup = NULL) {
 
     json_text <- jsonlite::serializeJSON(val, pretty = TRUE)
 
-    subs <- .connect$subs
-
-    if (not_null(subs)) {
-      for (i in seq_along(subs)) {
-        json_text <- gsub(names(subs)[i], subs[i], json_text, fixed = TRUE)
-      }
+    for (i in seq_along(connect_test_substitutions)) {
+      json_text <- gsub(
+        names(connect_test_substitutions)[i],
+        connect_test_substitutions[i],
+        json_text,
+        fixed = TRUE
+      )
     }
 
     writeLines(json_text, json_path)
 
     if (!is.null(cleanup)) {
-      withr::defer(cleanup(), envir = parent.frame())
+      withr::defer(cleanup(), envir = envir)
     }
   }
 
@@ -85,22 +119,5 @@ connect_fixture <- function(name, record = NULL, cleanup = NULL) {
 
   jsonlite::unserializeJSON(
     readLines(json_path, warn = FALSE)
-  )
-}
-
-local_connect_options <- function(subs, .local_envir = parent.frame()) {
-
-  old_recording <- .connect$recording
-  old_subs <- .connect$subs
-
-  .connect$recording <- TRUE
-  .connect$subs <- subs
-
-  withr::defer(
-    {
-      .connect$recording <- old_recording
-      .connect$subs <- old_subs
-    },
-    envir = .local_envir
   )
 }

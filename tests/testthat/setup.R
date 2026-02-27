@@ -15,12 +15,12 @@ if (all(nzchar(Sys.getenv(connect_vars)))) {
 
       server_host <- gsub("^https?://", "", board_a$url)
 
-      subs <- set_names(
+      connect_test_substitutions <- set_names(
         c("user_a", "user_b", "connect.example.com"),
         c(board_a$account, board_b$account, server_host)
       )
 
-      local_connect_options(subs, .local_envir = testthat::teardown_env())
+      connect_test_recording <- TRUE
     },
     error = function(e) message(conditionMessage(e))
   )
