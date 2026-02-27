@@ -331,13 +331,11 @@ test_that("last_saved returns NULL for missing pin", {
 
 test_that("rack_list on Connect returns rack_id_pins_connect, filters tags", {
 
-  board <- fake_board_connect()
+  board <- mock_board_connect()
 
-  search_result <- fixture_df(
-    connect_fixture(
-      "pin_search",
-      function() pins::pin_search(board_a)
-    )
+  search_result <- connect_fixture(
+    "pin_search",
+    function() pins::pin_search(board_a)
   )
 
   tagged <- lgl_ply(search_result$meta, has_tags)
@@ -363,13 +361,11 @@ test_that("rack_list on Connect returns rack_id_pins_connect, filters tags", {
 
 test_that("rack_list on Connect splits user/name from qualified names", {
 
-  board <- fake_board_connect()
+  board <- mock_board_connect()
 
-  search_result <- fixture_df(
-    connect_fixture(
-      "pin_search",
-      function() pins::pin_search(board_a)
-    )
+  search_result <- connect_fixture(
+    "pin_search",
+    function() pins::pin_search(board_a)
   )
 
   tagged <- lgl_ply(search_result$meta, has_tags)
@@ -401,13 +397,11 @@ test_that("rack_list on Connect splits user/name from qualified names", {
 
 test_that("rack_info on Connect returns version data.frame", {
 
-  board <- fake_board_connect()
+  board <- mock_board_connect()
 
-  versions <- fixture_df(
-    connect_fixture(
-      "pin_versions_tagged",
-      function() pins::pin_versions(board_a, qualified_a_board)
-    )
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    function() pins::pin_versions(board_a, qualified_a_board)
   )
 
   local_mocked_bindings(
@@ -430,13 +424,11 @@ test_that("rack_info on Connect returns version data.frame", {
 
 test_that("rack_load on Connect uses qualified pin name", {
 
-  board <- fake_board_connect()
+  board <- mock_board_connect()
 
-  versions <- fixture_df(
-    connect_fixture(
-      "pin_versions_tagged",
-      function() pins::pin_versions(board_a, qualified_a_board)
-    )
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    function() pins::pin_versions(board_a, qualified_a_board)
   )
 
   latest_ver <- versions$version[1L]
@@ -482,7 +474,7 @@ test_that("rack_load on Connect uses qualified pin name", {
 
 test_that("rack_load on Connect errors for missing pin", {
 
-  board <- fake_board_connect()
+  board <- mock_board_connect()
 
   record_error <- function() {
 
@@ -512,13 +504,11 @@ test_that("rack_load on Connect errors for missing pin", {
 
 test_that("rack_load on Connect errors for pin without blockr tags", {
 
-  board <- fake_board_connect()
+  board <- mock_board_connect()
 
-  versions <- fixture_df(
-    connect_fixture(
-      "pin_versions_untagged",
-      function() pins::pin_versions(board_a, qualified_a_plain)
-    )
+  versions <- connect_fixture(
+    "pin_versions_untagged",
+    function() pins::pin_versions(board_a, qualified_a_plain)
   )
 
   untagged_ver <- versions$version[1L]
@@ -541,13 +531,11 @@ test_that("rack_load on Connect errors for pin without blockr tags", {
 
 test_that("rack_save on Connect returns rack_id_pins_connect", {
 
-  board <- fake_board_connect(account = "user_a")
+  board <- mock_board_connect(account = "user_a")
 
-  versions <- fixture_df(
-    connect_fixture(
-      "pin_versions_tagged",
-      function() pins::pin_versions(board_a, qualified_a_board)
-    )
+  versions <- connect_fixture(
+    "pin_versions_tagged",
+    function() pins::pin_versions(board_a, qualified_a_board)
   )
 
   local_mocked_bindings(

@@ -1,22 +1,138 @@
 {
-  "file": "file17d285ec621b3.json",
-  "file_size": 10,
-  "pin_hash": "d0f69eaa30717b2b",
-  "type": "file",
-  "title": "blockr-fixture-plain: a pinned .json file",
-  "description": null,
-  "tags": null,
-  "urls": null,
-  "created": "2026-02-27T08:38:57",
-  "api_version": 1,
-  "user": {
-    "format": "v1"
+  "type": "list",
+  "attributes": {
+    "names": {
+      "type": "character",
+      "attributes": {},
+      "value": ["file", "file_size", "pin_hash", "type", "title", "description", "tags", "urls", "created", "api_version", "user", "name", "local"]
+    },
+    "class": {
+      "type": "character",
+      "attributes": {},
+      "value": ["pins_meta"]
+    }
   },
-  "name": "user_a/blockr-fixture-plain",
-  "local": {
-    "dir": "~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/6baef472-653f-45e8-b59f-39bfe738877d/80",
-    "url": "https://connect.example.com/content/6baef472-653f-45e8-b59f-39bfe738877d/_rev80/",
-    "version": "80",
-    "content_id": "6baef472-653f-45e8-b59f-39bfe738877d"
-  }
+  "value": [
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["file2e39694173.json"]
+    },
+    {
+      "type": "integer",
+      "attributes": {
+        "class": {
+          "type": "character",
+          "attributes": {},
+          "value": ["fs_bytes", "numeric"]
+        }
+      },
+      "value": [10]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["d0f69eaa30717b2b"]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["file"]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["blockr-fixture-plain: a pinned .json file"]
+    },
+    {
+      "type": "NULL"
+    },
+    {
+      "type": "NULL"
+    },
+    {
+      "type": "NULL"
+    },
+    {
+      "type": "double",
+      "attributes": {
+        "class": {
+          "type": "character",
+          "attributes": {},
+          "value": ["POSIXct", "POSIXt"]
+        },
+        "tzone": {
+          "type": "character",
+          "attributes": {},
+          "value": [""]
+        }
+      },
+      "value": [1772182799]
+    },
+    {
+      "type": "integer",
+      "attributes": {},
+      "value": [1]
+    },
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["format"]
+        }
+      },
+      "value": [
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["v1"]
+        }
+      ]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["user_a/blockr-fixture-plain"]
+    },
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["dir", "url", "version", "content_id"]
+        }
+      },
+      "value": [
+        {
+          "type": "character",
+          "attributes": {
+            "class": {
+              "type": "character",
+              "attributes": {},
+              "value": ["fs_path", "character"]
+            }
+          },
+          "value": ["~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/04414d02-0bc3-47b5-a75f-de6665576d1f/100"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["https://connect.example.com/content/04414d02-0bc3-47b5-a75f-de6665576d1f/_rev100/"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["100"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["04414d02-0bc3-47b5-a75f-de6665576d1f"]
+        }
+      ]
+    }
+  ]
 }

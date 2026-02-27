@@ -1,20 +1,53 @@
-[
-  {
-    "version": "81",
-    "created": "2026-02-27T08:38:00",
-    "active": true,
-    "size": 19411
+{
+  "type": "list",
+  "attributes": {
+    "class": {
+      "type": "character",
+      "attributes": {},
+      "value": ["tbl_df", "tbl", "data.frame"]
+    },
+    "row.names": {
+      "type": "integer",
+      "attributes": {},
+      "value": [1, 2, 3]
+    },
+    "names": {
+      "type": "character",
+      "attributes": {},
+      "value": ["version", "created", "active", "size"]
+    }
   },
-  {
-    "version": "79",
-    "created": "2026-02-27T08:38:00",
-    "active": false,
-    "size": 19408
-  },
-  {
-    "version": "78",
-    "created": "2026-02-27T08:38:00",
-    "active": false,
-    "size": 19413
-  }
-]
+  "value": [
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["101", "99", "98"]
+    },
+    {
+      "type": "double",
+      "attributes": {
+        "class": {
+          "type": "character",
+          "attributes": {},
+          "value": ["POSIXct", "POSIXt"]
+        },
+        "tzone": {
+          "type": "character",
+          "attributes": {},
+          "value": [""]
+        }
+      },
+      "value": [1772182800, 1772182740, 1772182740]
+    },
+    {
+      "type": "logical",
+      "attributes": {},
+      "value": [true, false, false]
+    },
+    {
+      "type": "double",
+      "attributes": {},
+      "value": [19402, 19410, 19409]
+    }
+  ]
+}

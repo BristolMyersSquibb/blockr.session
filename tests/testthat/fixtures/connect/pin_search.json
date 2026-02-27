@@ -1,89 +1,483 @@
-[
-  {
-    "name": "user_a/blockr-fixture-board",
-    "type": "file",
-    "title": "blockr-fixture-board: a pinned .json file",
-    "created": "2026-02-27T08:38:58",
-    "file_size": 103,
-    "meta": {
-      "file": "file17d2811cb19b0.json",
-      "file_size": 103,
-      "pin_hash": "f7f4b74c84a86462",
-      "type": "file",
-      "title": "blockr-fixture-board: a pinned .json file",
-      "description": null,
-      "tags": "blockr-session",
-      "urls": null,
-      "created": "2026-02-27T08:38:58",
-      "api_version": 1,
-      "user": {
-        "format": "v1"
-      },
-      "name": "user_a/blockr-fixture-board",
-      "local": {
-        "dir": "~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/4480ffc1-e288-4682-96e7-29a4d61a2ff4/81",
-        "url": "https://connect.example.com/content/4480ffc1-e288-4682-96e7-29a4d61a2ff4/_rev81/",
-        "version": "81",
-        "content_id": "4480ffc1-e288-4682-96e7-29a4d61a2ff4"
-      }
+{
+  "type": "list",
+  "attributes": {
+    "class": {
+      "type": "character",
+      "attributes": {},
+      "value": ["tbl_df", "tbl", "data.frame"]
+    },
+    "row.names": {
+      "type": "integer",
+      "attributes": {},
+      "value": [1, 2, 3]
+    },
+    "names": {
+      "type": "character",
+      "attributes": {},
+      "value": ["name", "type", "title", "created", "file_size", "meta"]
     }
   },
-  {
-    "name": "user_a/blockr-fixture-plain",
-    "type": "file",
-    "title": "blockr-fixture-plain: a pinned .json file",
-    "created": "2026-02-27T08:38:57",
-    "file_size": 10,
-    "meta": {
-      "file": "file17d285ec621b3.json",
-      "file_size": 10,
-      "pin_hash": "d0f69eaa30717b2b",
-      "type": "file",
-      "title": "blockr-fixture-plain: a pinned .json file",
-      "description": null,
-      "tags": null,
-      "urls": null,
-      "created": "2026-02-27T08:38:57",
-      "api_version": 1,
-      "user": {
-        "format": "v1"
+  "value": [
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["user_a/blockr-fixture-board", "user_a/blockr-fixture-plain", "user_a/test-user_a"]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["file", "file", "file"]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["blockr-fixture-board: a pinned .json file", "blockr-fixture-plain: a pinned .json file", "test-user_a: a pinned .json file"]
+    },
+    {
+      "type": "double",
+      "attributes": {
+        "class": {
+          "type": "character",
+          "attributes": {},
+          "value": ["POSIXct", "POSIXt"]
+        }
       },
-      "name": "user_a/blockr-fixture-plain",
-      "local": {
-        "dir": "~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/6baef472-653f-45e8-b59f-39bfe738877d/80",
-        "url": "https://connect.example.com/content/6baef472-653f-45e8-b59f-39bfe738877d/_rev80/",
-        "version": "80",
-        "content_id": "6baef472-653f-45e8-b59f-39bfe738877d"
-      }
-    }
-  },
-  {
-    "name": "user_a/test-user_a",
-    "type": "file",
-    "title": "test-user_a: a pinned .json file",
-    "created": "2026-02-23T16:38:53",
-    "file_size": 1790,
-    "meta": {
-      "file": "file1e141dc66b.json",
-      "file_size": 1790,
-      "pin_hash": "e85ff2ee47271db9",
-      "type": "file",
-      "title": "test-user_a: a pinned .json file",
-      "description": null,
-      "tags": "blockr-session",
-      "urls": null,
-      "created": "2026-02-23T16:38:53",
-      "api_version": 1,
-      "user": {
-        "format": "v1"
+      "value": [1772182800, 1772182799, 1771864733]
+    },
+    {
+      "type": "double",
+      "attributes": {
+        "class": {
+          "type": "character",
+          "attributes": {},
+          "value": ["fs_bytes", "numeric"]
+        }
       },
-      "name": "user_a/test-user_a",
-      "local": {
-        "dir": "~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/e70879b5-87d1-4be1-bb5f-ffea32ab0af6/6",
-        "url": "https://connect.example.com/content/e70879b5-87d1-4be1-bb5f-ffea32ab0af6/_rev6/",
-        "version": "6",
-        "content_id": "e70879b5-87d1-4be1-bb5f-ffea32ab0af6"
-      }
+      "value": [103, 10, 1790]
+    },
+    {
+      "type": "list",
+      "attributes": {},
+      "value": [
+        {
+          "type": "list",
+          "attributes": {
+            "names": {
+              "type": "character",
+              "attributes": {},
+              "value": ["file", "file_size", "pin_hash", "type", "title", "description", "tags", "urls", "created", "api_version", "user", "name", "local"]
+            },
+            "class": {
+              "type": "character",
+              "attributes": {},
+              "value": ["pins_meta"]
+            }
+          },
+          "value": [
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["file2e338b554bd.json"]
+            },
+            {
+              "type": "integer",
+              "attributes": {
+                "class": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["fs_bytes", "numeric"]
+                }
+              },
+              "value": [103]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["f7f4b74c84a86462"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["file"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["blockr-fixture-board: a pinned .json file"]
+            },
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["blockr-session"]
+            },
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "double",
+              "attributes": {
+                "class": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["POSIXct", "POSIXt"]
+                },
+                "tzone": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": [""]
+                }
+              },
+              "value": [1772182800]
+            },
+            {
+              "type": "integer",
+              "attributes": {},
+              "value": [1]
+            },
+            {
+              "type": "list",
+              "attributes": {
+                "names": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["format"]
+                }
+              },
+              "value": [
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["v1"]
+                }
+              ]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["user_a/blockr-fixture-board"]
+            },
+            {
+              "type": "list",
+              "attributes": {
+                "names": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["dir", "url", "version", "content_id"]
+                }
+              },
+              "value": [
+                {
+                  "type": "character",
+                  "attributes": {
+                    "class": {
+                      "type": "character",
+                      "attributes": {},
+                      "value": ["fs_path", "character"]
+                    }
+                  },
+                  "value": ["~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/5dfb02c3-bc8f-45e8-a565-b2caf382296f/101"]
+                },
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["https://connect.example.com/content/5dfb02c3-bc8f-45e8-a565-b2caf382296f/_rev101/"]
+                },
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["101"]
+                },
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["5dfb02c3-bc8f-45e8-a565-b2caf382296f"]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "attributes": {
+            "names": {
+              "type": "character",
+              "attributes": {},
+              "value": ["file", "file_size", "pin_hash", "type", "title", "description", "tags", "urls", "created", "api_version", "user", "name", "local"]
+            },
+            "class": {
+              "type": "character",
+              "attributes": {},
+              "value": ["pins_meta"]
+            }
+          },
+          "value": [
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["file2e39694173.json"]
+            },
+            {
+              "type": "integer",
+              "attributes": {
+                "class": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["fs_bytes", "numeric"]
+                }
+              },
+              "value": [10]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["d0f69eaa30717b2b"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["file"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["blockr-fixture-plain: a pinned .json file"]
+            },
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "double",
+              "attributes": {
+                "class": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["POSIXct", "POSIXt"]
+                },
+                "tzone": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": [""]
+                }
+              },
+              "value": [1772182799]
+            },
+            {
+              "type": "integer",
+              "attributes": {},
+              "value": [1]
+            },
+            {
+              "type": "list",
+              "attributes": {
+                "names": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["format"]
+                }
+              },
+              "value": [
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["v1"]
+                }
+              ]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["user_a/blockr-fixture-plain"]
+            },
+            {
+              "type": "list",
+              "attributes": {
+                "names": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["dir", "url", "version", "content_id"]
+                }
+              },
+              "value": [
+                {
+                  "type": "character",
+                  "attributes": {
+                    "class": {
+                      "type": "character",
+                      "attributes": {},
+                      "value": ["fs_path", "character"]
+                    }
+                  },
+                  "value": ["~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/04414d02-0bc3-47b5-a75f-de6665576d1f/100"]
+                },
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["https://connect.example.com/content/04414d02-0bc3-47b5-a75f-de6665576d1f/_rev100/"]
+                },
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["100"]
+                },
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["04414d02-0bc3-47b5-a75f-de6665576d1f"]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "attributes": {
+            "names": {
+              "type": "character",
+              "attributes": {},
+              "value": ["file", "file_size", "pin_hash", "type", "title", "description", "tags", "urls", "created", "api_version", "user", "name", "local"]
+            },
+            "class": {
+              "type": "character",
+              "attributes": {},
+              "value": ["pins_meta"]
+            }
+          },
+          "value": [
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["file1e141dc66b.json"]
+            },
+            {
+              "type": "integer",
+              "attributes": {
+                "class": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["fs_bytes", "numeric"]
+                }
+              },
+              "value": [1790]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["e85ff2ee47271db9"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["file"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["test-user_a: a pinned .json file"]
+            },
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["blockr-session"]
+            },
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "double",
+              "attributes": {
+                "class": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["POSIXct", "POSIXt"]
+                },
+                "tzone": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": [""]
+                }
+              },
+              "value": [1771864733]
+            },
+            {
+              "type": "integer",
+              "attributes": {},
+              "value": [1]
+            },
+            {
+              "type": "list",
+              "attributes": {
+                "names": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["format"]
+                }
+              },
+              "value": [
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["v1"]
+                }
+              ]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["user_a/test-user_a"]
+            },
+            {
+              "type": "list",
+              "attributes": {
+                "names": {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["dir", "url", "version", "content_id"]
+                }
+              },
+              "value": [
+                {
+                  "type": "character",
+                  "attributes": {
+                    "class": {
+                      "type": "character",
+                      "attributes": {},
+                      "value": ["fs_path", "character"]
+                    }
+                  },
+                  "value": ["~/.cache/pins/connect-f0c31832708e4a10c60722d013177bac/e70879b5-87d1-4be1-bb5f-ffea32ab0af6/6"]
+                },
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["https://connect.example.com/content/e70879b5-87d1-4be1-bb5f-ffea32ab0af6/_rev6/"]
+                },
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["6"]
+                },
+                {
+                  "type": "character",
+                  "attributes": {},
+                  "value": ["e70879b5-87d1-4be1-bb5f-ffea32ab0af6"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
-  }
-]
+  ]
+}
