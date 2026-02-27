@@ -19,7 +19,6 @@ Imports:
     pins (>= 1.4.0),
     jsonlite,
     cli,
-    shinyjs,
     bsicons,
     htmltools,
     utils

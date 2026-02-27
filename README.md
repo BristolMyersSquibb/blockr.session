@@ -27,7 +27,7 @@ pak::pak("BristolMyersSquibb/blockr.session")
 
 ## Example
 
-We can start up an app that uses the `manage_session()` plugin by
+We can start up an app that uses the `manage_project()` plugin by
 swapping out the default `preserve_board()` plugin.
 
 ``` r

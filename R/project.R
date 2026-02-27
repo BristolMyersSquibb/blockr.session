@@ -11,5 +11,6 @@
 #' @export
 manage_project <- function(server = manage_project_server,
                            ui = manage_project_ui) {
+
   preserve_board(server, ui)
 }

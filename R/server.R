@@ -24,6 +24,11 @@ manage_project_server <- function(id, board, ...) {
         )
       )
 
+      # Tracks the last URL we set ourselves. Initialized from the pkg-level
+      # reload state so that post-session$reload() sessions can detect they
+      # already handled this URL and skip the restore.
+      prev_query <- reactiveVal(get_and_clear_reload_url())
+
       prev_board_name <- reactiveVal(NULL)
 
       observeEvent(
@@ -35,13 +40,13 @@ manage_project_server <- function(id, board, ...) {
 
             prev_board_name(name)
 
-            meta <- tryCatch(
-              pins::pin_meta(backend, name),
+            info <- tryCatch(
+              rack_info(rack_id_for_board(name, backend), backend),
               error = function(e) NULL
             )
 
-            if (!is.null(meta) && !is.null(meta$created)) {
-              save_status(format_time_ago(meta$created))
+            if (!is.null(info) && nrow(info) > 0L) {
+              save_status(format_time_ago(info$created[1L]))
             } else {
               save_status("Not saved")
             }
@@ -50,23 +55,90 @@ manage_project_server <- function(id, board, ...) {
       )
 
       observeEvent(
+        session$clientData$url_search,
+        {
+          query <- getQueryString(session)
+
+          if (is.null(query$board_name)) {
+            return()
+          }
+
+          id <- rack_id_from_input(
+            list(
+              name = query$board_name,
+              user = query$user,
+              version = query$version
+            ),
+            backend
+          )
+
+          new_url <- board_query_string(id, backend)
+
+          # Skip if the URL matches what we last set ourselves. This prevents
+          # re-triggering after our own updateQueryString calls and also handles
+          # the post-session$reload() case (prev_query is initialized from the
+          # pkg-level reload state that persists across session reloads).
+          if (identical(new_url, prev_query())) {
+            set_board_option_value("board_name", query$board_name, session)
+            return()
+          }
+
+          board_ser <- tryCatch(
+            rack_load(id, backend),
+            error = cnd_to_notif(type = "error")
+          )
+
+          if (is.null(board_ser)) return()
+
+          # Persist new_url to pkg-level state before restore so the reloaded
+          # session (after session$reload() triggered by restore_board) sees it.
+          set_reload_url(new_url)
+          prev_query(new_url)
+
+          restore_board(
+            board$board,
+            board_ser,
+            restore_result,
+            session = session
+          )
+
+          set_board_option_value("board_name", query$board_name, session)
+          updateQueryString(new_url, mode = "replace", session = session)
+        }
+      )
+
+      observeEvent(
         input$save_btn,
         {
           res <- tryCatch(
-            do.call(
-              upload_board,
-              c(list(backend, board), dot_args, list(session = session))
-            ),
+            {
+              data <- do.call(
+                serialize_board,
+                c(
+                  list(board$board, board$blocks, board$board_id),
+                  dot_args,
+                  list(session = session)
+                )
+              )
+              rack_save(backend, data, name = board_name())
+            },
             error = cnd_to_notif(type = "error")
           )
           if (not_null(res)) {
             notify(
-              paste("Successfully saved", res),
+              paste("Successfully saved", display_name(res)),
               type = "message",
               session = session
             )
             save_status("Just now")
             refresh_trigger(refresh_trigger() + 1)
+
+            new_url <- board_query_string(
+              rack_id_for_board(board_name(), backend),
+              backend
+            )
+            prev_query(new_url)
+            updateQueryString(new_url, mode = "replace", session = session)
           }
         }
       )
@@ -77,6 +149,8 @@ manage_project_server <- function(id, board, ...) {
           new <- clear_board(board$board)
           attr(new, "id") <- rand_names()
           restore_result(new)
+
+          updateQueryString("?", mode = "replace", session = session)
         }
       )
 
@@ -84,9 +158,12 @@ manage_project_server <- function(id, board, ...) {
         {
           refresh_trigger()
 
-          workflows <- list_workflows(backend)
+          workflows <- tryCatch(
+            rack_list(backend),
+            error = function(e) list()
+          )
 
-          if (nrow(workflows) == 0) {
+          if (length(workflows) == 0L) {
             return(
               tags$div(class = "blockr-workflow-empty", "No saved workflows")
             )
@@ -94,17 +171,22 @@ manage_project_server <- function(id, board, ...) {
 
           tagList(
             lapply(
-              seq_len(min(nrow(workflows), 4)),
+              seq_len(min(length(workflows), 4L)),
               function(i) {
-                info <- workflows[i, ]
+                wf <- workflows[[i]]
+                wf_time <- format_time_ago(last_saved(wf, backend))
                 tags$div(
                   class = "blockr-workflow-item",
-                  onclick = shiny_input_js(
+                  onclick = shiny_input_obj_js(
                     session$ns("load_workflow"),
-                    info$name
+                    name = display_name(wf),
+                    user = coal(wf$user, "")
                   ),
-                  tags$div(class = "blockr-workflow-name", info$name),
-                  tags$div(class = "blockr-workflow-meta", info$time_ago)
+                  tags$div(
+                    class = "blockr-workflow-name",
+                    display_name(wf)
+                  ),
+                  tags$div(class = "blockr-workflow-meta", wf_time)
                 )
               }
             )
@@ -121,22 +203,20 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$load_workflow,
         {
-          name <- input$load_workflow
-          versions <- pin_versions(name, backend)
+          id <- rack_id_from_input(input$load_workflow)
 
-          if (length(versions) == 0) {
+          board_ser <- tryCatch(
+            rack_load(id, backend),
+            error = cnd_to_notif(type = "error")
+          )
+
+          if (is.null(board_ser)) {
             return()
           }
 
-          meta <- pins::pin_meta(backend, name, versions[1])
-
-          board_ser <- download_board(
-            backend,
-            name,
-            versions[1],
-            meta$pin_hash,
-            meta$user$format
-          )
+          new_url <- board_query_string(id, backend)
+          set_reload_url(new_url)
+          prev_query(new_url)
 
           restore_board(
             board$board,
@@ -144,6 +224,8 @@ manage_project_server <- function(id, board, ...) {
             restore_result,
             session = session
           )
+
+          updateQueryString(new_url, mode = "replace", session = session)
         }
       )
 
@@ -151,14 +233,17 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$view_all_workflows,
         {
-          workflows <- list_workflows(backend)
+          workflows <- tryCatch(
+            rack_list(backend),
+            error = function(e) list()
+          )
 
-          if (nrow(workflows) == 0) {
+          if (length(workflows) == 0L) {
             notify("No saved workflows", type = "message")
             return()
           }
 
-          show_workflows_modal(workflows, session)
+          show_workflows_modal(workflows, backend, session)
         }
       )
 
@@ -167,16 +252,17 @@ manage_project_server <- function(id, board, ...) {
         {
           req(input$delete_workflows)
           deleted <- 0
-          for (name in input$delete_workflows) {
+          for (wf in input$delete_workflows) {
+            id <- rack_id_from_input(wf)
             res <- tryCatch(
               {
-                pins::pin_delete(backend, name)
+                rack_purge(id, backend)
                 deleted <- deleted + 1
                 TRUE
               },
               error = function(e) {
                 notify(
-                  paste("Failed to delete:", name),
+                  paste("Failed to delete:", display_name(id)),
                   type = "error"
                 )
                 FALSE
@@ -212,18 +298,18 @@ manage_project_server <- function(id, board, ...) {
             )
           }
 
+          id <- rack_id_for_board(name, backend)
+
           versions <- tryCatch(
-            pins::pin_versions(backend, name),
+            rack_info(id, backend),
             error = function(e) NULL
           )
 
-          if (is.null(versions) || nrow(versions) == 0) {
+          if (is.null(versions) || nrow(versions) == 0L) {
             return(
               tags$div(class = "blockr-history-empty", "No versions found")
             )
           }
-
-          versions <- versions[order(versions$created, decreasing = TRUE), ]
 
           items <- lapply(
             seq_len(min(nrow(versions), 4)),
@@ -241,6 +327,7 @@ manage_project_server <- function(id, board, ...) {
                   shiny_input_obj_js(
                     session$ns("load_version"),
                     name = name,
+                    user = coal(id$user, ""),
                     version = v$version
                   )
                 },
@@ -261,33 +348,30 @@ manage_project_server <- function(id, board, ...) {
         input$load_version,
         {
           req(input$load_version$name, input$load_version$version)
-          name <- input$load_version$name
-          version <- input$load_version$version
 
-          meta <- tryCatch(
-            pins::pin_meta(backend, name, version),
-            error = function(e) {
-              notify(e$message, type = "error")
-              NULL
-            }
+          id <- rack_id_from_input(input$load_version)
+
+          board_ser <- tryCatch(
+            rack_load(id, backend),
+            error = cnd_to_notif(type = "error")
           )
-          if (is.null(meta)) {
+
+          if (is.null(board_ser)) {
             return()
           }
 
-          board_ser <- download_board(
-            backend,
-            name,
-            version,
-            meta$pin_hash,
-            meta$user$format
-          )
+          new_url <- board_query_string(id, backend)
+          set_reload_url(new_url)
+          prev_query(new_url)
+
           restore_board(
             board$board,
             board_ser,
             restore_result,
             session = session
           )
+
+          updateQueryString(new_url, mode = "replace", session = session)
         }
       )
 
@@ -304,19 +388,19 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
+          id <- rack_id_for_board(name, backend)
+
           versions <- tryCatch(
-            pins::pin_versions(backend, name),
+            rack_info(id, backend),
             error = function(e) NULL
           )
 
-          if (is.null(versions) || nrow(versions) == 0) {
+          if (is.null(versions) || nrow(versions) == 0L) {
             notify("No versions found", type = "message")
             return()
           }
 
-          versions <- versions[order(versions$created, decreasing = TRUE), ]
-
-          show_versions_modal(name, versions, session)
+          show_versions_modal(id, versions, session)
         }
       )
 
@@ -325,12 +409,15 @@ manage_project_server <- function(id, board, ...) {
         input$delete_versions,
         {
           req(input$delete_versions)
-          name <- board_name()
+          id <- rack_id_for_board(board_name(), backend)
           deleted <- 0
           for (version in input$delete_versions) {
+            ver_id <- rack_id_from_input(
+              list(name = id$name, user = id$user, version = version)
+            )
             res <- tryCatch(
               {
-                pins::pin_version_delete(backend, name, version)
+                rack_delete(ver_id, backend)
                 deleted <- deleted + 1
                 TRUE
               },
@@ -395,10 +482,9 @@ shiny_input_js <- function(ns_id, value) {
 
 shiny_input_obj_js <- function(ns_id, ...) {
   props <- list(...)
-  obj_parts <- vapply(
+  obj_parts <- chr_ply(
     names(props),
-    function(k) sprintf("%s: '%s'", k, props[[k]]),
-    character(1)
+    function(k) sprintf("%s: '%s'", k, props[[k]])
   )
   sprintf(
     "Shiny.setInputValue('%s', {%s}, {priority: 'event'})",
@@ -414,33 +500,37 @@ hide_modal_js <- function(modal_id) {
   )
 }
 
-show_workflows_modal <- function(workflows, session) {
+show_workflows_modal <- function(workflows, backend, session) {
 
   rows <- lapply(
-    seq_len(nrow(workflows)),
+    seq_along(workflows),
     function(i) {
-      info <- workflows[i, ]
+      wf <- workflows[[i]]
+      wf_time <- format_time_ago(last_saved(wf, backend))
       tags$tr(
         class = "blockr-workflow-row",
-        `data-name` = tolower(info$name),
+        `data-name` = tolower(display_name(wf)),
+        `data-user` = coal(wf$user, ""),
         tags$td(
           class = "blockr-wf-checkbox",
           tags$input(
             type = "checkbox",
             class = "blockr-wf-select",
-            value = info$name
+            `data-name` = display_name(wf),
+            `data-user` = coal(wf$user, "")
           )
         ),
-        tags$td(class = "blockr-wf-name", info$name),
-        tags$td(class = "blockr-wf-time", info$time_ago),
+        tags$td(class = "blockr-wf-name", display_name(wf)),
+        tags$td(class = "blockr-wf-time", wf_time),
         tags$td(
           class = "blockr-wf-action",
           tags$button(
             class = "btn btn-sm btn-primary",
             onclick = paste0(
-              shiny_input_js(
+              shiny_input_obj_js(
                 session$ns("load_workflow"),
-                info$name
+                name = display_name(wf),
+                user = coal(wf$user, "")
               ),
               "\n",
               hide_modal_js(session$ns("workflows_modal"))
@@ -516,7 +606,7 @@ show_workflows_modal <- function(workflows, session) {
   )
 }
 
-show_versions_modal <- function(name, versions, session) {
+show_versions_modal <- function(id, versions, session) {
 
   rows <- lapply(
     seq_len(nrow(versions)),
@@ -551,7 +641,8 @@ show_versions_modal <- function(name, versions, session) {
               onclick = paste0(
                 shiny_input_obj_js(
                   session$ns("load_version"),
-                  name = name,
+                  name = id$name,
+                  user = coal(id$user, ""),
                   version = v$version
                 ),
                 "\n",
@@ -585,7 +676,7 @@ show_versions_modal <- function(name, versions, session) {
         class = "blockr-workflows-modal",
         tags$div(
           class = "blockr-wf-header",
-          tags$h5(paste("Version History:", name)),
+          tags$h5(paste("Version History:", display_name(id))),
           tags$div(
             class = "blockr-wf-header-actions",
             tags$button(
@@ -670,7 +761,10 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
     document.getElementById('%s').addEventListener('click', function() {
       var selected = [];
       document.querySelectorAll('.%s:checked').forEach(function(cb) {
-        selected.push(cb.value);
+        var item = cb.dataset && cb.dataset.name
+          ? {name: cb.dataset.name, user: cb.dataset.user || ''}
+          : cb.value;
+        selected.push(item);
       });
       if (selected.length > 0 &&
           confirm('Delete ' + selected.length + ' %s(s)?')) {
