@@ -24,6 +24,11 @@ manage_project_server <- function(id, board, ...) {
         )
       )
 
+      # Tracks the last URL we set ourselves. Initialized from the pkg-level
+      # reload state so that post-session$reload() sessions can detect they
+      # already handled this URL and skip the restore.
+      prev_query <- reactiveVal(get_and_clear_reload_url())
+
       prev_board_name <- reactiveVal(NULL)
 
       observeEvent(
@@ -53,15 +58,30 @@ manage_project_server <- function(id, board, ...) {
         session$clientData$url_search,
         {
           query <- getQueryString(session)
-          if (is.null(query$board_name)) return()
+
+          if (is.null(query$board_name)) {
+            return()
+          }
 
           id <- rack_id_from_input(
             list(
               name = query$board_name,
               user = query$user,
               version = query$version
-            )
+            ),
+            backend
           )
+
+          new_url <- board_query_string(id, backend)
+
+          # Skip if the URL matches what we last set ourselves. This prevents
+          # re-triggering after our own updateQueryString calls and also handles
+          # the post-session$reload() case (prev_query is initialized from the
+          # pkg-level reload state that persists across session reloads).
+          if (identical(new_url, prev_query())) {
+            set_board_option_value("board_name", query$board_name, session)
+            return()
+          }
 
           board_ser <- tryCatch(
             rack_load(id, backend),
@@ -69,6 +89,11 @@ manage_project_server <- function(id, board, ...) {
           )
 
           if (is.null(board_ser)) return()
+
+          # Persist new_url to pkg-level state before restore so the reloaded
+          # session (after session$reload() triggered by restore_board) sees it.
+          set_reload_url(new_url)
+          prev_query(new_url)
 
           restore_board(
             board$board,
@@ -78,15 +103,8 @@ manage_project_server <- function(id, board, ...) {
           )
 
           set_board_option_value("board_name", query$board_name, session)
-
-          updateQueryString(
-            board_query_string(id, backend),
-            mode = "replace",
-            session = session
-          )
-        },
-        once = TRUE,
-        ignoreNULL = FALSE
+          updateQueryString(new_url, mode = "replace", session = session)
+        }
       )
 
       observeEvent(
@@ -115,14 +133,12 @@ manage_project_server <- function(id, board, ...) {
             save_status("Just now")
             refresh_trigger(refresh_trigger() + 1)
 
-            updateQueryString(
-              board_query_string(
-                rack_id_for_board(board_name(), backend),
-                backend
-              ),
-              mode = "replace",
-              session = session
+            new_url <- board_query_string(
+              rack_id_for_board(board_name(), backend),
+              backend
             )
+            prev_query(new_url)
+            updateQueryString(new_url, mode = "replace", session = session)
           }
         }
       )
@@ -198,6 +214,10 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
+          new_url <- board_query_string(id, backend)
+          set_reload_url(new_url)
+          prev_query(new_url)
+
           restore_board(
             board$board,
             board_ser,
@@ -205,11 +225,7 @@ manage_project_server <- function(id, board, ...) {
             session = session
           )
 
-          updateQueryString(
-            board_query_string(id, backend),
-            mode = "replace",
-            session = session
-          )
+          updateQueryString(new_url, mode = "replace", session = session)
         }
       )
 
@@ -344,6 +360,10 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
+          new_url <- board_query_string(id, backend)
+          set_reload_url(new_url)
+          prev_query(new_url)
+
           restore_board(
             board$board,
             board_ser,
@@ -351,11 +371,7 @@ manage_project_server <- function(id, board, ...) {
             session = session
           )
 
-          updateQueryString(
-            board_query_string(id, backend),
-            mode = "replace",
-            session = session
-          )
+          updateQueryString(new_url, mode = "replace", session = session)
         }
       )
 

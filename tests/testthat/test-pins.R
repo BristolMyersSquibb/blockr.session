@@ -115,6 +115,17 @@ test_that("rack_id_from_input null version", {
   expect_null(id2$version)
 })
 
+test_that("rack_id_from_input connect backend infers user", {
+
+  backend <- mock_board_connect(account = "nicolas")
+  input <- list(name = "board", user = "")
+  id <- rack_id_from_input(input, backend)
+
+  expect_s3_class(id, "rack_id_pins_connect")
+  expect_equal(id$user, "nicolas")
+  expect_equal(id$name, "board")
+})
+
 test_that("rack_id_for_board local", {
 
   backend <- pins::board_temp()

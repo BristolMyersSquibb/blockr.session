@@ -36,7 +36,7 @@ new_rack_id_pins_connect <- function(user, name, version = NULL) {
   )
 }
 
-rack_id_from_input <- function(x) {
+rack_id_from_input <- function(x, backend = NULL) {
 
   version <- x$version
 
@@ -46,6 +46,8 @@ rack_id_from_input <- function(x) {
 
   if (not_null(x$user) && nzchar(x$user)) {
     new_rack_id_pins_connect(x$user, x$name, version)
+  } else if (inherits(backend, "pins_board_connect")) {
+    new_rack_id_pins_connect(backend$account, x$name, version)
   } else {
     new_rack_id_pins(x$name, version)
   }
@@ -276,8 +278,7 @@ rack_save.pins_board_connect <- function(backend, data, ..., name) {
     tags = blockr_session_tags()
   )
 
-  qualified <- paste0(backend$account, "/", name)
-  info <- rack_info(new_rack_id_pins(qualified), backend)
+  info <- rack_info(new_rack_id_pins_connect(backend$account, name), backend)
 
   new_rack_id_pins_connect(
     user = backend$account,

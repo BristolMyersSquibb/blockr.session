@@ -1,3 +1,15 @@
+.blockr_reload_state <- new.env(parent = emptyenv())
+
+get_and_clear_reload_url <- function() {
+  url <- .blockr_reload_state$url
+  .blockr_reload_state$url <- NULL
+  url
+}
+
+set_reload_url <- function(url) {
+  .blockr_reload_state$url <- url
+}
+
 get_session_backend <- function() {
 
   val <- blockr_option("session_mgmt_backend", pins::board_local)
