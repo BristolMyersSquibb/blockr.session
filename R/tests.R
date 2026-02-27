@@ -19,13 +19,33 @@ mock_board_connect <- function(account = "user_a",
   )
 }
 
+.connect <- local({
+
+  recording <- FALSE
+  subs <- NULL
+
+  env <- new.env(parent = emptyenv())
+
+  makeActiveBinding("recording", function(val) {
+    if (missing(val)) recording
+    else recording <<- val
+  }, env)
+
+  makeActiveBinding("subs", function(val) {
+    if (missing(val)) subs
+    else subs <<- val
+  }, env)
+
+  env
+})
+
 connect_fixture <- function(name, record = NULL, cleanup = NULL) {
 
   fixtures_dir <- testthat::test_path("_fixtures", "connect")
   json_name <- paste0(name, ".json")
   json_path <- file.path(fixtures_dir, json_name)
 
-  if (connect_recording()) {
+  if (.connect$recording) {
 
     if (is.null(record)) {
       blockr_abort(
@@ -42,7 +62,7 @@ connect_fixture <- function(name, record = NULL, cleanup = NULL) {
 
     json_text <- jsonlite::serializeJSON(val, pretty = TRUE)
 
-    subs <- connect_subs()
+    subs <- .connect$subs
 
     if (not_null(subs)) {
       for (i in seq_along(subs)) {
@@ -58,28 +78,29 @@ connect_fixture <- function(name, record = NULL, cleanup = NULL) {
   }
 
   if (!file.exists(json_path)) {
-    msg <- paste0(
-      "Connect fixture '", name, "' not found"
+    testthat::skip(
+      paste0("Connect fixture '", name, "' not found")
     )
-    testthat::skip(msg)
   }
 
-  jsonlite::unserializeJSON(readLines(json_path, warn = FALSE))
-}
-
-connect_recording <- function() {
-  isTRUE(getOption("blockr.connect_recording"))
-}
-
-connect_subs <- function() {
-  getOption("blockr.connect_fixture_subs")
+  jsonlite::unserializeJSON(
+    readLines(json_path, warn = FALSE)
+  )
 }
 
 local_connect_options <- function(subs, .local_envir = parent.frame()) {
 
-  withr::local_options(
-    blockr.connect_fixture_subs = subs,
-    blockr.connect_recording = TRUE,
-    .local_envir = .local_envir
+  old_recording <- .connect$recording
+  old_subs <- .connect$subs
+
+  .connect$recording <- TRUE
+  .connect$subs <- subs
+
+  withr::defer(
+    {
+      .connect$recording <- old_recording
+      .connect$subs <- old_subs
+    },
+    envir = .local_envir
   )
 }
