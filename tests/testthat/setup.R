@@ -13,14 +13,11 @@ if (all(nzchar(Sys.getenv(connect_vars)))) {
         key = Sys.getenv("CONNECT_API_KEY_B")
       )
 
-      server_url <- board_a$url
-      server_host <- gsub("^https?://", "", server_url)
+      server_host <- gsub("^https?://", "", board_a$url)
 
-      subs <- c(
-        setNames("user_a", board_a$account),
-        setNames("user_b", board_b$account),
-        setNames("https://connect.example.com", server_url),
-        setNames("connect.example.com", server_host)
+      subs <- set_names(
+        c("user_a", "user_b", "connect.example.com"),
+        c(board_a$account, board_b$account, server_host)
       )
 
       withr::local_options(
