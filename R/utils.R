@@ -134,6 +134,98 @@ normalize_js_input <- function(x) {
   list(as.list(x))
 }
 
+filter_traceback <- function(calls) {
+  blockr_pkgs <- c("blockr.core", "blockr.dock", "blockr.session",
+                    "blockr.extra", "blockr.dplyr", "blockr.md",
+                    "blockr.ggplot", "blockr.io", "blockr")
+  pattern <- paste0("^(", paste(blockr_pkgs, collapse = "|"), ")::")
+  keep <- grep(pattern, calls)
+  if (length(keep) == 0L) return(calls)
+  # include from first blockr frame to end
+  calls[seq(min(keep), length(calls))]
+}
+
+show_restore_error <- function(stage, name, version = NULL, error, traceback,
+                               board_json = NULL,
+                               session = shiny::getDefaultReactiveDomain()) {
+  error_msg <- conditionMessage(error)
+  tb_filtered <- filter_traceback(traceback)
+  tb_text <- paste(tb_filtered, collapse = "\n")
+
+  info <- paste0("Workflow: ", name)
+  if (!is.null(version)) {
+    info <- paste0(info, " (version: ", version, ")")
+  }
+
+  json_text <- if (!is.null(board_json)) {
+    jsonlite::toJSON(board_json, null = "null", auto_unbox = TRUE, pretty = TRUE)
+  }
+
+  report_parts <- c(
+    paste("Stage:", stage),
+    info,
+    paste("Error:", error_msg),
+    "",
+    "Traceback:",
+    tb_text
+  )
+  if (!is.null(json_text)) {
+    report_parts <- c(report_parts, "", "Workflow JSON:", json_text)
+  }
+  report <- paste(report_parts, collapse = "\n")
+
+  message("--- Workflow restore error ---\n",
+          paste(head(report_parts, 5), collapse = "\n"), "\n---")
+
+  dl_id <- paste0("dl_error_", sample.int(1e6, 1))
+  report_b64 <- gsub(
+    "\n", "", base64enc::base64encode(charToRaw(enc2utf8(report)))
+  )
+
+  shiny::showNotification(
+    shiny::tagList(
+      shiny::tags$div(
+        paste0("Failed to ", stage, " workflow: ", error_msg)
+      ),
+      shiny::tags$a(
+        id = dl_id,
+        href = paste0("data:text/plain;base64,", report_b64),
+        download = paste0("error-report-", name, ".txt"),
+        style = paste0(
+          "color: #842029; border-color: #842029; ",
+          "background: transparent; text-decoration: none;"
+        ),
+        class = "btn btn-sm mt-2",
+        shiny::icon("download"),
+        "Download error report"
+      )
+    ),
+    type = "error",
+    duration = NULL
+  )
+}
+
+safe_restore_board <- function(board, board_ser, restore_result,
+                               name, version = NULL, session) {
+  tb <- NULL
+  tryCatch(
+    {
+      withCallingHandlers(
+        restore_board(board, board_ser, restore_result, session = session),
+        error = function(e) {
+          tb <<- format(sys.calls())
+        }
+      )
+      TRUE
+    },
+    error = function(e) {
+      show_restore_error("restore", name, version, e, tb,
+                         board_json = board_ser, session = session)
+      FALSE
+    }
+  )
+}
+
 board_query_string <- function(id, backend) {
 
   params <- list(board_name = display_name(id))
