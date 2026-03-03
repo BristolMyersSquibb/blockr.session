@@ -104,6 +104,43 @@ sanitize_pin_name <- function(name) {
 
 blockr_session_tags <- function() "blockr-session"
 
+# Normalize JS array-of-objects input from Shiny.setInputValue.
+# Shiny may deliver as:
+#   - list of lists (ideal) -> use as-is
+#   - data.frame (multiple objects) -> split into list of rows
+#   - named atomic vector (single object) -> wrap in list
+#   - named atomic vector with repeated keys (multiple objects flattened)
+#     e.g. c(name="a", user="", name="b", user="") -> split into list of objects
+normalize_js_input <- function(x) {
+  if (is.data.frame(x)) {
+    return(lapply(seq_len(nrow(x)), function(i) as.list(x[i, ])))
+  }
+
+  if (!is.atomic(x)) {
+    return(x)
+  }
+
+  nms <- names(x)
+  if (is.null(nms)) {
+    return(list(as.list(x)))
+  }
+
+  unique_keys <- unique(nms)
+  n_keys <- length(unique_keys)
+  n_total <- length(x)
+
+  if (n_keys > 0 && n_total > n_keys && n_total %% n_keys == 0) {
+    n_objects <- n_total %/% n_keys
+    return(lapply(seq_len(n_objects), function(i) {
+      start <- (i - 1L) * n_keys + 1L
+      end <- i * n_keys
+      as.list(x[start:end])
+    }))
+  }
+
+  list(as.list(x))
+}
+
 board_query_string <- function(id, backend) {
 
   params <- list(board_name = display_name(id))
