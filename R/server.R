@@ -89,16 +89,15 @@ manage_project_server <- function(id, board, ...) {
 
           prev_query(new_url)
 
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            meta = list(url = new_url),
-            session = session
+          ok <- safe_restore_board(
+            board$board, board_ser, restore_result,
+            name = display_name(id), version = id$version, session = session
           )
 
-          set_board_option_value("board_name", query$board_name, session)
-          updateQueryString(new_url, mode = "replace", session = session)
+          if (ok) {
+            set_board_option_value("board_name", query$board_name, session)
+            updateQueryString(new_url, mode = "replace", session = session)
+          }
         }
       )
 
@@ -212,15 +211,14 @@ manage_project_server <- function(id, board, ...) {
           new_url <- board_query_string(id, backend)
           prev_query(new_url)
 
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            meta = list(url = new_url),
-            session = session
+          ok <- safe_restore_board(
+            board$board, board_ser, restore_result,
+            name = display_name(id), version = id$version, session = session
           )
 
-          updateQueryString(new_url, mode = "replace", session = session)
+          if (ok) {
+            updateQueryString(new_url, mode = "replace", session = session)
+          }
         }
       )
 
@@ -453,15 +451,14 @@ manage_project_server <- function(id, board, ...) {
           new_url <- board_query_string(id, backend)
           prev_query(new_url)
 
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            meta = list(url = new_url),
-            session = session
+          ok <- safe_restore_board(
+            board$board, board_ser, restore_result,
+            name = display_name(id), version = id$version, session = session
           )
 
-          updateQueryString(new_url, mode = "replace", session = session)
+          if (ok) {
+            updateQueryString(new_url, mode = "replace", session = session)
+          }
         }
       )
 
