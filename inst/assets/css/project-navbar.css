@@ -101,6 +101,9 @@
 
 /* Individual workflow item */
 .blockr-workflow-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
@@ -113,6 +116,11 @@
 
 .blockr-workflow-item.active {
   background-color: #f3f4f6;
+}
+
+.blockr-workflow-item-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .blockr-workflow-name {
@@ -136,6 +144,32 @@
 
 .blockr-workflow-empty:hover {
   background-color: transparent;
+}
+
+/* Open in new tab icon */
+.blockr-open-newtab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  color: #9ca3af;
+  opacity: 0;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+  text-decoration: none;
+}
+
+.blockr-workflow-item:hover .blockr-open-newtab,
+.blockr-workflow-row:hover .blockr-open-newtab {
+  opacity: 1;
+}
+
+.blockr-open-newtab:hover {
+  background-color: #e5e7eb;
+  color: #374151;
+  text-decoration: none;
 }
 
 /* Footer link */
@@ -431,7 +465,7 @@
 }
 
 .blockr-wf-table th:last-child {
-  width: 80px;
+  width: 120px;
 }
 
 .blockr-wf-checkbox {
@@ -470,6 +504,10 @@
 
 .blockr-wf-action {
   text-align: right;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .blockr-wf-action .btn {
