@@ -365,7 +365,15 @@
 .blockr-wf-header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.blockr-wf-header-actions .btn {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .blockr-wf-header h5 {
@@ -376,7 +384,7 @@
 }
 
 .blockr-wf-search {
-  width: 240px;
+  width: 180px;
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
@@ -468,6 +476,8 @@
   padding: 4px 12px;
   font-size: 0.8125rem;
 }
+
+.blockr-wf-upload-label { cursor: pointer; margin-bottom: 0; }
 
 /* Modal overrides */
 .modal-dialog:has(.blockr-workflows-modal) .modal-content {

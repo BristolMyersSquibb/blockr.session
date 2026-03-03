@@ -21,7 +21,9 @@ Imports:
     cli,
     bsicons,
     htmltools,
-    utils
+    utils,
+    zip,
+    base64enc
 Suggests:
     testthat (>= 3.0.0),
     blockr.dock,

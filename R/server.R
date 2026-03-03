@@ -251,8 +251,9 @@ manage_project_server <- function(id, board, ...) {
         input$delete_workflows,
         {
           req(input$delete_workflows)
+          sel <- normalize_js_input(input$delete_workflows)
           deleted <- 0
-          for (wf in input$delete_workflows) {
+          for (wf in sel) {
             id <- rack_id_from_input(wf)
             res <- tryCatch(
               {
@@ -273,6 +274,77 @@ manage_project_server <- function(id, board, ...) {
             notify(
               paste("Deleted", deleted, "workflow(s)"),
               type = "message"
+            )
+            removeModal()
+            refresh_trigger(refresh_trigger() + 1)
+          }
+        }
+      )
+
+      # DOWNLOAD workflows
+      observeEvent(
+        input$download_workflows,
+        {
+          req(input$download_workflows)
+          sel <- normalize_js_input(input$download_workflows)
+
+          result <- tryCatch(
+            prepare_download(sel, backend),
+            error = function(e) transfer_error(
+              paste("Download failed:", conditionMessage(e))
+            )
+          )
+
+          if (!result$ok) {
+            notify(result$error, type = "error", session = session)
+            return()
+          }
+
+          fname <- result$filename
+          url <- session$registerDataObj(
+            paste0("wf-", as.numeric(Sys.time())),
+            result$path,
+            function(data, req) {
+              shiny::httpResponse(
+                status = 200L,
+                content_type = result$content_type,
+                content = readBin(data, "raw", file.info(data)$size),
+                headers = list(
+                  "Content-Disposition" = paste0(
+                    'attachment; filename="', fname, '"'
+                  )
+                )
+              )
+            }
+          )
+          session$sendCustomMessage("blockr-download-file", url)
+        }
+      )
+
+      # UPLOAD workflows
+      observeEvent(
+        input$upload_workflows,
+        {
+          req(input$upload_workflows)
+          files <- normalize_js_input(input$upload_workflows)
+
+          result <- tryCatch(
+            upload_workflows(files, backend),
+            error = function(e) list(
+              ok = FALSE, uploaded = 0L,
+              errors = paste("Upload failed:", conditionMessage(e))
+            )
+          )
+
+          for (err in result$errors) {
+            notify(err, type = "error", session = session)
+          }
+
+          if (result$ok) {
+            notify(
+              paste("Uploaded", result$uploaded, "workflow(s)"),
+              type = "message",
+              session = session
             )
             removeModal()
             refresh_trigger(refresh_trigger() + 1)
@@ -548,7 +620,10 @@ show_workflows_modal <- function(workflows, backend, session) {
     delete_btn_id = session$ns("delete_workflows_btn"),
     delete_input_id = session$ns("delete_workflows"),
     item_type = "workflow",
-    search_id = session$ns("workflow_search")
+    search_id = session$ns("workflow_search"),
+    download_btn_id = session$ns("download_workflows_btn"),
+    download_input_id = session$ns("download_workflows"),
+    upload_input_id = session$ns("upload_workflows")
   )
 
   showModal(
@@ -570,6 +645,24 @@ show_workflows_modal <- function(workflows, backend, session) {
               class = "btn btn-sm btn-outline-danger",
               style = "display: none;",
               "Delete"
+            ),
+            tags$button(
+              id = session$ns("download_workflows_btn"),
+              class = "btn btn-sm btn-primary",
+              style = "display: none;",
+              "Download"
+            ),
+            tags$label(
+              class = "btn btn-sm btn-outline-primary blockr-wf-upload-label",
+              `for` = session$ns("upload_workflows"),
+              tags$input(
+                type = "file",
+                id = session$ns("upload_workflows"),
+                accept = ".json,.zip",
+                multiple = "multiple",
+                style = "display: none;"
+              ),
+              "Upload"
             ),
             tags$input(
               type = "text",
@@ -715,7 +808,10 @@ show_versions_modal <- function(id, versions, session) {
 
 modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
                            delete_input_id, item_type = "item",
-                           search_id = NULL, has_disabled = FALSE) {
+                           search_id = NULL, has_disabled = FALSE,
+                           download_btn_id = NULL,
+                           download_input_id = NULL,
+                           upload_input_id = NULL) {
 
   if (!is.null(search_id)) {
     search_block <- sprintf(
@@ -739,6 +835,78 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
     disabled_filter <- ""
   }
 
+  # Download button visibility in updateDeleteBtn
+  if (!is.null(download_btn_id)) {
+    download_visibility <- sprintf(
+      "var dlBtn = document.getElementById('%s');
+      dlBtn.style.display = selected.length > 0 ? '' : 'none';
+      dlBtn.textContent = 'Download (' + selected.length + ')';",
+      download_btn_id
+    )
+  } else {
+    download_visibility <- ""
+  }
+
+  # Download click handler
+  if (!is.null(download_btn_id) && !is.null(download_input_id)) {
+    download_block <- sprintf(
+      "document.getElementById('%s').addEventListener('click', function() {
+        var selected = [];
+        document.querySelectorAll('.%s:checked').forEach(function(cb) {
+          var item = cb.dataset && cb.dataset.name
+            ? {name: cb.dataset.name, user: cb.dataset.user || ''}
+            : cb.value;
+          selected.push(item);
+        });
+        if (selected.length > 0) {
+          Shiny.setInputValue('%s', selected, {priority: 'event'});
+        }
+      });",
+      download_btn_id,
+      checkbox_class,
+      download_input_id
+    )
+  } else {
+    download_block <- ""
+  }
+
+  # Upload file handler
+  if (!is.null(upload_input_id)) {
+    upload_block <- sprintf(
+      "document.getElementById('%s').addEventListener('change', function(e) {
+        var files = e.target.files;
+        if (!files || files.length === 0) return;
+        var fileData = [];
+        var pending = files.length;
+        Array.from(files).forEach(function(file) {
+          var reader = new FileReader();
+          reader.onload = function(ev) {
+            fileData.push({
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              datapath: ev.target.result
+            });
+            pending--;
+            if (pending === 0) {
+              Shiny.setInputValue('%s', fileData, {priority: 'event'});
+            }
+          };
+          if (file.name.endsWith('.zip')) {
+            reader.readAsDataURL(file);
+          } else {
+            reader.readAsText(file);
+          }
+        });
+        e.target.value = '';
+      });",
+      upload_input_id,
+      upload_input_id
+    )
+  } else {
+    upload_block <- ""
+  }
+
   sprintf(
     "%s
     document.getElementById('%s').addEventListener('change', function(e) {
@@ -752,6 +920,7 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
       var btn = document.getElementById('%s');
       btn.style.display = selected.length > 0 ? '' : 'none';
       btn.textContent = 'Delete (' + selected.length + ')';
+      %s
     }
 
     document.querySelectorAll('.%s').forEach(function(cb) {
@@ -772,6 +941,10 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
       }
     });
 
+    %s
+
+    %s
+
     updateDeleteBtn();",
     search_block,
     select_all_id,
@@ -779,10 +952,13 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
     disabled_filter,
     checkbox_class,
     delete_btn_id,
+    download_visibility,
     checkbox_class,
     delete_btn_id,
     checkbox_class,
     item_type,
-    delete_input_id
+    delete_input_id,
+    download_block,
+    upload_block
   )
 }
