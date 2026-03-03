@@ -95,15 +95,15 @@ manage_project_server <- function(id, board, ...) {
           set_reload_url(new_url)
           prev_query(new_url)
 
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            session = session
+          ok <- safe_restore_board(
+            board$board, board_ser, restore_result,
+            name = display_name(id), version = id$version, session = session
           )
 
-          set_board_option_value("board_name", query$board_name, session)
-          updateQueryString(new_url, mode = "replace", session = session)
+          if (ok) {
+            set_board_option_value("board_name", query$board_name, session)
+            updateQueryString(new_url, mode = "replace", session = session)
+          }
         }
       )
 
@@ -218,14 +218,14 @@ manage_project_server <- function(id, board, ...) {
           set_reload_url(new_url)
           prev_query(new_url)
 
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            session = session
+          ok <- safe_restore_board(
+            board$board, board_ser, restore_result,
+            name = display_name(id), version = id$version, session = session
           )
 
-          updateQueryString(new_url, mode = "replace", session = session)
+          if (ok) {
+            updateQueryString(new_url, mode = "replace", session = session)
+          }
         }
       )
 
@@ -436,14 +436,14 @@ manage_project_server <- function(id, board, ...) {
           set_reload_url(new_url)
           prev_query(new_url)
 
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            session = session
+          ok <- safe_restore_board(
+            board$board, board_ser, restore_result,
+            name = display_name(id), version = id$version, session = session
           )
 
-          updateQueryString(new_url, mode = "replace", session = session)
+          if (ok) {
+            updateQueryString(new_url, mode = "replace", session = session)
+          }
         }
       )
 
