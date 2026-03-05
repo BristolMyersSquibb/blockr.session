@@ -44,6 +44,10 @@ rack_id_from_input <- function(x, backend = NULL) {
     version <- NULL
   }
 
+  if (inherits(backend, "rack_board_folder")) {
+    return(new_rack_id_folder(x$name, version))
+  }
+
   if (not_null(x$user) && nzchar(x$user)) {
     new_rack_id_pins_connect(x$user, x$name, version)
   } else if (inherits(backend, "pins_board_connect")) {
@@ -54,7 +58,9 @@ rack_id_from_input <- function(x, backend = NULL) {
 }
 
 rack_id_for_board <- function(name, backend) {
-  if (inherits(backend, "pins_board_connect")) {
+  if (inherits(backend, "rack_board_folder")) {
+    new_rack_id_folder(name)
+  } else if (inherits(backend, "pins_board_connect")) {
     new_rack_id_pins_connect(backend$account, name)
   } else {
     new_rack_id_pins(name)

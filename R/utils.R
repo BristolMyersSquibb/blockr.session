@@ -18,11 +18,12 @@ get_session_backend <- function() {
     val <- val()
   }
 
-  if (!inherits(val, "pins_board")) {
+  if (!inherits(val, "pins_board") && !inherits(val, "rack_board_folder")) {
     blockr_abort(
       paste(
-        "The `session_mgmt_backend` option must be a pins board or a",
-        "function that returns one, got {class(val)[[1L]]}."
+        "The `session_mgmt_backend` option must be a pins board, a",
+        "rack_board_folder, or a function that returns one, got",
+        "{class(val)[[1L]]}."
       ),
       class = "invalid_session_backend"
     )

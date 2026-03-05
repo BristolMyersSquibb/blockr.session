@@ -24,7 +24,7 @@ transfer_error <- function(msg) {
 prepare_download <- function(sel, backend) {
   if (length(sel) == 1L) {
     id <- rack_id_from_input(sel[[1]], backend)
-    paths <- pins::pin_download(backend, pin_name(id))
+    paths <- rack_file(id, backend)
     json_path <- paths[grepl("\\.json$", paths)][1]
 
     if (is.na(json_path)) {
@@ -46,7 +46,7 @@ prepare_download <- function(sel, backend) {
     if (is.null(id)) next
 
     paths <- tryCatch(
-      pins::pin_download(backend, pin_name(id)),
+      rack_file(id, backend),
       error = function(e) NULL
     )
     if (is.null(paths)) next
@@ -119,9 +119,7 @@ upload_zip <- function(f, backend) {
   for (jf in json_files) {
     wf_name <- tools::file_path_sans_ext(basename(jf))
     tryCatch({
-      pins::pin_upload(backend, paths = jf, name = wf_name,
-                       versioned = TRUE, metadata = list(format = "v1"),
-                       tags = blockr_session_tags())
+      upload_single_json(backend, jf, wf_name)
       uploaded <- uploaded + 1L
     }, error = function(e) {
       errors <<- c(errors, paste("Failed to upload:", wf_name))
@@ -140,13 +138,25 @@ upload_json <- function(f, backend) {
   writeLines(f$datapath, tmp_path)
 
   tryCatch({
-    pins::pin_upload(backend, paths = tmp_path, name = wf_name,
-                     versioned = TRUE, metadata = list(format = "v1"),
-                     tags = blockr_session_tags())
+    upload_single_json(backend, tmp_path, wf_name)
     uploaded <- 1L
   }, error = function(e) {
     errors <- c(errors, paste("Failed to upload:", wf_name))
   })
 
   list(uploaded = uploaded, errors = errors)
+}
+
+upload_single_json <- function(backend, path, name) {
+  if (inherits(backend, "rack_board_folder")) {
+    data <- jsonlite::fromJSON(
+      path, simplifyDataFrame = FALSE, simplifyMatrix = FALSE
+    )
+    rack_save(backend, data, name = name)
+  } else {
+    pins::pin_upload(backend, paths = path, name = name,
+                     versioned = TRUE, metadata = list(format = "v1"),
+                     tags = blockr_session_tags())
+  }
+  invisible()
 }

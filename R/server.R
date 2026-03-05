@@ -221,7 +221,7 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$load_workflow,
         {
-          id <- rack_id_from_input(input$load_workflow)
+          id <- rack_id_from_input(input$load_workflow, backend)
 
           board_ser <- tryCatch(
             rack_load(id, backend),
@@ -272,7 +272,7 @@ manage_project_server <- function(id, board, ...) {
           sel <- normalize_js_input(input$delete_workflows)
           deleted <- 0
           for (wf in sel) {
-            id <- rack_id_from_input(wf)
+            id <- rack_id_from_input(wf, backend)
             res <- tryCatch(
               {
                 rack_purge(id, backend)
@@ -439,7 +439,7 @@ manage_project_server <- function(id, board, ...) {
         {
           req(input$load_version$name, input$load_version$version)
 
-          id <- rack_id_from_input(input$load_version)
+          id <- rack_id_from_input(input$load_version, backend)
 
           board_ser <- tryCatch(
             rack_load(id, backend),
@@ -503,7 +503,8 @@ manage_project_server <- function(id, board, ...) {
           deleted <- 0
           for (version in input$delete_versions) {
             ver_id <- rack_id_from_input(
-              list(name = id$name, user = id$user, version = version)
+              list(name = id$name, user = id$user, version = version),
+              backend
             )
             res <- tryCatch(
               {
