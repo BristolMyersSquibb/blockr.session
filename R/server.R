@@ -143,16 +143,6 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      observeEvent(
-        input$new_btn,
-        {
-          new <- clear_board(board$board)
-          attr(new, "id") <- rand_names()
-          restore_result(new)
-
-          updateQueryString("?", mode = "replace", session = session)
-        }
-      )
 
       output$recent_workflows <- renderUI(
         {

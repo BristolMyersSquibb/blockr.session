@@ -324,6 +324,7 @@
   font-weight: 500;
   color: #666;
   cursor: pointer;
+  text-decoration: none;
   transition: all 0.15s ease;
 }
 
@@ -331,6 +332,7 @@
   background: hsl(220, 3%, 97%);
   border-color: hsl(220, 3%, 85%);
   color: #333;
+  text-decoration: none;
 }
 
 .blockr-navbar-btn-new svg {

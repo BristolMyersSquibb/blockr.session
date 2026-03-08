@@ -211,14 +211,10 @@ manage_project_ui <- function(id, x) {
         )
       ),
       # New button
-      tags$button(
-        id = ns("new_btn"),
-        class = "blockr-navbar-btn-new shiny-bound-input",
-        type = "button",
-        onclick = sprintf(
-          "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-          ns("new_btn")
-        ),
+      tags$a(
+        class = "blockr-navbar-btn-new",
+        href = "#",
+        onclick = "window.open(window.location.origin + window.location.pathname, '_blank'); return false;",
         bsicons::bs_icon("plus"),
         "New"
       ),
