@@ -1201,8 +1201,7 @@ test_that("rack_shares on Connect returns permissions from API", {
   )
 
   record_perms <- function() {
-    guid <- content$guid
-    connect_api(board_a, "GET /content/{guid}/permissions")
+    connect_api(board_a, "GET /content/{content$guid}/permissions")
   }
   perms <- connect_fixture("content_permissions", record_perms)
 
