@@ -21,6 +21,7 @@ Imports:
     cli,
     bsicons,
     htmltools,
+    httr2,
     utils
 Suggests:
     testthat (>= 3.0.0),

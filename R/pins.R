@@ -401,7 +401,13 @@ rack_set_tags.rack_id_pins <- function(id, backend, tags, ...) {
 
 #' @export
 rack_acl.rack_id_pins <- function(id, backend, ...) {
-  "private"
+  NULL
+}
+
+#' @export
+rack_acl.rack_id_pins_connect <- function(id, backend, ...) {
+  content <- connect_content_find(backend, id$name)
+  content$access_type
 }
 
 #' @export
@@ -410,6 +416,17 @@ rack_set_acl.rack_id_pins <- function(id, backend, acl_type, ...) {
     "Setting ACL is not supported by this backend.",
     class = "rack_not_supported"
   )
+}
+
+#' @export
+rack_set_acl.rack_id_pins_connect <- function(id, backend, acl_type, ...) {
+  content <- connect_content_find(backend, id$name)
+  connect_api(
+    backend, "PATCH",
+    paste0("/content/", content$guid),
+    body = list(access_type = acl_type)
+  )
+  invisible(id)
 }
 
 # rack_share ---------------------------------------------------------------
@@ -423,6 +440,21 @@ rack_share.rack_id_pins <- function(id, backend, with_sub, ...) {
 }
 
 #' @export
+rack_share.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
+  content <- connect_content_find(backend, id$name)
+  connect_api(
+    backend, "POST",
+    paste0("/content/", content$guid, "/permissions"),
+    body = list(
+      principal_guid = with_sub,
+      principal_type = "user",
+      role = "viewer"
+    )
+  )
+  invisible(id)
+}
+
+#' @export
 rack_unshare.rack_id_pins <- function(id, backend, with_sub, ...) {
   blockr_abort(
     "Unsharing is not supported by this backend.",
@@ -431,10 +463,43 @@ rack_unshare.rack_id_pins <- function(id, backend, with_sub, ...) {
 }
 
 #' @export
+rack_unshare.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
+  content <- connect_content_find(backend, id$name)
+  perms <- connect_api(
+    backend, "GET",
+    paste0("/content/", content$guid, "/permissions")
+  )
+
+  match <- Filter(function(p) p$principal_guid == with_sub, perms)
+
+  if (length(match) == 0L) {
+    blockr_abort(
+      "No permission found for principal {with_sub}.",
+      class = "rack_permission_not_found"
+    )
+  }
+
+  connect_api(
+    backend, "DELETE",
+    paste0("/content/", content$guid, "/permissions/", match[[1L]]$id)
+  )
+  invisible(id)
+}
+
+#' @export
 rack_shares.rack_id_pins <- function(id, backend, ...) {
   blockr_abort(
     "Listing shares is not supported by this backend.",
     class = "rack_not_supported"
+  )
+}
+
+#' @export
+rack_shares.rack_id_pins_connect <- function(id, backend, ...) {
+  content <- connect_content_find(backend, id$name)
+  connect_api(
+    backend, "GET",
+    paste0("/content/", content$guid, "/permissions")
   )
 }
 
@@ -446,4 +511,13 @@ rack_find_users.pins_board <- function(backend, query, ...) {
     "User discovery is not supported by this backend.",
     class = "rack_not_supported"
   )
+}
+
+#' @export
+rack_find_users.pins_board_connect <- function(backend, query, ...) {
+  result <- connect_api(
+    backend, "GET",
+    paste0("/users?prefix=", utils::URLencode(query, reserved = TRUE))
+  )
+  result$results
 }

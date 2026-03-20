@@ -1007,7 +1007,7 @@ test_that("rack_tags round-trip strips session marker from written tags", {
 
 # rack_acl -----------------------------------------------------------------
 
-test_that("rack_acl on pins always returns private", {
+test_that("rack_acl on local pins returns NULL", {
 
   backend <- pins::board_temp(versioned = TRUE)
   data <- list(blocks = list())
@@ -1015,7 +1015,7 @@ test_that("rack_acl on pins always returns private", {
   rack_save(backend, data, name = "acl-test")
 
   acl <- rack_acl(new_rack_id_pins("acl-test"), backend)
-  expect_equal(acl, "private")
+  expect_null(acl)
 })
 
 # Unsupported operations ---------------------------------------------------
@@ -1128,4 +1128,154 @@ test_that("tag round-trip: save, tag, filter, load", {
 
   result <- rack_load(filtered[[1L]], backend)
   expect_equal(result$blocks$a, 1L)
+})
+
+# Connect: rack_acl -------------------------------------------------------
+
+test_that("rack_acl on Connect returns access_type from API", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) {
+      list(guid = "abc-123", access_type = "logged_in")
+    }
+  )
+
+  acl <- rack_acl(id, board)
+  expect_equal(acl, "logged_in")
+})
+
+test_that("rack_set_acl on Connect calls API with access_type", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  patched_body <- NULL
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) {
+      list(guid = "abc-123")
+    },
+    connect_api = function(board, method, path, body = NULL) {
+      patched_body <<- body
+      list()
+    }
+  )
+
+  rack_set_acl(id, board, "all")
+  expect_equal(patched_body$access_type, "all")
+})
+
+# Connect: rack_share / rack_unshare / rack_shares -------------------------
+
+test_that("rack_share on Connect posts permission", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  posted_body <- NULL
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) {
+      list(guid = "abc-123")
+    },
+    connect_api = function(board, method, path, body = NULL) {
+      posted_body <<- body
+      list()
+    }
+  )
+
+  rack_share(id, board, "user-guid-456")
+  expect_equal(posted_body$principal_guid, "user-guid-456")
+  expect_equal(posted_body$principal_type, "user")
+  expect_equal(posted_body$role, "viewer")
+})
+
+test_that("rack_unshare on Connect deletes permission", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  deleted_path <- NULL
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) {
+      list(guid = "abc-123")
+    },
+    connect_api = function(board, method, path, body = NULL) {
+      if (method == "GET") {
+        return(list(
+          list(id = 99, principal_guid = "user-guid-456", role = "viewer")
+        ))
+      }
+      deleted_path <<- path
+      list()
+    }
+  )
+
+  rack_unshare(id, board, "user-guid-456")
+  expect_equal(deleted_path, "/content/abc-123/permissions/99")
+})
+
+test_that("rack_unshare on Connect errors for unknown principal", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) {
+      list(guid = "abc-123")
+    },
+    connect_api = function(board, method, path, body = NULL) {
+      list()
+    }
+  )
+
+  expect_error(
+    rack_unshare(id, board, "nonexistent"),
+    class = "rack_permission_not_found"
+  )
+})
+
+test_that("rack_shares on Connect returns permissions list", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) {
+      list(guid = "abc-123")
+    },
+    connect_api = function(board, method, path, body = NULL) {
+      list(
+        list(id = 1, principal_guid = "guid-a", role = "viewer"),
+        list(id = 2, principal_guid = "guid-b", role = "owner")
+      )
+    }
+  )
+
+  perms <- rack_shares(id, board)
+  expect_length(perms, 2L)
+})
+
+# Connect: rack_find_users ------------------------------------------------
+
+test_that("rack_find_users on Connect returns user list", {
+
+  board <- mock_board_connect()
+
+  local_mocked_bindings(
+    connect_api = function(board, method, path, body = NULL) {
+      list(results = list(
+        list(guid = "guid-a", username = "alice"),
+        list(guid = "guid-b", username = "alison")
+      ))
+    }
+  )
+
+  users <- rack_find_users(board, "ali")
+  expect_length(users, 2L)
+  expect_equal(users[[1L]]$username, "alice")
 })
