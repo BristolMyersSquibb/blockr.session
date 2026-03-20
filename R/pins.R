@@ -421,11 +421,8 @@ rack_set_acl.rack_id_pins <- function(id, backend, acl_type, ...) {
 #' @export
 rack_set_acl.rack_id_pins_connect <- function(id, backend, acl_type, ...) {
   content <- connect_content_find(backend, id$name)
-  connect_api(
-    backend, "PATCH",
-    paste0("/content/", content$guid),
-    body = list(access_type = acl_type)
-  )
+  guid <- content$guid
+  connect_api(backend, "PATCH /content/{guid}", body = list(access_type = acl_type))
   invisible(id)
 }
 
@@ -442,9 +439,9 @@ rack_share.rack_id_pins <- function(id, backend, with_sub, ...) {
 #' @export
 rack_share.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
   content <- connect_content_find(backend, id$name)
+  guid <- content$guid
   connect_api(
-    backend, "POST",
-    paste0("/content/", content$guid, "/permissions"),
+    backend, "POST /content/{guid}/permissions",
     body = list(
       principal_guid = with_sub,
       principal_type = "user",
@@ -465,10 +462,8 @@ rack_unshare.rack_id_pins <- function(id, backend, with_sub, ...) {
 #' @export
 rack_unshare.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
   content <- connect_content_find(backend, id$name)
-  perms <- connect_api(
-    backend, "GET",
-    paste0("/content/", content$guid, "/permissions")
-  )
+  guid <- content$guid
+  perms <- connect_api(backend, "GET /content/{guid}/permissions")
 
   match <- Filter(function(p) p$principal_guid == with_sub, perms)
 
@@ -479,10 +474,8 @@ rack_unshare.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
     )
   }
 
-  connect_api(
-    backend, "DELETE",
-    paste0("/content/", content$guid, "/permissions/", match[[1L]]$id)
-  )
+  perm_id <- match[[1L]]$id
+  connect_api(backend, "DELETE /content/{guid}/permissions/{perm_id}")
   invisible(id)
 }
 
@@ -497,10 +490,8 @@ rack_shares.rack_id_pins <- function(id, backend, ...) {
 #' @export
 rack_shares.rack_id_pins_connect <- function(id, backend, ...) {
   content <- connect_content_find(backend, id$name)
-  connect_api(
-    backend, "GET",
-    paste0("/content/", content$guid, "/permissions")
-  )
+  guid <- content$guid
+  connect_api(backend, "GET /content/{guid}/permissions")
 }
 
 # rack_find_users ----------------------------------------------------------
@@ -515,9 +506,6 @@ rack_find_users.pins_board <- function(backend, query, ...) {
 
 #' @export
 rack_find_users.pins_board_connect <- function(backend, query, ...) {
-  result <- connect_api(
-    backend, "GET",
-    paste0("/users?prefix=", utils::URLencode(query, reserved = TRUE))
-  )
+  result <- connect_api(backend, "GET /users", query = list(prefix = query))
   result$results
 }

@@ -45,22 +45,22 @@
             {
               "type": "character",
               "attributes": {},
-              "value": ["viewer"]
+              "value": ["administrator"]
             },
             {
               "type": "character",
               "attributes": {},
-              "value": ["2026-02-16T21:25:53Z"]
+              "value": ["2026-02-13T15:01:11Z"]
             },
             {
               "type": "character",
               "attributes": {},
-              "value": ["2026-02-27T14:33:03Z"]
+              "value": ["2026-03-09T07:56:06Z"]
             },
             {
               "type": "character",
               "attributes": {},
-              "value": ["2026-02-27T21:10:26Z"]
+              "value": ["2026-03-20T20:26:09Z"]
             },
             {
               "type": "logical",
@@ -78,73 +78,6 @@
               "value": ["00000000-0000-4000-a000-000000000001"]
             }
           ]
-        },
-        {
-          "type": "list",
-          "attributes": {
-            "names": {
-              "type": "character",
-              "attributes": {},
-              "value": ["email", "username", "first_name", "last_name", "user_role", "created_time", "updated_time", "active_time", "confirmed", "locked", "guid"]
-            }
-          },
-          "value": [
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["user_b@example.com"]
-            },
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["user_b"]
-            },
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["Bob"]
-            },
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["Test"]
-            },
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["viewer"]
-            },
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["2026-02-25T15:36:45Z"]
-            },
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["2026-02-27T10:37:20Z"]
-            },
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["2026-03-20T19:51:20Z"]
-            },
-            {
-              "type": "logical",
-              "attributes": {},
-              "value": [true]
-            },
-            {
-              "type": "logical",
-              "attributes": {},
-              "value": [false]
-            },
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["00000000-0000-4000-a000-000000000002"]
-            }
-          ]
         }
       ]
     },
@@ -156,7 +89,7 @@
     {
       "type": "integer",
       "attributes": {},
-      "value": [6]
+      "value": [1]
     }
   ]
 }

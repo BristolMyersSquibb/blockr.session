@@ -32,8 +32,8 @@ if (all(nzchar(connect_vars))) {
 
     # Query authenticated user details to substitute GUIDs and emails
     tryCatch({
-      me_a <- connect_api(board_a, "GET", "/user")
-      me_b <- connect_api(board_b, "GET", "/user")
+      me_a <- connect_api(board_a, "GET /user")
+      me_b <- connect_api(board_b, "GET /user")
 
       if (not_null(me_a$guid)) {
         subs[me_a$guid] <- "00000000-0000-4000-a000-000000000001"

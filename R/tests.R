@@ -95,13 +95,11 @@ connect_fixture <- function(name, record = NULL, cleanup = NULL,
 
     json_text <- jsonlite::serializeJSON(val, pretty = TRUE)
 
-    for (i in seq_along(connect_test_substitutions)) {
-      json_text <- gsub(
-        names(connect_test_substitutions)[i],
-        connect_test_substitutions[i],
-        json_text,
-        fixed = TRUE
-      )
+    subs <- connect_test_substitutions
+    ord <- order(nchar(names(subs)), decreasing = TRUE)
+
+    for (i in ord) {
+      json_text <- gsub(names(subs)[i], subs[i], json_text, fixed = TRUE)
     }
 
     writeLines(json_text, json_path)

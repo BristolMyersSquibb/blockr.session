@@ -1139,7 +1139,9 @@ test_that("rack_acl on Connect returns access_type from API", {
   record_content <- function() {
     rack_save(board_a, blockr_test_session, name = "blockr-fixture-acl")
     qualified <- paste0(board_a$account, "/blockr-fixture-acl")
-    content <- connect_api(board_a, "GET", "/content?name=blockr-fixture-acl")
+    content <- connect_api(
+      board_a, "GET /content", query = list(name = "blockr-fixture-acl")
+    )
     content[[1L]]
   }
   content <- connect_fixture(
@@ -1168,7 +1170,8 @@ test_that("rack_set_acl on Connect calls API with access_type", {
     connect_content_find = function(board, name) {
       list(guid = "abc-123")
     },
-    connect_api = function(board, method, path, body = NULL) {
+    connect_api = function(board, route, ..., body = NULL, query = NULL,
+                           env = parent.frame()) {
       patched_body <<- body
       list()
     }
@@ -1187,7 +1190,7 @@ test_that("rack_shares on Connect returns permissions from API", {
   record_content <- function() {
     rack_save(board_a, blockr_test_session, name = "blockr-fixture-sharing")
     content <- connect_api(
-      board_a, "GET", "/content?name=blockr-fixture-sharing"
+      board_a, "GET /content", query = list(name = "blockr-fixture-sharing")
     )
     content[[1L]]
   }
@@ -1198,16 +1201,14 @@ test_that("rack_shares on Connect returns permissions from API", {
   )
 
   record_perms <- function() {
-    connect_api(
-      board_a, "GET",
-      paste0("/content/", content$guid, "/permissions")
-    )
+    guid <- content$guid
+    connect_api(board_a, "GET /content/{guid}/permissions")
   }
   perms <- connect_fixture("content_permissions", record_perms)
 
   local_mocked_bindings(
     connect_content_find = function(board, name) content,
-    connect_api = function(board, method, path, body = NULL) perms
+    connect_api = function(board, route, ...) perms
   )
 
   id <- new_rack_id_pins_connect("user_a", "my_board")
@@ -1226,7 +1227,8 @@ test_that("rack_share on Connect posts permission", {
     connect_content_find = function(board, name) {
       list(guid = "abc-123")
     },
-    connect_api = function(board, method, path, body = NULL) {
+    connect_api = function(board, route, ..., body = NULL, query = NULL,
+                           env = parent.frame()) {
       posted_body <<- body
       list()
     }
@@ -1243,25 +1245,27 @@ test_that("rack_unshare on Connect deletes permission", {
   board <- mock_board_connect()
   id <- new_rack_id_pins_connect("user_a", "my_board")
 
-  deleted_path <- NULL
+  deleted_route <- NULL
 
   local_mocked_bindings(
     connect_content_find = function(board, name) {
       list(guid = "abc-123")
     },
-    connect_api = function(board, method, path, body = NULL) {
-      if (method == "GET") {
+    connect_api = function(board, route, ..., body = NULL, query = NULL,
+                           env = parent.frame()) {
+      resolved <- glue::glue(route, .envir = env)
+      if (grepl("^GET", resolved)) {
         return(list(
           list(id = 99, principal_guid = "user-guid-456", role = "viewer")
         ))
       }
-      deleted_path <<- path
+      deleted_route <<- resolved
       list()
     }
   )
 
   rack_unshare(id, board, "user-guid-456")
-  expect_equal(deleted_path, "/content/abc-123/permissions/99")
+  expect_equal(deleted_route, "DELETE /content/abc-123/permissions/99")
 })
 
 test_that("rack_unshare on Connect errors for unknown principal", {
@@ -1273,7 +1277,7 @@ test_that("rack_unshare on Connect errors for unknown principal", {
     connect_content_find = function(board, name) {
       list(guid = "abc-123")
     },
-    connect_api = function(board, method, path, body = NULL) {
+    connect_api = function(board, route, ...) {
       list()
     }
   )
@@ -1291,12 +1295,15 @@ test_that("rack_find_users on Connect returns users from API", {
   board <- mock_board_connect()
 
   record_users <- function() {
-    connect_api(board_a, "GET", "/users?page_size=2")
+    connect_api(
+      board_a, "GET /users",
+      query = list(prefix = board_a$account)
+    )
   }
   user_response <- connect_fixture("user_search", record_users)
 
   local_mocked_bindings(
-    connect_api = function(board, method, path, body = NULL) {
+    connect_api = function(board, route, ...) {
       user_response
     }
   )
