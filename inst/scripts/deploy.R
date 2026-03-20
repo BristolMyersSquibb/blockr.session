@@ -1,12 +1,11 @@
-deploy_to_connect <- function(app, name,
-                              pkgs = c("blockr.core", "blockr.session")) {
+deploy_to_connect <- function(app, name, pkgs = character()) {
 
   if (length(pkgs)) {
     lib <- withr::local_tempdir()
     withr::local_libpaths(lib, "prefix")
   }
 
-  for (pkg in paste0("BristolMyersSquibb/", pkgs)) {
+  for (pkg in pkgs) {
     remotes::install_github(pkg, upgrade = FALSE, lib = lib)
   }
 
@@ -36,10 +35,10 @@ deploy_to_connect(
   app = "app-full.R",
   name = "blockr-project",
   pkgs = c(
-    "blockr.core",
-    "blockr.dock",
-    "blockr.dag",
-    "blockr",
-    "blockr.session@14-user"
+    "BristolMyersSquibb/blockr.core",
+    "BristolMyersSquibb/blockr.dock",
+    "BristolMyersSquibb/blockr.dag",
+    "BristolMyersSquibb/blockr.session#17",
+    "cynkra/g6R"
   )
 )

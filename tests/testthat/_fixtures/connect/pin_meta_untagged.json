@@ -1,0 +1,138 @@
+{
+  "type": "list",
+  "attributes": {
+    "names": {
+      "type": "character",
+      "attributes": {},
+      "value": ["file", "file_size", "pin_hash", "type", "title", "description", "tags", "urls", "created", "api_version", "user", "name", "local"]
+    },
+    "class": {
+      "type": "character",
+      "attributes": {},
+      "value": ["pins_meta"]
+    }
+  },
+  "value": [
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["file12fce6090a0b9.json"]
+    },
+    {
+      "type": "integer",
+      "attributes": {
+        "class": {
+          "type": "character",
+          "attributes": {},
+          "value": ["fs_bytes", "numeric"]
+        }
+      },
+      "value": [10]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["d0f69eaa30717b2b"]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["file"]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["blockr-fixture-plain: a pinned .json file"]
+    },
+    {
+      "type": "NULL"
+    },
+    {
+      "type": "NULL"
+    },
+    {
+      "type": "NULL"
+    },
+    {
+      "type": "double",
+      "attributes": {
+        "class": {
+          "type": "character",
+          "attributes": {},
+          "value": ["POSIXct", "POSIXt"]
+        },
+        "tzone": {
+          "type": "character",
+          "attributes": {},
+          "value": [""]
+        }
+      },
+      "value": [1772227042]
+    },
+    {
+      "type": "integer",
+      "attributes": {},
+      "value": [1]
+    },
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["format"]
+        }
+      },
+      "value": [
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["v1"]
+        }
+      ]
+    },
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["user_a/blockr-fixture-plain"]
+    },
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["dir", "url", "version", "content_id"]
+        }
+      },
+      "value": [
+        {
+          "type": "character",
+          "attributes": {
+            "class": {
+              "type": "character",
+              "attributes": {},
+              "value": ["fs_path", "character"]
+            }
+          },
+          "value": ["~/.cache/pins/connect-e1eef568ecb025fd2f202366457db4f2/3c19a809-5e30-4808-9892-5d25c3f9691a/396"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["https://connect.example.com/content/3c19a809-5e30-4808-9892-5d25c3f9691a/_rev396/"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["396"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["3c19a809-5e30-4808-9892-5d25c3f9691a"]
+        }
+      ]
+    }
+  ]
+}

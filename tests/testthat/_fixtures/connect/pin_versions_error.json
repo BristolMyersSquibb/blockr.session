@@ -1,0 +1,17 @@
+{
+  "type": "list",
+  "attributes": {
+    "names": {
+      "type": "character",
+      "attributes": {},
+      "value": ["message"]
+    }
+  },
+  "value": [
+    {
+      "type": "character",
+      "attributes": {},
+      "value": ["Can't find pin called \"nonexistent-pin\"\ni Use `pin_list()` to see all available pins in this board"]
+    }
+  ]
+}
