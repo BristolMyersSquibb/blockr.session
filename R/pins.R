@@ -420,7 +420,7 @@ rack_set_acl.rack_id_pins <- function(id, backend, acl_type, ...) {
 
 #' @export
 rack_set_acl.rack_id_pins_connect <- function(id, backend, acl_type, ...) {
-  content <- connect_content_find(backend, id$name)
+  content <- connect_content_find(backend, id$name) # nolint: object_usage.
   connect_api(
     backend, "PATCH /content/{content$guid}",
     body = list(access_type = acl_type)
@@ -440,7 +440,7 @@ rack_share.rack_id_pins <- function(id, backend, with_sub, ...) {
 
 #' @export
 rack_share.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
-  content <- connect_content_find(backend, id$name)
+  content <- connect_content_find(backend, id$name) # nolint: object_usage.
   connect_api(
     backend, "POST /content/{content$guid}/permissions",
     body = list(
@@ -462,7 +462,7 @@ rack_unshare.rack_id_pins <- function(id, backend, with_sub, ...) {
 
 #' @export
 rack_unshare.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
-  content <- connect_content_find(backend, id$name)
+  content <- connect_content_find(backend, id$name) # nolint: object_usage.
   perms <- connect_api(backend, "GET /content/{content$guid}/permissions")
 
   match <- Filter(function(p) p$principal_guid == with_sub, perms)
@@ -491,7 +491,7 @@ rack_shares.rack_id_pins <- function(id, backend, ...) {
 
 #' @export
 rack_shares.rack_id_pins_connect <- function(id, backend, ...) {
-  content <- connect_content_find(backend, id$name)
+  content <- connect_content_find(backend, id$name) # nolint: object_usage.
   connect_api(backend, "GET /content/{content$guid}/permissions")
 }
 
