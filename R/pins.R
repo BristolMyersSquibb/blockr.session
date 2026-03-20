@@ -401,7 +401,7 @@ rack_set_tags.rack_id_pins <- function(id, backend, tags, ...) {
 
 #' @export
 rack_acl.rack_id_pins <- function(id, backend, ...) {
-  NULL
+  "public"
 }
 
 #' @export

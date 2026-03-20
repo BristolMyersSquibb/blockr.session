@@ -1007,7 +1007,7 @@ test_that("rack_tags round-trip strips session marker from written tags", {
 
 # rack_acl -----------------------------------------------------------------
 
-test_that("rack_acl on local pins returns NULL", {
+test_that("rack_acl on local pins returns public", {
 
   backend <- pins::board_temp(versioned = TRUE)
   data <- list(blocks = list())
@@ -1015,7 +1015,7 @@ test_that("rack_acl on local pins returns NULL", {
   rack_save(backend, data, name = "acl-test")
 
   acl <- rack_acl(new_rack_id_pins("acl-test"), backend)
-  expect_null(acl)
+  expect_equal(acl, "public")
 })
 
 # Unsupported operations ---------------------------------------------------
