@@ -1,0 +1,162 @@
+{
+  "type": "list",
+  "attributes": {
+    "names": {
+      "type": "character",
+      "attributes": {},
+      "value": ["results", "current_page", "total"]
+    }
+  },
+  "value": [
+    {
+      "type": "list",
+      "attributes": {},
+      "value": [
+        {
+          "type": "list",
+          "attributes": {
+            "names": {
+              "type": "character",
+              "attributes": {},
+              "value": ["email", "username", "first_name", "last_name", "user_role", "created_time", "updated_time", "active_time", "confirmed", "locked", "guid"]
+            }
+          },
+          "value": [
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["christoph@cynkra.com"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["christoph"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["Christoph"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["Sax"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["viewer"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["2026-02-16T21:25:53Z"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["2026-02-27T14:33:03Z"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["2026-02-27T21:10:26Z"]
+            },
+            {
+              "type": "logical",
+              "attributes": {},
+              "value": [true]
+            },
+            {
+              "type": "logical",
+              "attributes": {},
+              "value": [false]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["a46d5d51-d044-4bd1-ab89-723b85fcb5ed"]
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "attributes": {
+            "names": {
+              "type": "character",
+              "attributes": {},
+              "value": ["email", "username", "first_name", "last_name", "user_role", "created_time", "updated_time", "active_time", "confirmed", "locked", "guid"]
+            }
+          },
+          "value": [
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["david.granjon@cynkra.com"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["user_b"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["David"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["Granjon"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["viewer"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["2026-02-25T15:36:45Z"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["2026-02-27T10:37:20Z"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["2026-03-20T19:51:20Z"]
+            },
+            {
+              "type": "logical",
+              "attributes": {},
+              "value": [true]
+            },
+            {
+              "type": "logical",
+              "attributes": {},
+              "value": [false]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["32ff70e5-3918-487f-a894-3a4d0f64f883"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "integer",
+      "attributes": {},
+      "value": [1]
+    },
+    {
+      "type": "integer",
+      "attributes": {},
+      "value": [6]
+    }
+  ]
+}

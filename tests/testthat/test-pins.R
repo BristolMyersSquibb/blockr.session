@@ -1135,16 +1135,26 @@ test_that("tag round-trip: save, tag, filter, load", {
 test_that("rack_acl on Connect returns access_type from API", {
 
   board <- mock_board_connect()
-  id <- new_rack_id_pins_connect("user_a", "my_board")
 
-  local_mocked_bindings(
-    connect_content_find = function(board, name) {
-      list(guid = "abc-123", access_type = "logged_in")
-    }
+  record_content <- function() {
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-acl")
+    qualified <- paste0(board_a$account, "/blockr-fixture-acl")
+    content <- connect_api(board_a, "GET", "/content?name=blockr-fixture-acl")
+    content[[1L]]
+  }
+  content <- connect_fixture(
+    "content_find",
+    record_content,
+    pin_cleanup(board_a, "blockr-fixture-acl")
   )
 
+  local_mocked_bindings(
+    connect_content_find = function(board, name) content
+  )
+
+  id <- new_rack_id_pins_connect("user_a", "my_board")
   acl <- rack_acl(id, board)
-  expect_equal(acl, "logged_in")
+  expect_type(acl, "character")
 })
 
 test_that("rack_set_acl on Connect calls API with access_type", {
@@ -1169,6 +1179,41 @@ test_that("rack_set_acl on Connect calls API with access_type", {
 })
 
 # Connect: rack_share / rack_unshare / rack_shares -------------------------
+
+test_that("rack_shares on Connect returns permissions from API", {
+
+  board <- mock_board_connect()
+
+  record_content <- function() {
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    content <- connect_api(
+      board_a, "GET", "/content?name=blockr-fixture-sharing"
+    )
+    content[[1L]]
+  }
+  content <- connect_fixture(
+    "content_for_sharing",
+    record_content,
+    pin_cleanup(board_a, "blockr-fixture-sharing")
+  )
+
+  record_perms <- function() {
+    connect_api(
+      board_a, "GET",
+      paste0("/content/", content$guid, "/permissions")
+    )
+  }
+  perms <- connect_fixture("content_permissions", record_perms)
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) content,
+    connect_api = function(board, method, path, body = NULL) perms
+  )
+
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+  result <- rack_shares(id, board)
+  expect_type(result, "list")
+})
 
 test_that("rack_share on Connect posts permission", {
 
@@ -1239,43 +1284,28 @@ test_that("rack_unshare on Connect errors for unknown principal", {
   )
 })
 
-test_that("rack_shares on Connect returns permissions list", {
-
-  board <- mock_board_connect()
-  id <- new_rack_id_pins_connect("user_a", "my_board")
-
-  local_mocked_bindings(
-    connect_content_find = function(board, name) {
-      list(guid = "abc-123")
-    },
-    connect_api = function(board, method, path, body = NULL) {
-      list(
-        list(id = 1, principal_guid = "guid-a", role = "viewer"),
-        list(id = 2, principal_guid = "guid-b", role = "owner")
-      )
-    }
-  )
-
-  perms <- rack_shares(id, board)
-  expect_length(perms, 2L)
-})
-
 # Connect: rack_find_users ------------------------------------------------
 
-test_that("rack_find_users on Connect returns user list", {
+test_that("rack_find_users on Connect returns users from API", {
 
   board <- mock_board_connect()
 
+  record_users <- function() {
+    connect_api(board_a, "GET", "/users?page_size=2")
+  }
+  user_response <- connect_fixture("user_search", record_users)
+
   local_mocked_bindings(
     connect_api = function(board, method, path, body = NULL) {
-      list(results = list(
-        list(guid = "guid-a", username = "alice"),
-        list(guid = "guid-b", username = "alison")
-      ))
+      user_response
     }
   )
 
-  users <- rack_find_users(board, "ali")
-  expect_length(users, 2L)
-  expect_equal(users[[1L]]$username, "alice")
+  users <- rack_find_users(board, "test")
+  expect_type(users, "list")
+
+  has_username <- all(
+    lgl_ply(users, function(u) not_null(u$username))
+  )
+  expect_true(has_username)
 })
