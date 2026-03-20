@@ -114,7 +114,7 @@ test_that("load_workflow triggers restore", {
 
       res <- session$returned()
       expect_true(!is.null(res))
-      expect_s3_class(res, "board")
+      expect_true(is_board(res$board))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "load-test")
@@ -155,7 +155,7 @@ test_that("load_version restores specific version", {
 
       res <- session$returned()
       expect_true(!is.null(res))
-      expect_s3_class(res, "board")
+      expect_true(is_board(res$board))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "ver-load-test")

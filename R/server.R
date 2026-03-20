@@ -24,10 +24,7 @@ manage_project_server <- function(id, board, ...) {
         )
       )
 
-      # Tracks the last URL we set ourselves. Initialized from the pkg-level
-      # reload state so that post-session$reload() sessions can detect they
-      # already handled this URL and skip the restore.
-      prev_query <- reactiveVal(get_and_clear_reload_url())
+      prev_query <- reactiveVal(board$reload_meta$url)
 
       prev_board_name <- reactiveVal(NULL)
 
@@ -90,15 +87,13 @@ manage_project_server <- function(id, board, ...) {
 
           if (is.null(board_ser)) return()
 
-          # Persist new_url to pkg-level state before restore so the reloaded
-          # session (after session$reload() triggered by restore_board) sees it.
-          set_reload_url(new_url)
           prev_query(new_url)
 
           restore_board(
             board$board,
             board_ser,
             restore_result,
+            meta = list(url = new_url),
             session = session
           )
 
@@ -215,13 +210,13 @@ manage_project_server <- function(id, board, ...) {
           }
 
           new_url <- board_query_string(id, backend)
-          set_reload_url(new_url)
           prev_query(new_url)
 
           restore_board(
             board$board,
             board_ser,
             restore_result,
+            meta = list(url = new_url),
             session = session
           )
 
@@ -361,13 +356,13 @@ manage_project_server <- function(id, board, ...) {
           }
 
           new_url <- board_query_string(id, backend)
-          set_reload_url(new_url)
           prev_query(new_url)
 
           restore_board(
             board$board,
             board_ser,
             restore_result,
+            meta = list(url = new_url),
             session = session
           )
 
