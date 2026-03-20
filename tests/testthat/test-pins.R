@@ -924,3 +924,208 @@ test_that("rack_purge on Connect deletes entire pin", {
   expect_true(result)
   expect_equal(deleted_name, "user_a/my_board")
 })
+
+# rack_capabilities --------------------------------------------------------
+
+test_that("rack_capabilities on local board returns expected list", {
+
+  backend <- pins::board_temp()
+  caps <- rack_capabilities(backend)
+
+  expect_type(caps, "list")
+  expect_true(caps$versioning)
+  expect_true(caps$tags)
+  expect_true(caps$metadata)
+  expect_false(caps$sharing)
+  expect_false(caps$visibility)
+  expect_false(caps$user_discovery)
+})
+
+test_that("rack_capabilities on Connect board returns expected list", {
+
+  board <- mock_board_connect()
+  caps <- rack_capabilities(board)
+
+  expect_type(caps, "list")
+  expect_true(caps$versioning)
+  expect_true(caps$tags)
+  expect_true(caps$metadata)
+  expect_false(caps$sharing)
+  expect_false(caps$visibility)
+  expect_false(caps$user_discovery)
+})
+
+# rack_tags ----------------------------------------------------------------
+
+test_that("rack_tags strips session markers", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "tag-read")
+
+  tags <- rack_tags(new_rack_id_pins("tag-read"), backend)
+
+  expect_false("blockr-session" %in% tags)
+  expect_equal(tags, character(0))
+})
+
+test_that("rack_set_tags writes tags and preserves session marker", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "tag-write")
+  Sys.sleep(1.1)
+  id <- new_rack_id_pins("tag-write")
+
+  rack_set_tags(id, backend, tags = c("analysis", "production"))
+
+  meta <- pins::pin_meta(backend, "tag-write")
+  expect_true("blockr-session" %in% meta$tags)
+  expect_true("analysis" %in% meta$tags)
+  expect_true("production" %in% meta$tags)
+})
+
+test_that("rack_tags round-trip strips session marker from written tags", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "tag-roundtrip")
+  Sys.sleep(1.1)
+  id <- new_rack_id_pins("tag-roundtrip")
+
+  rack_set_tags(id, backend, tags = c("analysis", "production"))
+
+  tags <- rack_tags(id, backend)
+
+  expect_true("analysis" %in% tags)
+  expect_true("production" %in% tags)
+  expect_false("blockr-session" %in% tags)
+})
+
+# rack_acl -----------------------------------------------------------------
+
+test_that("rack_acl on pins always returns private", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "acl-test")
+
+  acl <- rack_acl(new_rack_id_pins("acl-test"), backend)
+  expect_equal(acl, "private")
+})
+
+# Unsupported operations ---------------------------------------------------
+
+test_that("rack_set_acl on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+  id <- new_rack_id_pins("test")
+
+  expect_error(
+    rack_set_acl(id, backend, "public"),
+    class = "rack_not_supported"
+  )
+})
+
+test_that("rack_share on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+  id <- new_rack_id_pins("test")
+
+  expect_error(
+    rack_share(id, backend, "user1"),
+    class = "rack_not_supported"
+  )
+})
+
+test_that("rack_unshare on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+  id <- new_rack_id_pins("test")
+
+  expect_error(
+    rack_unshare(id, backend, "user1"),
+    class = "rack_not_supported"
+  )
+})
+
+test_that("rack_shares on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+  id <- new_rack_id_pins("test")
+
+  expect_error(
+    rack_shares(id, backend),
+    class = "rack_not_supported"
+  )
+})
+
+test_that("rack_find_users on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+
+  expect_error(
+    rack_find_users(backend, "alice"),
+    class = "rack_not_supported"
+  )
+})
+
+# rack_list tag filtering --------------------------------------------------
+
+test_that("rack_list filters by user tags", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "board-a")
+  rack_save(backend, data, name = "board-b")
+  Sys.sleep(1.1)
+
+  rack_set_tags(
+    new_rack_id_pins("board-b"), backend,
+    tags = "production"
+  )
+
+  all_boards <- rack_list(backend)
+  expect_length(all_boards, 2L)
+
+  filtered <- rack_list(backend, tags = "production")
+  expect_length(filtered, 1L)
+  expect_equal(display_name(filtered[[1L]]), "board-b")
+})
+
+test_that("rack_list with no matching tags returns empty list", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "board-no-match")
+
+  result <- rack_list(backend, tags = "nonexistent")
+  expect_length(result, 0L)
+})
+
+# Tag round-trip -----------------------------------------------------------
+
+test_that("tag round-trip: save, tag, filter, load", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list(a = 1))
+
+  rack_save(backend, data, name = "roundtrip")
+  Sys.sleep(1.1)
+  rack_set_tags(
+    new_rack_id_pins("roundtrip"), backend,
+    tags = "analysis"
+  )
+
+  filtered <- rack_list(backend, tags = "analysis")
+  expect_length(filtered, 1L)
+
+  result <- rack_load(filtered[[1L]], backend)
+  expect_equal(result$blocks$a, 1L)
+})
