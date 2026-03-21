@@ -2,7 +2,7 @@ connect_vars <- Sys.getenv(
   c("CONNECT_SERVER", "CONNECT_API_KEY_A", "CONNECT_API_KEY_B")
 )
 
-if (all(nzchar(connect_vars))) {
+if (all(nzchar(connect_vars)) && nzchar(Sys.getenv("CONNECT_RECORD"))) {
 
   try_board <- function(key, label) {
     tryCatch(
