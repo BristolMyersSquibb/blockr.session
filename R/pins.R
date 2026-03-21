@@ -102,7 +102,7 @@ last_saved.rack_id_pins <- function(id, backend, ...) {
 # rack_list -----------------------------------------------------------------
 
 #' @export
-rack_list.pins_board <- function(backend, ...) {
+rack_list.pins_board <- function(backend, tags = NULL, ...) {
 
   df <- pins::pin_search(backend)
 
@@ -112,6 +112,11 @@ rack_list.pins_board <- function(backend, ...) {
 
   keep <- lgl_ply(df$meta, has_tags)
   df <- df[keep, , drop = FALSE]
+
+  if (not_null(tags)) {
+    keep <- lgl_ply(df$meta, has_tags, tags = tags)
+    df <- df[keep, , drop = FALSE]
+  }
 
   if (nrow(df) == 0L) {
     return(list())
@@ -123,7 +128,7 @@ rack_list.pins_board <- function(backend, ...) {
 }
 
 #' @export
-rack_list.pins_board_connect <- function(backend, ...) {
+rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
 
   df <- pins::pin_search(backend)
 
@@ -133,6 +138,11 @@ rack_list.pins_board_connect <- function(backend, ...) {
 
   keep <- lgl_ply(df$meta, has_tags)
   df <- df[keep, , drop = FALSE]
+
+  if (not_null(tags)) {
+    keep <- lgl_ply(df$meta, has_tags, tags = tags)
+    df <- df[keep, , drop = FALSE]
+  }
 
   if (nrow(df) == 0L) {
     return(list())
@@ -315,4 +325,188 @@ rack_delete.rack_id_pins <- function(id, backend, ...) {
 rack_purge.rack_id_pins <- function(id, backend, ...) {
   pins::pin_delete(backend, pin_name(id))
   invisible(TRUE)
+}
+
+# rack_capabilities --------------------------------------------------------
+
+#' @export
+rack_capabilities.pins_board <- function(backend, ...) {
+  list(
+    versioning = TRUE,
+    tags = TRUE,
+    metadata = TRUE,
+    sharing = FALSE,
+    visibility = FALSE,
+    user_discovery = FALSE
+  )
+}
+
+#' @export
+rack_capabilities.pins_board_connect <- function(backend, ...) {
+  list(
+    versioning = TRUE,
+    tags = TRUE,
+    metadata = TRUE,
+    sharing = TRUE,
+    visibility = TRUE,
+    user_discovery = TRUE
+  )
+}
+
+# rack_tags ----------------------------------------------------------------
+
+#' @export
+rack_tags.rack_id_pins <- function(id, backend, ...) {
+  meta <- pins::pin_meta(backend, pin_name(id), id$version)
+  setdiff(meta$tags, blockr_session_tags())
+}
+
+#' @export
+rack_set_tags.rack_id_pins <- function(id, backend, tags, ...) {
+
+  name <- pin_name(id)
+  version <- id$version
+
+  if (is.null(version)) {
+    info <- rack_info(id, backend)
+
+    if (nrow(info) == 0L) {
+      blockr_abort(
+        "No versions found for pin {name}.",
+        class = "rack_set_tags_no_versions"
+      )
+    }
+
+    version <- info$version[1L]
+  }
+
+  meta <- pins::pin_meta(backend, name, version)
+  path <- pins::pin_download(backend, name, version, meta$pin_hash)
+
+  all_tags <- unique(c(tags, blockr_session_tags()))
+
+  pins::pin_upload(
+    backend,
+    path,
+    name,
+    versioned = TRUE,
+    metadata = meta$user,
+    tags = all_tags
+  )
+
+  invisible(id)
+}
+
+# rack_acl -----------------------------------------------------------------
+
+#' @export
+rack_acl.rack_id_pins <- function(id, backend, ...) {
+  "public"
+}
+
+#' @export
+rack_acl.rack_id_pins_connect <- function(id, backend, ...) {
+  content <- connect_content_find(backend, id$name)
+  content$access_type
+}
+
+#' @export
+rack_set_acl.rack_id_pins <- function(id, backend, acl_type, ...) {
+  blockr_abort(
+    "Setting ACL is not supported by this backend.",
+    class = "rack_not_supported"
+  )
+}
+
+#' @export
+rack_set_acl.rack_id_pins_connect <- function(id, backend, acl_type, ...) {
+  content <- connect_content_find(backend, id$name) # nolint: object_usage.
+  connect_api(
+    backend, "PATCH /content/{content$guid}",
+    body = list(access_type = acl_type)
+  )
+  invisible(id)
+}
+
+# rack_share ---------------------------------------------------------------
+
+#' @export
+rack_share.rack_id_pins <- function(id, backend, with_sub, ...) {
+  blockr_abort(
+    "Sharing is not supported by this backend.",
+    class = "rack_not_supported"
+  )
+}
+
+#' @export
+rack_share.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
+  content <- connect_content_find(backend, id$name) # nolint: object_usage.
+  connect_api(
+    backend, "POST /content/{content$guid}/permissions",
+    body = list(
+      principal_guid = with_sub,
+      principal_type = "user",
+      role = "viewer"
+    )
+  )
+  invisible(id)
+}
+
+#' @export
+rack_unshare.rack_id_pins <- function(id, backend, with_sub, ...) {
+  blockr_abort(
+    "Unsharing is not supported by this backend.",
+    class = "rack_not_supported"
+  )
+}
+
+#' @export
+rack_unshare.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
+  content <- connect_content_find(backend, id$name) # nolint: object_usage.
+  perms <- connect_api(backend, "GET /content/{content$guid}/permissions")
+
+  match <- Filter(function(p) p$principal_guid == with_sub, perms)
+
+  if (length(match) == 0L) {
+    blockr_abort(
+      "No permission found for principal {with_sub}.",
+      class = "rack_permission_not_found"
+    )
+  }
+
+  connect_api(
+    backend,
+    "DELETE /content/{content$guid}/permissions/{match[[1L]]$id}"
+  )
+  invisible(id)
+}
+
+#' @export
+rack_shares.rack_id_pins <- function(id, backend, ...) {
+  blockr_abort(
+    "Listing shares is not supported by this backend.",
+    class = "rack_not_supported"
+  )
+}
+
+#' @export
+rack_shares.rack_id_pins_connect <- function(id, backend, ...) {
+  content <- connect_content_find(backend, id$name) # nolint: object_usage.
+  connect_api(backend, "GET /content/{content$guid}/permissions")
+}
+
+# rack_find_users ----------------------------------------------------------
+
+#' @export
+rack_find_users.pins_board <- function(backend, query, ...) {
+  blockr_abort(
+    "User discovery is not supported by this backend.",
+    class = "rack_not_supported"
+  )
+}
+
+#' @export
+rack_find_users.pins_board_connect <- function(backend, query, ...) {
+  result <- connect_api(backend, "GET /users", query = list(prefix = query))
+  result$results
 }

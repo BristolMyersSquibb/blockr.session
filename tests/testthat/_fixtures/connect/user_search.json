@@ -1,0 +1,95 @@
+{
+  "type": "list",
+  "attributes": {
+    "names": {
+      "type": "character",
+      "attributes": {},
+      "value": ["results", "current_page", "total"]
+    }
+  },
+  "value": [
+    {
+      "type": "list",
+      "attributes": {},
+      "value": [
+        {
+          "type": "list",
+          "attributes": {
+            "names": {
+              "type": "character",
+              "attributes": {},
+              "value": ["email", "username", "first_name", "last_name", "user_role", "created_time", "updated_time", "active_time", "confirmed", "locked", "guid"]
+            }
+          },
+          "value": [
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["user_a@example.com"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["user_a"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["Alice"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["Test"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["administrator"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["2026-02-13T15:01:11Z"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["2026-03-09T07:56:06Z"]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["2026-03-21T06:49:41Z"]
+            },
+            {
+              "type": "logical",
+              "attributes": {},
+              "value": [true]
+            },
+            {
+              "type": "logical",
+              "attributes": {},
+              "value": [false]
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["00000000-0000-4000-a000-000000000001"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "integer",
+      "attributes": {},
+      "value": [1]
+    },
+    {
+      "type": "integer",
+      "attributes": {},
+      "value": [1]
+    }
+  ]
+}

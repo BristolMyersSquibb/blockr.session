@@ -924,3 +924,474 @@ test_that("rack_purge on Connect deletes entire pin", {
   expect_true(result)
   expect_equal(deleted_name, "user_a/my_board")
 })
+
+# rack_capabilities --------------------------------------------------------
+
+test_that("rack_capabilities on local board returns expected list", {
+
+  backend <- pins::board_temp()
+  caps <- rack_capabilities(backend)
+
+  expect_type(caps, "list")
+  expect_true(caps$versioning)
+  expect_true(caps$tags)
+  expect_true(caps$metadata)
+  expect_false(caps$sharing)
+  expect_false(caps$visibility)
+  expect_false(caps$user_discovery)
+})
+
+test_that("rack_capabilities on Connect board returns expected list", {
+
+  board <- mock_board_connect()
+  caps <- rack_capabilities(board)
+
+  expect_type(caps, "list")
+  expect_true(caps$versioning)
+  expect_true(caps$tags)
+  expect_true(caps$metadata)
+  expect_true(caps$sharing)
+  expect_true(caps$visibility)
+  expect_true(caps$user_discovery)
+})
+
+# rack_tags ----------------------------------------------------------------
+
+test_that("rack_tags strips session markers", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "tag-read")
+
+  tags <- rack_tags(new_rack_id_pins("tag-read"), backend)
+
+  expect_false("blockr-session" %in% tags)
+  expect_equal(tags, character(0))
+})
+
+test_that("rack_set_tags writes tags and preserves session marker", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "tag-write")
+  Sys.sleep(1.1)
+  id <- new_rack_id_pins("tag-write")
+
+  rack_set_tags(id, backend, tags = c("analysis", "production"))
+
+  meta <- pins::pin_meta(backend, "tag-write")
+  expect_true("blockr-session" %in% meta$tags)
+  expect_true("analysis" %in% meta$tags)
+  expect_true("production" %in% meta$tags)
+})
+
+test_that("rack_tags round-trip strips session marker from written tags", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "tag-roundtrip")
+  Sys.sleep(1.1)
+  id <- new_rack_id_pins("tag-roundtrip")
+
+  rack_set_tags(id, backend, tags = c("analysis", "production"))
+
+  tags <- rack_tags(id, backend)
+
+  expect_true("analysis" %in% tags)
+  expect_true("production" %in% tags)
+  expect_false("blockr-session" %in% tags)
+})
+
+# rack_acl -----------------------------------------------------------------
+
+test_that("rack_acl on local pins returns public", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "acl-test")
+
+  acl <- rack_acl(new_rack_id_pins("acl-test"), backend)
+  expect_equal(acl, "public")
+})
+
+# Unsupported operations ---------------------------------------------------
+
+test_that("rack_set_acl on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+  id <- new_rack_id_pins("test")
+
+  expect_error(
+    rack_set_acl(id, backend, "public"),
+    class = "rack_not_supported"
+  )
+})
+
+test_that("rack_share on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+  id <- new_rack_id_pins("test")
+
+  expect_error(
+    rack_share(id, backend, "user1"),
+    class = "rack_not_supported"
+  )
+})
+
+test_that("rack_unshare on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+  id <- new_rack_id_pins("test")
+
+  expect_error(
+    rack_unshare(id, backend, "user1"),
+    class = "rack_not_supported"
+  )
+})
+
+test_that("rack_shares on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+  id <- new_rack_id_pins("test")
+
+  expect_error(
+    rack_shares(id, backend),
+    class = "rack_not_supported"
+  )
+})
+
+test_that("rack_find_users on pins errors with rack_not_supported", {
+
+  backend <- pins::board_temp()
+
+  expect_error(
+    rack_find_users(backend, "alice"),
+    class = "rack_not_supported"
+  )
+})
+
+# rack_list tag filtering --------------------------------------------------
+
+test_that("rack_list filters by user tags", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "board-a")
+  rack_save(backend, data, name = "board-b")
+  Sys.sleep(1.1)
+
+  rack_set_tags(
+    new_rack_id_pins("board-b"), backend,
+    tags = "production"
+  )
+
+  all_boards <- rack_list(backend)
+  expect_length(all_boards, 2L)
+
+  filtered <- rack_list(backend, tags = "production")
+  expect_length(filtered, 1L)
+  expect_equal(display_name(filtered[[1L]]), "board-b")
+})
+
+test_that("rack_list with no matching tags returns empty list", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list())
+
+  rack_save(backend, data, name = "board-no-match")
+
+  result <- rack_list(backend, tags = "nonexistent")
+  expect_length(result, 0L)
+})
+
+# Tag round-trip -----------------------------------------------------------
+
+test_that("tag round-trip: save, tag, filter, load", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list(a = 1))
+
+  rack_save(backend, data, name = "roundtrip")
+  Sys.sleep(1.1)
+  rack_set_tags(
+    new_rack_id_pins("roundtrip"), backend,
+    tags = "analysis"
+  )
+
+  filtered <- rack_list(backend, tags = "analysis")
+  expect_length(filtered, 1L)
+
+  result <- rack_load(filtered[[1L]], backend)
+  expect_equal(result$blocks$a, 1L)
+})
+
+# Connect: rack_acl -------------------------------------------------------
+
+test_that("rack_acl on Connect returns access_type from API", {
+
+  board <- mock_board_connect()
+
+  record_content <- function() {
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-acl")
+    qualified <- paste0(board_a$account, "/blockr-fixture-acl")
+    content <- connect_api(
+      board_a, "GET /content", query = list(name = "blockr-fixture-acl")
+    )
+    content[[1L]]
+  }
+  content <- connect_fixture(
+    "content_find",
+    record_content,
+    pin_cleanup(board_a, "blockr-fixture-acl")
+  )
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) content
+  )
+
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+  acl <- rack_acl(id, board)
+  expect_type(acl, "character")
+})
+
+test_that("rack_set_acl on Connect calls API with access_type", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  record_content <- function() {
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    connect_api(
+      board_a, "GET /content",
+      query = list(name = "blockr-fixture-sharing")
+    )[[1L]]
+  }
+  content <- connect_fixture(
+    "content_for_sharing",
+    record_content,
+    pin_cleanup(board_a, "blockr-fixture-sharing")
+  )
+
+  patched_body <- NULL
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) content,
+    connect_api = function(board, route, ..., body = NULL, query = NULL,
+                           env = parent.frame()) {
+      patched_body <<- body
+      list()
+    }
+  )
+
+  rack_set_acl(id, board, "all")
+  expect_equal(patched_body$access_type, "all")
+})
+
+# Connect: rack_share / rack_unshare / rack_shares -------------------------
+
+test_that("rack_shares on Connect returns permissions from API", {
+
+  board <- mock_board_connect()
+
+  record_content <- function() {
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    content <- connect_api(
+      board_a, "GET /content", query = list(name = "blockr-fixture-sharing")
+    )
+    content[[1L]]
+  }
+  content <- connect_fixture(
+    "content_for_sharing",
+    record_content,
+    pin_cleanup(board_a, "blockr-fixture-sharing")
+  )
+
+  record_perms <- function() {
+    me_b <- connect_api(board_b, "GET /user")
+    connect_api(
+      board_a, "POST /content/{content$guid}/permissions",
+      body = list(
+        principal_guid = me_b$guid,
+        principal_type = "user",
+        role = "viewer"
+      )
+    )
+    connect_api(board_a, "GET /content/{content$guid}/permissions")
+  }
+  perms <- connect_fixture("content_permissions", record_perms)
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) content,
+    connect_api = function(board, route, ...) perms
+  )
+
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+  result <- rack_shares(id, board)
+  expect_type(result, "list")
+  expect_length(result, 1L)
+  expect_equal(result[[1L]]$principal_type, "user")
+  expect_equal(result[[1L]]$role, "viewer")
+})
+
+test_that("rack_share on Connect posts permission", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  record_content <- function() {
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    connect_api(
+      board_a, "GET /content",
+      query = list(name = "blockr-fixture-sharing")
+    )[[1L]]
+  }
+  content <- connect_fixture(
+    "content_for_sharing",
+    record_content,
+    pin_cleanup(board_a, "blockr-fixture-sharing")
+  )
+
+  posted_body <- NULL
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) content,
+    connect_api = function(board, route, ..., body = NULL, query = NULL,
+                           env = parent.frame()) {
+      posted_body <<- body
+      list()
+    }
+  )
+
+  rack_share(id, board, "user-guid-456")
+  expect_equal(posted_body$principal_guid, "user-guid-456")
+  expect_equal(posted_body$principal_type, "user")
+  expect_equal(posted_body$role, "viewer")
+})
+
+test_that("rack_unshare on Connect deletes permission", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  record_content <- function() {
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    connect_api(
+      board_a, "GET /content",
+      query = list(name = "blockr-fixture-sharing")
+    )[[1L]]
+  }
+  content <- connect_fixture(
+    "content_for_sharing",
+    record_content,
+    pin_cleanup(board_a, "blockr-fixture-sharing")
+  )
+
+  record_perms <- function() {
+    me_b <- connect_api(board_b, "GET /user")
+    connect_api(
+      board_a, "POST /content/{content$guid}/permissions",
+      body = list(
+        principal_guid = me_b$guid,
+        principal_type = "user",
+        role = "viewer"
+      )
+    )
+    connect_api(board_a, "GET /content/{content$guid}/permissions")
+  }
+  perms <- connect_fixture("content_permissions", record_perms)
+
+  deleted_route <- NULL
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) content,
+    connect_api = function(board, route, ..., body = NULL, query = NULL,
+                           env = parent.frame()) {
+      resolved <- glue::glue(route, .envir = env)
+      if (grepl("^GET", resolved)) return(perms)
+      deleted_route <<- resolved
+      list()
+    }
+  )
+
+  target <- perms[[1L]]$principal_guid
+  rack_unshare(id, board, target)
+
+  expected <- paste0(
+    "DELETE /content/", content$guid,
+    "/permissions/", perms[[1L]]$id
+  )
+  expect_equal(deleted_route, expected)
+})
+
+test_that("rack_unshare on Connect errors for unknown principal", {
+
+  board <- mock_board_connect()
+  id <- new_rack_id_pins_connect("user_a", "my_board")
+
+  record_content <- function() {
+    rack_save(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    connect_api(
+      board_a, "GET /content",
+      query = list(name = "blockr-fixture-sharing")
+    )[[1L]]
+  }
+  content <- connect_fixture(
+    "content_for_sharing",
+    record_content,
+    pin_cleanup(board_a, "blockr-fixture-sharing")
+  )
+
+  record_perms <- function() {
+    me_b <- connect_api(board_b, "GET /user")
+    connect_api(
+      board_a, "POST /content/{content$guid}/permissions",
+      body = list(
+        principal_guid = me_b$guid,
+        principal_type = "user",
+        role = "viewer"
+      )
+    )
+    connect_api(board_a, "GET /content/{content$guid}/permissions")
+  }
+  perms <- connect_fixture("content_permissions", record_perms)
+
+  local_mocked_bindings(
+    connect_content_find = function(board, name) content,
+    connect_api = function(board, route, ...) perms
+  )
+
+  expect_error(
+    rack_unshare(id, board, "nonexistent"),
+    class = "rack_permission_not_found"
+  )
+})
+
+# Connect: rack_find_users ------------------------------------------------
+
+test_that("rack_find_users on Connect returns users from API", {
+
+  board <- mock_board_connect()
+
+  record_users <- function() {
+    connect_api(
+      board_a, "GET /users",
+      query = list(prefix = board_a$account)
+    )
+  }
+  user_response <- connect_fixture("user_search", record_users)
+
+  local_mocked_bindings(
+    connect_api = function(board, route, ...) user_response
+  )
+
+  users <- rack_find_users(board, "test")
+  expect_type(users, "list")
+  expect_length(users, 1L)
+  expect_equal(users[[1L]]$username, "user_a")
+  expect_equal(users[[1L]]$first_name, "Alice")
+})

@@ -38,7 +38,7 @@ print.rack_id <- function(x, ...) {
 
 # rack_list -----------------------------------------------------------------
 
-rack_list <- function(backend, ...) UseMethod("rack_list")
+rack_list <- function(backend, tags = NULL, ...) UseMethod("rack_list")
 
 # rack_info -----------------------------------------------------------------
 
@@ -57,3 +57,31 @@ rack_save <- function(backend, data, ...) UseMethod("rack_save")
 rack_delete <- function(id, backend, ...) UseMethod("rack_delete")
 
 rack_purge <- function(id, backend, ...) UseMethod("rack_purge")
+
+# rack_capabilities --------------------------------------------------------
+
+rack_capabilities <- function(backend, ...) UseMethod("rack_capabilities")
+
+# rack_tags ----------------------------------------------------------------
+
+rack_tags <- function(id, backend, ...) UseMethod("rack_tags")
+
+rack_set_tags <- function(id, backend, tags, ...) UseMethod("rack_set_tags")
+
+# rack_acl -----------------------------------------------------------------
+
+rack_acl <- function(id, backend, ...) UseMethod("rack_acl")
+
+rack_set_acl <- function(id, backend, acl_type, ...) UseMethod("rack_set_acl")
+
+# rack_share ---------------------------------------------------------------
+
+rack_share <- function(id, backend, with_sub, ...) UseMethod("rack_share")
+
+rack_unshare <- function(id, backend, with_sub, ...) UseMethod("rack_unshare")
+
+rack_shares <- function(id, backend, ...) UseMethod("rack_shares")
+
+# rack_find_users ----------------------------------------------------------
+
+rack_find_users <- function(backend, query, ...) UseMethod("rack_find_users")

@@ -1,0 +1,43 @@
+{
+  "type": "list",
+  "attributes": {},
+  "value": [
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["id", "content_guid", "principal_guid", "principal_type", "role"]
+        }
+      },
+      "value": [
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["4"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["4bc3c014-0fd2-4419-845f-6b0e88a30876"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["00000000-0000-4000-a000-000000000002"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["user"]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["viewer"]
+        }
+      ]
+    }
+  ]
+}
