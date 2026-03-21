@@ -479,3 +479,182 @@
 .modal-dialog:has(.blockr-workflows-modal) .modal-body {
   padding: 20px 24px;
 }
+
+/* ============================================
+   Sharing Panel
+   ============================================ */
+
+/* Allow dynamic tab button (uiOutput wrapper) to participate in flex */
+.blockr-tab-bar > .shiny-html-output {
+  display: contents;
+}
+
+.blockr-sharing-section {
+  padding: 8px 12px;
+}
+
+.blockr-sharing-section + .blockr-sharing-section {
+  border-top: 1px solid #e5e7eb;
+}
+
+.blockr-sharing-label {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+/* Visibility dropdown */
+.blockr-visibility-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: white;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.blockr-visibility-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Shared users list */
+.blockr-shared-user {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.blockr-shared-user + .blockr-shared-user {
+  border-top: 1px solid #f3f4f6;
+}
+
+.blockr-shared-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.blockr-shared-user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blockr-shared-user-remove {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #ef4444;
+  background: transparent;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.blockr-shared-user-remove:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.blockr-shared-empty {
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* User search */
+.blockr-user-search {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.blockr-user-search:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.blockr-user-search::placeholder {
+  color: #9ca3af;
+}
+
+/* User search results */
+.blockr-search-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.blockr-search-result + .blockr-search-result {
+  border-top: 1px solid #f3f4f6;
+}
+
+.blockr-search-result-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.blockr-search-result-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #111827;
+}
+
+.blockr-search-result-email {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.blockr-search-result-share {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #2563eb;
+  background: transparent;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.blockr-search-result-share:hover {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+.blockr-search-empty {
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+.blockr-sharing-hint {
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  font-style: italic;
+  padding: 8px 0;
+}

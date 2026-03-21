@@ -40,28 +40,8 @@ manage_project_ui <- function(id, x) {
               id = ns("tab_workflows"),
               class = "blockr-tab active",
               type = "button",
-              onclick = sprintf(
-                "event.stopPropagation();
-                document.querySelectorAll(
-                  '#%s .blockr-tab'
-                ).forEach(
-                  t => t.classList.remove('active')
-                );
-                this.classList.add('active');
-                document.getElementById(
-                  '%s'
-                ).classList.remove(
-                  'blockr-tab-panel-hidden'
-                );
-                document.getElementById(
-                  '%s'
-                ).classList.add(
-                  'blockr-tab-panel-hidden'
-                );",
-                ns("tabbed_dropdown"),
-                ns("panel_workflows"),
-                ns("panel_history")
-              ),
+              `data-panel` = ns("panel_workflows"),
+              onclick = tab_switch_js(),
               bsicons::bs_icon("layers"),
               "Workflows"
             ),
@@ -69,31 +49,12 @@ manage_project_ui <- function(id, x) {
               id = ns("tab_history"),
               class = "blockr-tab",
               type = "button",
-              onclick = sprintf(
-                "event.stopPropagation();
-                document.querySelectorAll(
-                  '#%s .blockr-tab'
-                ).forEach(
-                  t => t.classList.remove('active')
-                );
-                this.classList.add('active');
-                document.getElementById(
-                  '%s'
-                ).classList.add(
-                  'blockr-tab-panel-hidden'
-                );
-                document.getElementById(
-                  '%s'
-                ).classList.remove(
-                  'blockr-tab-panel-hidden'
-                );",
-                ns("tabbed_dropdown"),
-                ns("panel_workflows"),
-                ns("panel_history")
-              ),
+              `data-panel` = ns("panel_history"),
+              onclick = tab_switch_js(),
               bsicons::bs_icon("clock-history"),
               "History"
-            )
+            ),
+            uiOutput(ns("sharing_tab"))
           ),
           # Workflows panel
           tags$div(
@@ -142,7 +103,9 @@ manage_project_ui <- function(id, x) {
                 bsicons::bs_icon("arrow-right")
               )
             )
-          )
+          ),
+          # Sharing panel (conditionally rendered from server)
+          uiOutput(ns("sharing_panel"))
         )
       ),
       # Editable workflow title
@@ -228,4 +191,18 @@ manage_project_ui <- function(id, x) {
       uiOutput(ns("user_avatar"), inline = TRUE)
     )
   )
+}
+
+tab_switch_js <- function() {
+  "event.stopPropagation();
+  var dd = this.closest('.blockr-tabbed-dropdown');
+  dd.querySelectorAll('.blockr-tab').forEach(
+    t => t.classList.remove('active')
+  );
+  this.classList.add('active');
+  dd.querySelectorAll('.blockr-tab-panel').forEach(
+    p => p.classList.add('blockr-tab-panel-hidden')
+  );
+  var panel = document.getElementById(this.getAttribute('data-panel'));
+  if (panel) panel.classList.remove('blockr-tab-panel-hidden');"
 }

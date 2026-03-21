@@ -447,6 +447,257 @@ manage_project_server <- function(id, board, ...) {
         session$sendCustomMessage("blockr-update-navbar-title", board_name())
       )
 
+      # --- Sharing & visibility (capability-driven) ---
+
+      capabilities <- reactive(rack_capabilities(backend))
+
+      has_sharing <- reactive({
+        caps <- capabilities()
+        isTRUE(caps$sharing) || isTRUE(caps$visibility)
+      })
+
+      sharing_trigger <- reactiveVal(0)
+
+      output$sharing_tab <- renderUI({
+        req(has_sharing())
+        tags$button(
+          id = session$ns("tab_sharing"),
+          class = "blockr-tab",
+          type = "button",
+          `data-panel` = session$ns("panel_sharing"),
+          onclick = tab_switch_js(),
+          bsicons::bs_icon("people"),
+          "Sharing"
+        )
+      })
+
+      output$sharing_panel <- renderUI({
+        req(has_sharing())
+        caps <- capabilities()
+
+        tags$div(
+          id = session$ns("panel_sharing"),
+          class = "blockr-tab-panel blockr-tab-panel-hidden",
+          if (isTRUE(caps$visibility)) {
+            tags$div(
+              class = "blockr-sharing-section",
+              tags$div(class = "blockr-sharing-label", "VISIBILITY"),
+              uiOutput(session$ns("visibility_control"))
+            )
+          },
+          if (isTRUE(caps$sharing)) {
+            tags$div(
+              class = "blockr-sharing-section",
+              tags$div(class = "blockr-sharing-label", "SHARED WITH"),
+              uiOutput(session$ns("shared_users_list"))
+            )
+          },
+          if (isTRUE(caps$user_discovery)) {
+            tags$div(
+              class = "blockr-sharing-section",
+              tags$div(class = "blockr-sharing-label", "ADD PEOPLE"),
+              tags$input(
+                type = "text",
+                id = session$ns("user_search_input"),
+                class = "blockr-user-search",
+                placeholder = "Search users...",
+                oninput = sprintf(
+                  "Shiny.setInputValue('%s', this.value, {priority: 'event'})",
+                  session$ns("user_search_input")
+                )
+              ),
+              uiOutput(session$ns("user_search_results"))
+            )
+          }
+        )
+      })
+
+      output$visibility_control <- renderUI({
+        req(has_sharing())
+        caps <- capabilities()
+        req(isTRUE(caps$visibility))
+
+        name <- board_name()
+        if (is.null(name) || !nzchar(name)) {
+          return(
+            tags$div(class = "blockr-sharing-hint", "Save workflow first")
+          )
+        }
+
+        id <- rack_id_for_board(name, backend)
+        acl <- tryCatch(rack_acl(id, backend), error = function(e) "acl")
+
+        tags$select(
+          id = session$ns("visibility_select"),
+          class = "blockr-visibility-select",
+          onchange = sprintf(
+            "Shiny.setInputValue('%s', this.value, {priority: 'event'})",
+            session$ns("visibility_change")
+          ),
+          tags$option(
+            value = "acl",
+            selected = if (acl == "acl") "selected" else NULL,
+            "Private"
+          ),
+          tags$option(
+            value = "logged_in",
+            selected = if (acl == "logged_in") "selected" else NULL,
+            "Restricted"
+          ),
+          tags$option(
+            value = "all",
+            selected = if (acl == "all") "selected" else NULL,
+            "Public"
+          )
+        )
+      })
+
+      output$shared_users_list <- renderUI({
+        sharing_trigger()
+        req(has_sharing())
+        caps <- capabilities()
+        req(isTRUE(caps$sharing))
+
+        name <- board_name()
+        if (is.null(name) || !nzchar(name)) {
+          return(
+            tags$div(class = "blockr-sharing-hint", "Save workflow first")
+          )
+        }
+
+        id <- rack_id_for_board(name, backend)
+        shares <- tryCatch(
+          rack_shares(id, backend),
+          error = function(e) list()
+        )
+
+        if (length(shares) == 0) {
+          return(
+            tags$div(
+              class = "blockr-shared-empty",
+              "Not shared with anyone"
+            )
+          )
+        }
+
+        tagList(lapply(shares, function(s) {
+          tags$div(
+            class = "blockr-shared-user",
+            tags$div(
+              class = "blockr-shared-user-info",
+              tags$span(
+                class = "blockr-shared-user-name",
+                s$principal_guid
+              )
+            ),
+            tags$button(
+              class = "blockr-shared-user-remove",
+              onclick = sprintf(
+                "Shiny.setInputValue('%s', '%s', {priority: 'event'})",
+                session$ns("unshare_user"),
+                s$principal_guid
+              ),
+              "Remove"
+            )
+          )
+        }))
+      })
+
+      user_search_query <- debounce(reactive(input$user_search_input), 300)
+
+      output$user_search_results <- renderUI({
+        query <- user_search_query()
+        req(query, nzchar(query))
+
+        users <- tryCatch(
+          rack_find_users(backend, query),
+          error = function(e) list()
+        )
+
+        if (length(users) == 0) {
+          return(
+            tags$div(class = "blockr-search-empty", "No users found")
+          )
+        }
+
+        tagList(lapply(users, function(u) {
+          display <- paste(coal(u$first_name, ""), coal(u$last_name, ""))
+          email <- coal(u$email, u$username, "")
+
+          tags$div(
+            class = "blockr-search-result",
+            tags$div(
+              class = "blockr-search-result-info",
+              tags$span(class = "blockr-search-result-name", display),
+              if (nzchar(email)) {
+                tags$span(class = "blockr-search-result-email", email)
+              }
+            ),
+            tags$button(
+              class = "blockr-search-result-share",
+              onclick = sprintf(
+                "Shiny.setInputValue('%s', '%s', {priority: 'event'})",
+                session$ns("share_user"),
+                u$guid
+              ),
+              "Share"
+            )
+          )
+        }))
+      })
+
+      observeEvent(
+        input$visibility_change,
+        {
+          req(board_name())
+          id <- rack_id_for_board(board_name(), backend)
+          tryCatch(
+            rack_set_acl(id, backend, input$visibility_change),
+            error = cnd_to_notif(type = "error")
+          )
+        }
+      )
+
+      observeEvent(
+        input$share_user,
+        {
+          req(board_name())
+          id <- rack_id_for_board(board_name(), backend)
+          tryCatch(
+            {
+              rack_share(id, backend, input$share_user)
+              sharing_trigger(sharing_trigger() + 1)
+              notify(
+                "Shared successfully",
+                type = "message",
+                session = session
+              )
+            },
+            error = cnd_to_notif(type = "error")
+          )
+        }
+      )
+
+      observeEvent(
+        input$unshare_user,
+        {
+          req(board_name())
+          id <- rack_id_for_board(board_name(), backend)
+          tryCatch(
+            {
+              rack_unshare(id, backend, input$unshare_user)
+              sharing_trigger(sharing_trigger() + 1)
+              notify(
+                "Removed user",
+                type = "message",
+                session = session
+              )
+            },
+            error = cnd_to_notif(type = "error")
+          )
+        }
+      )
+
       # User avatar
       output$user_avatar <- renderUI(
         {
