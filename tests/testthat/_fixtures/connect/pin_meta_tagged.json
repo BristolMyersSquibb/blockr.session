@@ -16,7 +16,7 @@
     {
       "type": "character",
       "attributes": {},
-      "value": ["file61ea37b01d18e.json"]
+      "value": ["file0001.json"]
     },
     {
       "type": "integer",
@@ -69,7 +69,7 @@
           "value": [""]
         }
       },
-      "value": [1774075830]
+      "value": [1577836800]
     },
     {
       "type": "integer",
@@ -117,22 +117,22 @@
               "value": ["fs_path", "character"]
             }
           },
-          "value": ["~/.cache/pins/connect-e1eef568ecb025fd2f202366457db4f2/a98cadce-78ef-4faf-8f5b-3e6e26eb4fec/760"]
+          "value": ["~/.cache/pins/connect-00000000000000000000000000000000/00000000-0000-4000-b000-000000000001/100"]
         },
         {
           "type": "character",
           "attributes": {},
-          "value": ["https://connect.example.com/content/a98cadce-78ef-4faf-8f5b-3e6e26eb4fec/_rev760/"]
+          "value": ["https://connect.example.com/content/00000000-0000-4000-b000-000000000001/_rev100/"]
         },
         {
           "type": "character",
           "attributes": {},
-          "value": ["760"]
+          "value": ["100"]
         },
         {
           "type": "character",
           "attributes": {},
-          "value": ["a98cadce-78ef-4faf-8f5b-3e6e26eb4fec"]
+          "value": ["00000000-0000-4000-b000-000000000001"]
         }
       ]
     }
