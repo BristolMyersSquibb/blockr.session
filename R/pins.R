@@ -347,9 +347,9 @@ rack_capabilities.pins_board_connect <- function(backend, ...) {
     versioning = TRUE,
     tags = TRUE,
     metadata = TRUE,
-    sharing = FALSE,
-    visibility = FALSE,
-    user_discovery = FALSE
+    sharing = TRUE,
+    visibility = TRUE,
+    user_discovery = TRUE
   )
 }
 
