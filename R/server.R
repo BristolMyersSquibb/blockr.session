@@ -477,7 +477,10 @@ manage_project_server <- function(id, board, ...) {
 
         tags$div(
           id = session$ns("panel_sharing"),
-          class = "blockr-tab-panel blockr-tab-panel-hidden blockr-sharing-panel",
+          class = paste(
+            "blockr-tab-panel blockr-tab-panel-hidden",
+            "blockr-sharing-panel"
+          ),
           if (isTRUE(caps$visibility)) {
             tags$div(
               class = "blockr-sharing-section",
@@ -538,7 +541,10 @@ manage_project_server <- function(id, board, ...) {
         acl <- tryCatch(rack_acl(id, backend), error = function(e) "acl")
 
         selected <- if (identical(acl, "acl")) {
-          shares <- tryCatch(rack_shares(id, backend), error = function(e) list())
+          shares <- tryCatch(
+            rack_shares(id, backend),
+            error = function(e) list()
+          )
           if (length(shares) > 0L) "acl" else "private"
         } else {
           acl

@@ -176,7 +176,9 @@ fixture_shift_ts <- function(x, offset) {
     iso_re <- "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
     iso_idx <- grep(iso_re, x, perl = TRUE)
     for (i in iso_idx) {
-      ts <- as.numeric(as.POSIXct(x[i], format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"))
+      ts <- as.numeric(
+        as.POSIXct(x[i], format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+      )
       x[i] <- format(
         .POSIXct(ts + offset, tz = "UTC"),
         "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"
@@ -204,7 +206,9 @@ fixture_round_ts <- function(x) {
     iso_re <- "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
     iso_idx <- grep(iso_re, x, perl = TRUE)
     for (i in iso_idx) {
-      ts <- as.numeric(as.POSIXct(x[i], format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"))
+      ts <- as.numeric(
+        as.POSIXct(x[i], format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+      )
       x[i] <- format(
         .POSIXct(ts - (ts %% 86400), tz = "UTC"),
         "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"
