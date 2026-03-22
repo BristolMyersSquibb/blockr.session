@@ -85,12 +85,26 @@
 <p>The default storage backend is [pins::board_local()] which can be configured by setting the <code>session_mgmt_backend</code> [blockr_option()].</p>
 </div>
 <div class="section level2">
-<h2 id="deploying-to-posit-connect">Deploying to Posit Connect<a class="anchor" aria-label="anchor" href="#deploying-to-posit-connect"></a>
+<h2 id="using-a-connect-backend">Using a Connect backend<a class="anchor" aria-label="anchor" href="#using-a-connect-backend"></a>
 </h2>
-<p>When deploying to Posit Connect, use <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">pins::board_connect</a></code> as the backend so that a fresh board is created per user session (picking up the correct credentials at runtime rather than at deploy time):</p>
+<p>To use Posit Connect as the storage backend, pass <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">pins::board_connect</a></code> (the function itself, not its result) as the backend option. This enables sharing, visibility controls, and per-user pin storage:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>blockr.session_mgmt_backend <span class="op">=</span> <span class="fu">pins</span><span class="fu">::</span><span class="va"><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect</a></span><span class="op">)</span></span></code></pre></div>
-<p>Note the absence of <code>()</code>: the value is the <strong>function itself</strong>, not its result. <code>get_session_backend()</code> calls it once per session, which is what allows per-user pin storage to work correctly.</p>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bristolmyerssquibb.github.io/blockr.core/" class="external-link">blockr.core</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bristolmyerssquibb.github.io/blockr.dock/" class="external-link">blockr.dock</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">blockr.session</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>blockr.session_mgmt_backend <span class="op">=</span> <span class="fu">pins</span><span class="fu">::</span><span class="va"><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">serve</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.html" class="external-link">new_dock_board</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  plugins <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">custom_plugins</a></span><span class="op">(</span><span class="fu"><a href="reference/manage_project.html">manage_project</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+<p><code>get_session_backend()</code> calls the function once per session, picking up credentials at runtime. The navbar dropdown gains a <strong>Sharing</strong> tab (next to Workflows and History) that lets you set visibility and share with other Connect users.</p>
+<div class="section level3">
+<h3 id="deploying-to-posit-connect">Deploying to Posit Connect<a class="anchor" aria-label="anchor" href="#deploying-to-posit-connect"></a>
+</h3>
+<p>When deploying to Connect, the above is all that is needed — <code>board_connect</code> picks up the server URL and API key from the environment automatically.</p>
+</div>
 <div class="section level3">
 <h3 id="per-user-pins-with-the-connect-api-integration">Per-user pins with the Connect API Integration<a class="anchor" aria-label="anchor" href="#per-user-pins-with-the-connect-api-integration"></a>
 </h3>
