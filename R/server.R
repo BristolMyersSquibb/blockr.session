@@ -24,7 +24,7 @@ manage_project_server <- function(id, board, ...) {
         )
       )
 
-      prev_query <- reactiveVal(board$reload_meta$url)
+      prev_query <- reactiveVal(isolate(board$reload_meta$url))
 
       prev_board_name <- reactiveVal(NULL)
 
