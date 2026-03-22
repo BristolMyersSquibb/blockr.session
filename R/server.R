@@ -477,7 +477,7 @@ manage_project_server <- function(id, board, ...) {
 
         tags$div(
           id = session$ns("panel_sharing"),
-          class = "blockr-tab-panel blockr-tab-panel-hidden",
+          class = "blockr-tab-panel blockr-tab-panel-hidden blockr-sharing-panel",
           if (isTRUE(caps$visibility)) {
             tags$div(
               class = "blockr-sharing-section",

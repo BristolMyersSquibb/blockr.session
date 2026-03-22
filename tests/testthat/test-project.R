@@ -378,6 +378,10 @@ test_that("sharing tab rendered with sharing-capable backend", {
 
       html <- output$sharing_panel
       expect_true(any(grepl("VISIBILITY", html)))
+
+      # Sharing controls only render in "Restricted" (acl) mode
+      session$setInputs(visibility_select = "acl")
+      html <- output$sharing_controls
       expect_true(any(grepl("SHARED WITH", html)))
       expect_true(any(grepl("ADD PEOPLE", html)))
     },

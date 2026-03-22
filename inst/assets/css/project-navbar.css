@@ -23,7 +23,6 @@
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25) !important;
   border: 1px solid #e5e7eb !important;
   margin-top: 8px !important;
-  overflow: hidden;
   background: white;
 }
 
@@ -84,6 +83,11 @@
   left: -9999px;
   visibility: hidden;
   pointer-events: none;
+}
+
+/* Sharing panel: allow selectize dropdown to overflow */
+.blockr-sharing-panel {
+  overflow: visible;
 }
 
 /* Workflows section */
