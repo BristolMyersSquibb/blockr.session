@@ -496,8 +496,26 @@ rack_shares.rack_id_pins <- function(id, backend, ...) {
 
 #' @export
 rack_shares.rack_id_pins_connect <- function(id, backend, ...) {
+
   content <- connect_content_find(backend, id$name) # nolint: object_usage.
-  connect_api(backend, "GET /content/{content$guid}/permissions")
+  perms <- connect_api(backend, "GET /content/{content$guid}/permissions")
+
+  lapply(perms, function(p) {
+    guid <- p$principal_guid # nolint: object_usage.
+    user <- tryCatch(
+      connect_api(backend, "GET /users/{guid}"),
+      error = function(e) NULL
+    )
+
+    p$display_name <- if (not_null(user)) {
+      name <- paste(coal(user$first_name, ""), coal(user$last_name, ""))
+      if (nzchar(trimws(name))) trimws(name) else coal(user$username, guid)
+    } else {
+      guid
+    }
+
+    p
+  })
 }
 
 # rack_find_users ----------------------------------------------------------

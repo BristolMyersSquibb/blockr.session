@@ -26,6 +26,7 @@ manage_project_ui <- function(id, x) {
           class = "blockr-navbar-icon-btn",
           type = "button",
           `data-bs-toggle` = "dropdown",
+          `data-bs-auto-close` = "outside",
           `aria-expanded` = "false",
           bsicons::bs_icon("layers", size = "1.4em")
         ),

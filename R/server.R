@@ -485,6 +485,15 @@ manage_project_server <- function(id, board, ...) {
               uiOutput(session$ns("visibility_control"))
             )
           },
+          uiOutput(session$ns("sharing_controls"))
+        )
+      })
+
+      output$sharing_controls <- renderUI({
+        req(identical(input$visibility_select, "acl"))
+        caps <- capabilities()
+
+        tagList(
           if (isTRUE(caps$sharing)) {
             tags$div(
               class = "blockr-sharing-section",
@@ -513,6 +522,7 @@ manage_project_server <- function(id, board, ...) {
       })
 
       output$visibility_control <- renderUI({
+        sharing_trigger()
         req(has_sharing())
         caps <- capabilities()
         req(isTRUE(caps$visibility))
@@ -527,28 +537,23 @@ manage_project_server <- function(id, board, ...) {
         id <- rack_id_for_board(name, backend)
         acl <- tryCatch(rack_acl(id, backend), error = function(e) "acl")
 
-        tags$select(
-          id = session$ns("visibility_select"),
-          class = "blockr-visibility-select",
-          onchange = sprintf(
-            "Shiny.setInputValue('%s', this.value, {priority: 'event'})",
-            session$ns("visibility_change")
+        selected <- if (identical(acl, "acl")) {
+          shares <- tryCatch(rack_shares(id, backend), error = function(e) list())
+          if (length(shares) > 0L) "acl" else "private"
+        } else {
+          acl
+        }
+
+        selectInput(
+          session$ns("visibility_select"),
+          label = NULL,
+          choices = c(
+            "Private" = "private",
+            "Restricted" = "acl",
+            "Public" = "logged_in"
           ),
-          tags$option(
-            value = "acl",
-            selected = if (acl == "acl") "selected" else NULL,
-            "Private"
-          ),
-          tags$option(
-            value = "logged_in",
-            selected = if (acl == "logged_in") "selected" else NULL,
-            "Restricted"
-          ),
-          tags$option(
-            value = "all",
-            selected = if (acl == "all") "selected" else NULL,
-            "Public"
-          )
+          selected = selected,
+          width = "100%"
         )
       })
 
@@ -587,7 +592,7 @@ manage_project_server <- function(id, board, ...) {
               class = "blockr-shared-user-info",
               tags$span(
                 class = "blockr-shared-user-name",
-                s$principal_guid
+                s$display_name
               )
             ),
             tags$button(
@@ -647,15 +652,32 @@ manage_project_server <- function(id, board, ...) {
       })
 
       observeEvent(
-        input$visibility_change,
+        input$visibility_select,
         {
           req(board_name())
           id <- rack_id_for_board(board_name(), backend)
+
+          acl_value <- if (identical(input$visibility_select, "private")) {
+            "acl"
+          } else {
+            input$visibility_select
+          }
+
           tryCatch(
-            rack_set_acl(id, backend, input$visibility_change),
+            {
+              rack_set_acl(id, backend, acl_value)
+
+              if (identical(input$visibility_select, "private")) {
+                shares <- rack_shares(id, backend)
+                for (s in shares) {
+                  rack_unshare(id, backend, s$principal_guid)
+                }
+              }
+            },
             error = cnd_to_notif(type = "error")
           )
-        }
+        },
+        ignoreInit = TRUE
       )
 
       observeEvent(
