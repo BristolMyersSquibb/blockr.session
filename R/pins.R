@@ -54,6 +54,7 @@ rack_id_from_input <- function(x, backend = NULL) {
 }
 
 rack_id_for_board <- function(name, backend) {
+  name <- sanitize_pin_name(name)
   if (inherits(backend, "pins_board_connect")) {
     new_rack_id_pins_connect(backend$account, name)
   } else {
@@ -249,6 +250,8 @@ rack_load.rack_id_pins <- function(id, backend, ...) {
 #' @export
 rack_save.pins_board <- function(backend, data, ..., name) {
 
+  name <- sanitize_pin_name(name)
+
   tmp <- tempfile(fileext = ".json")
   on.exit(unlink(tmp))
 
@@ -273,6 +276,8 @@ rack_save.pins_board <- function(backend, data, ..., name) {
 
 #' @export
 rack_save.pins_board_connect <- function(backend, data, ..., name) {
+
+  name <- sanitize_pin_name(name)
 
   tmp <- tempfile(fileext = ".json")
   on.exit(unlink(tmp))
@@ -343,13 +348,18 @@ rack_capabilities.pins_board <- function(backend, ...) {
 
 #' @export
 rack_capabilities.pins_board_connect <- function(backend, ...) {
+
+  session <- shiny::getDefaultReactiveDomain()
+  has_api <- is.null(session) ||
+    !is.null(session$request$HTTP_POSIT_CONNECT_USER_SESSION_TOKEN)
+
   list(
     versioning = TRUE,
     tags = TRUE,
     metadata = TRUE,
-    sharing = TRUE,
-    visibility = TRUE,
-    user_discovery = TRUE
+    sharing = has_api,
+    visibility = has_api,
+    user_discovery = has_api
   )
 }
 
@@ -491,8 +501,26 @@ rack_shares.rack_id_pins <- function(id, backend, ...) {
 
 #' @export
 rack_shares.rack_id_pins_connect <- function(id, backend, ...) {
+
   content <- connect_content_find(backend, id$name) # nolint: object_usage.
-  connect_api(backend, "GET /content/{content$guid}/permissions")
+  perms <- connect_api(backend, "GET /content/{content$guid}/permissions")
+
+  lapply(perms, function(p) {
+    guid <- p$principal_guid # nolint: object_usage.
+    user <- tryCatch(
+      connect_api(backend, "GET /users/{guid}"),
+      error = function(e) NULL
+    )
+
+    p$display_name <- if (not_null(user)) {
+      name <- paste(coal(user$first_name, ""), coal(user$last_name, ""))
+      if (nzchar(trimws(name))) trimws(name) else coal(user$username, guid)
+    } else {
+      guid
+    }
+
+    p
+  })
 }
 
 # rack_find_users ----------------------------------------------------------

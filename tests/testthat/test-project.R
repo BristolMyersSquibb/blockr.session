@@ -332,3 +332,103 @@ test_that("new_btn sets restore_result to cleared board", {
     )
   )
 })
+
+test_that("sharing tab absent with pins backend", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      # With pins_board (sharing=FALSE), req() fails silently
+      expect_error(output$sharing_tab, class = "shiny.silent.error")
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "no-sharing-test")
+    )
+  )
+})
+
+test_that("sharing tab rendered with sharing-capable backend", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  local_mocked_bindings(
+    rack_capabilities = function(backend, ...) {
+      list(
+        versioning = TRUE, tags = TRUE, metadata = TRUE,
+        sharing = TRUE, visibility = TRUE, user_discovery = TRUE
+      )
+    }
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      html <- output$sharing_tab
+      expect_true(any(grepl("Sharing", html)))
+
+      html <- output$sharing_panel
+      expect_true(any(grepl("VISIBILITY", html)))
+
+      # Sharing controls only render in "Restricted" (acl) mode
+      session$setInputs(visibility_select = "acl")
+      html <- output$sharing_controls
+      expect_true(any(grepl("SHARED WITH", html)))
+      expect_true(any(grepl("ADD PEOPLE", html)))
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "sharing-test")
+    )
+  )
+})
+
+test_that("sharing observers fire with sharing-capable backend", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  local_mocked_bindings(
+    rack_capabilities = function(backend, ...) {
+      list(
+        versioning = TRUE, tags = TRUE, metadata = TRUE,
+        sharing = TRUE, visibility = TRUE, user_discovery = TRUE
+      )
+    },
+    rack_set_acl = function(id, backend, acl_type, ...) invisible(id),
+    rack_share = function(id, backend, with_sub, ...) invisible(id),
+    rack_unshare = function(id, backend, with_sub, ...) invisible(id),
+    rack_shares = function(id, backend, ...) list(),
+    rack_find_users = function(backend, query, ...) list()
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+
+      session$setInputs(visibility_change = "all")
+      expect_no_error(session$flushReact())
+
+      session$setInputs(share_user = "user-guid-123")
+      expect_no_error(session$flushReact())
+
+      session$setInputs(unshare_user = "user-guid-123")
+      expect_no_error(session$flushReact())
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "sharing-obs-test")
+    )
+  )
+})

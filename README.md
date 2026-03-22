@@ -44,19 +44,35 @@ serve(
 The default storage backend is \[pins::board_local()\] which can be
 configured by setting the `session_mgmt_backend` \[blockr_option()\].
 
-## Deploying to Posit Connect
+## Using a Connect backend
 
-When deploying to Posit Connect, use `pins::board_connect` as the
-backend so that a fresh board is created per user session (picking up
-the correct credentials at runtime rather than at deploy time):
+To use Posit Connect as the storage backend, pass `pins::board_connect`
+(the function itself, not its result) as the backend option. This
+enables sharing, visibility controls, and per-user pin storage:
 
 ``` r
+library(blockr.core)
+library(blockr.dock)
+library(blockr.session)
+
 options(blockr.session_mgmt_backend = pins::board_connect)
+
+serve(
+  new_dock_board(),
+  plugins = custom_plugins(manage_project())
+)
 ```
 
-Note the absence of `()`: the value is the **function itself**, not its
-result. `get_session_backend()` calls it once per session, which is what
-allows per-user pin storage to work correctly.
+`get_session_backend()` calls the function once per session, picking up
+credentials at runtime. The navbar dropdown gains a **Sharing** tab
+(next to Workflows and History) that lets you set visibility and share
+with other Connect users.
+
+### Deploying to Posit Connect
+
+When deploying to Connect, the above is all that is needed —
+`board_connect` picks up the server URL and API key from the environment
+automatically.
 
 ### Per-user pins with the Connect API Integration
 
