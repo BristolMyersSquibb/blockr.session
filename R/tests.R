@@ -140,7 +140,11 @@ fixture_normalize_obj <- function(x) {
   anchor <- 1577836800 # 2020-01-01 00:00:00 UTC
   ts_offset <- anchor - min(timestamps)
 
-  list(val = fixture_shift_ts(x, ts_offset), ts_offset = ts_offset)
+  val <- fixture_shift_ts(x, ts_offset)
+  val <- fixture_round_ts(val)
+  val <- fixture_stabilize_sizes(val)
+
+  list(val = val, ts_offset = ts_offset)
 }
 
 fixture_collect_ts <- function(x) {
@@ -182,6 +186,46 @@ fixture_shift_ts <- function(x, offset) {
   }
   if (is.list(x)) {
     x[] <- lapply(x, fixture_shift_ts, offset = offset)
+  }
+  x
+}
+
+# Truncate timestamps to day boundaries so sub-second jitter between
+# operations and variable server state (e.g. user active_time) don't
+# cause fixture diffs across recordings.
+fixture_round_ts <- function(x) {
+  if (inherits(x, "POSIXct")) {
+    tz <- attr(x, "tzone")
+    if (is.null(tz)) tz <- ""
+    secs <- as.numeric(x)
+    return(.POSIXct(secs - (secs %% 86400), tz = tz))
+  }
+  if (is.character(x)) {
+    iso_re <- "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    iso_idx <- grep(iso_re, x, perl = TRUE)
+    for (i in iso_idx) {
+      ts <- as.numeric(as.POSIXct(x[i], format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"))
+      x[i] <- format(
+        .POSIXct(ts - (ts %% 86400), tz = "UTC"),
+        "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"
+      )
+    }
+    return(x)
+  }
+  if (is.list(x)) {
+    x[] <- lapply(x, fixture_round_ts)
+  }
+  x
+}
+
+# Replace volatile bundle-size values with a fixed sentinel.
+# pin_versions() returns an `fs_bytes` column whose value depends on
+# server-side packaging and changes across recordings even when the
+# pinned content is identical.
+fixture_stabilize_sizes <- function(x) {
+  if (!is.data.frame(x)) return(x)
+  if ("size" %in% names(x) && is.numeric(x$size)) {
+    x$size <- rep(0L, length(x$size))
   }
   x
 }

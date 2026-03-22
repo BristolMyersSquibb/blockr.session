@@ -55,12 +55,12 @@
             {
               "type": "character",
               "attributes": {},
-              "value": ["2020-01-24T16:54:55Z"]
+              "value": ["2020-01-24T00:00:00Z"]
             },
             {
               "type": "character",
               "attributes": {},
-              "value": ["2020-02-07T02:59:23Z"]
+              "value": ["2020-02-07T00:00:00Z"]
             },
             {
               "type": "logical",

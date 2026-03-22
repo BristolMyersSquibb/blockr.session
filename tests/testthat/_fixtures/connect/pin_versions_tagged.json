@@ -45,9 +45,9 @@
       "value": [true, false]
     },
     {
-      "type": "double",
+      "type": "integer",
       "attributes": {},
-      "value": [19412, 19409]
+      "value": [0, 0]
     }
   ]
 }

@@ -372,7 +372,8 @@ test_that("rack_list on Connect returns rack_id_pins_connect, filters tags", {
       versioned = TRUE,
       metadata = list(format = "v1")
     )
-    pins::pin_search(board_a)
+    result <- pins::pin_search(board_a)
+    result[grepl("blockr-fixture-", result$name, fixed = TRUE), ]
   }
   search_result <- connect_fixture(
     "pin_search",
@@ -412,7 +413,8 @@ test_that("rack_list on Connect splits user/name from qualified names", {
       versioned = TRUE,
       metadata = list(format = "v1")
     )
-    pins::pin_search(board_a)
+    result <- pins::pin_search(board_a)
+    result[grepl("blockr-fixture-", result$name, fixed = TRUE), ]
   }
   search_result <- connect_fixture(
     "pin_search",
