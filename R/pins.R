@@ -348,13 +348,18 @@ rack_capabilities.pins_board <- function(backend, ...) {
 
 #' @export
 rack_capabilities.pins_board_connect <- function(backend, ...) {
+
+  session <- shiny::getDefaultReactiveDomain()
+  has_api <- is.null(session) ||
+    !is.null(session$request$HTTP_POSIT_CONNECT_USER_SESSION_TOKEN)
+
   list(
     versioning = TRUE,
     tags = TRUE,
     metadata = TRUE,
-    sharing = TRUE,
-    visibility = TRUE,
-    user_discovery = TRUE
+    sharing = has_api,
+    visibility = has_api,
+    user_discovery = has_api
   )
 }
 
