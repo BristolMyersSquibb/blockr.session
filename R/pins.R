@@ -54,6 +54,7 @@ rack_id_from_input <- function(x, backend = NULL) {
 }
 
 rack_id_for_board <- function(name, backend) {
+  name <- sanitize_pin_name(name)
   if (inherits(backend, "pins_board_connect")) {
     new_rack_id_pins_connect(backend$account, name)
   } else {
@@ -249,6 +250,8 @@ rack_load.rack_id_pins <- function(id, backend, ...) {
 #' @export
 rack_save.pins_board <- function(backend, data, ..., name) {
 
+  name <- sanitize_pin_name(name)
+
   tmp <- tempfile(fileext = ".json")
   on.exit(unlink(tmp))
 
@@ -273,6 +276,8 @@ rack_save.pins_board <- function(backend, data, ..., name) {
 
 #' @export
 rack_save.pins_board_connect <- function(backend, data, ..., name) {
+
+  name <- sanitize_pin_name(name)
 
   tmp <- tempfile(fileext = ".json")
   on.exit(unlink(tmp))

@@ -73,14 +73,33 @@ cnd_to_notif <- function(return_val = NULL, type = "warning",
                          session = get_session()) {
 
   function(cnd) {
+    msg <- conditionMessage(cnd)
+    # Escape curly braces so cli/glue won't interpret them (e.g. JSON in
+    # Connect API error bodies like {"code":5, ...} would crash glue::glue).
+    msg <- gsub("{", "{{", msg, fixed = TRUE)
+    msg <- gsub("}", "}}", msg, fixed = TRUE)
+
     notify(
-      HTML(cli::ansi_html(conditionMessage(cnd))),
+      msg,
       type = type,
       session = session
     )
 
     return_val
   }
+}
+
+sanitize_pin_name <- function(name) {
+  name <- gsub("[^[:alnum:]._-]", "_", name)
+  name <- gsub("_+", "_", name)
+  name <- gsub("^[_.-]+|[_.-]+$", "", name)
+  if (nchar(name) < 3L) {
+    name <- paste0(name, strrep("x", 3L - nchar(name)))
+  }
+  if (nchar(name) > 64L) {
+    name <- substr(name, 1L, 64L)
+  }
+  name
 }
 
 blockr_session_tags <- function() "blockr-session"

@@ -136,6 +136,34 @@ test_that("rack_id_for_board local", {
   expect_false(is_connect)
 })
 
+test_that("sanitize_pin_name replaces spaces and invalid chars", {
+  expect_equal(sanitize_pin_name("Rebel eyas"), "Rebel_eyas")
+  expect_equal(sanitize_pin_name("hello world!"), "hello_world")
+  expect_equal(sanitize_pin_name("a.b-c_d"), "a.b-c_d")
+  expect_equal(sanitize_pin_name("  spaced  "), "spaced")
+  expect_equal(sanitize_pin_name("ab"), "abx")
+  expect_equal(
+    sanitize_pin_name(paste(rep("a", 100), collapse = "")),
+    paste(rep("a", 64), collapse = "")
+  )
+})
+
+test_that("rack_id_for_board sanitizes name", {
+
+  backend <- pins::board_temp()
+  id <- rack_id_for_board("Rebel eyas", backend)
+  expect_equal(id$name, "Rebel_eyas")
+})
+
+test_that("rack_save sanitizes name", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list(), links = list())
+
+  res <- rack_save(backend, data, name = "Rebel eyas")
+  expect_equal(res$name, "Rebel_eyas")
+})
+
 test_that("rack_save persists and rack_list finds it", {
 
   backend <- pins::board_temp(versioned = TRUE)
