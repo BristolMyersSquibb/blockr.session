@@ -64,6 +64,7 @@ manage_project_server <- function(id, board, ...) {
             list(
               name = query$board_name,
               user = query$user,
+              record_id = query$record_id,
               version = query$version
             ),
             backend
@@ -175,7 +176,10 @@ manage_project_server <- function(id, board, ...) {
                   onclick = shiny_input_obj_js(
                     session$ns("load_workflow"),
                     name = display_name(wf),
-                    user = coal(wf$user, "")
+                    user = coal(wf$user, ""),
+                    record_id = coal(
+                      wf$record_id, ""
+                    )
                   ),
                   tags$div(
                     class = "blockr-workflow-name",
@@ -408,7 +412,13 @@ manage_project_server <- function(id, board, ...) {
           deleted <- 0
           for (version in input$delete_versions) {
             ver_id <- rack_id_from_input(
-              list(name = id$name, user = id$user, version = version)
+              list(
+                name = id$name,
+                user = id$user,
+                record_id = id$record_id,
+                version = version
+              ),
+              backend
             )
             res <- tryCatch(
               {
@@ -785,13 +795,17 @@ show_workflows_modal <- function(workflows, backend, session) {
         class = "blockr-workflow-row",
         `data-name` = tolower(display_name(wf)),
         `data-user` = coal(wf$user, ""),
+        `data-record-id` = coal(wf$record_id, ""),
         tags$td(
           class = "blockr-wf-checkbox",
           tags$input(
             type = "checkbox",
             class = "blockr-wf-select",
             `data-name` = display_name(wf),
-            `data-user` = coal(wf$user, "")
+            `data-user` = coal(wf$user, ""),
+            `data-record-id` = coal(
+              wf$record_id, ""
+            )
           )
         ),
         tags$td(class = "blockr-wf-name", display_name(wf)),
@@ -804,10 +818,15 @@ show_workflows_modal <- function(workflows, backend, session) {
               shiny_input_obj_js(
                 session$ns("load_workflow"),
                 name = display_name(wf),
-                user = coal(wf$user, "")
+                user = coal(wf$user, ""),
+                record_id = coal(
+                  wf$record_id, ""
+                )
               ),
               "\n",
-              hide_modal_js(session$ns("workflows_modal"))
+              hide_modal_js(
+                session$ns("workflows_modal")
+              )
             ),
             "Load"
           )
@@ -917,10 +936,15 @@ show_versions_modal <- function(id, versions, session) {
                   session$ns("load_version"),
                   name = id$name,
                   user = coal(id$user, ""),
+                  record_id = coal(
+                    id$record_id, ""
+                  ),
                   version = v$version
                 ),
                 "\n",
-                hide_modal_js(session$ns("versions_modal"))
+                hide_modal_js(
+                  session$ns("versions_modal")
+                )
               ),
               "Load"
             )
@@ -1036,7 +1060,9 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
       var selected = [];
       document.querySelectorAll('.%s:checked').forEach(function(cb) {
         var item = cb.dataset && cb.dataset.name
-          ? {name: cb.dataset.name, user: cb.dataset.user || ''}
+          ? {name: cb.dataset.name,
+             user: cb.dataset.user || '',
+             record_id: cb.dataset.recordId || ''}
           : cb.value;
         selected.push(item);
       });

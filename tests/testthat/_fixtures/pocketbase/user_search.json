@@ -1,0 +1,21 @@
+{
+  "page": 1,
+  "perPage": 20,
+  "totalItems": 2,
+  "items": [
+    {
+      "id": "usr002",
+      "username": "asmith",
+      "name": "Alice Smith",
+      "email": "alice@example.com",
+      "created": "2024-01-01 00:00:00.000Z"
+    },
+    {
+      "id": "usr004",
+      "username": "alee",
+      "name": "Alex Lee",
+      "email": "alex@example.com",
+      "created": "2024-01-01 00:00:00.000Z"
+    }
+  ]
+}

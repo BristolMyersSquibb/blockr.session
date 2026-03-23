@@ -40,14 +40,25 @@ rack_id_from_input <- function(x, backend = NULL) {
 
   version <- x$version
 
-  if (not_null(version) && (!nzchar(version) || version == "null")) {
+  if (not_null(version) &&
+        (!nzchar(version) || version == "null")) {
     version <- NULL
   }
 
-  if (not_null(x$user) && nzchar(x$user)) {
+  if (not_null(x$record_id) && nzchar(x$record_id)) {
+    new_rack_id_pb( # nolint: object_usage.
+      x$name,
+      record_id = x$record_id,
+      version_id = version
+    )
+  } else if (inherits(backend, "rack_backend_pb")) {
+    new_rack_id_pb(x$name, version_id = version) # nolint: object_usage.
+  } else if (not_null(x$user) && nzchar(x$user)) {
     new_rack_id_pins_connect(x$user, x$name, version)
   } else if (inherits(backend, "pins_board_connect")) {
-    new_rack_id_pins_connect(backend$account, x$name, version)
+    new_rack_id_pins_connect(
+      backend$account, x$name, version
+    )
   } else {
     new_rack_id_pins(x$name, version)
   }
@@ -55,7 +66,9 @@ rack_id_from_input <- function(x, backend = NULL) {
 
 rack_id_for_board <- function(name, backend) {
   name <- sanitize_pin_name(name)
-  if (inherits(backend, "pins_board_connect")) {
+  if (inherits(backend, "rack_backend_pb")) {
+    new_rack_id_pb(name) # nolint: object_usage.
+  } else if (inherits(backend, "pins_board_connect")) {
     new_rack_id_pins_connect(backend$account, name)
   } else {
     new_rack_id_pins(name)

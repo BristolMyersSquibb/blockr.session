@@ -1,0 +1,26 @@
+{
+  "id": "board001",
+  "name": "test-board",
+  "owner": "user001",
+  "tags": ["blockr-session"],
+  "acl_type": "acl",
+  "shared_with": ["usr002", "usr003"],
+  "created": "2024-01-01 00:00:00.000Z",
+  "updated": "2024-01-01 00:00:00.000Z",
+  "expand": {
+    "shared_with": [
+      {
+        "id": "usr002",
+        "username": "asmith",
+        "name": "Alice Smith",
+        "email": "alice@example.com"
+      },
+      {
+        "id": "usr003",
+        "username": "bjones",
+        "name": "Bob Jones",
+        "email": "bob@example.com"
+      }
+    ]
+  }
+}
