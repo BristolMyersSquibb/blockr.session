@@ -6,11 +6,13 @@ get_session_backend <- function() {
     val <- val()
   }
 
-  if (!inherits(val, "pins_board")) {
+  if (!inherits(val, "pins_board") &&
+        !inherits(val, "rack_backend_pb")) {
     blockr_abort(
       paste(
-        "The `session_mgmt_backend` option must be a pins board or a",
-        "function that returns one, got {class(val)[[1L]]}."
+        "The `session_mgmt_backend` option must be a",
+        "pins board or PocketBase backend, or a function",
+        "that returns one, got {class(val)[[1L]]}."
       ),
       class = "invalid_session_backend"
     )
@@ -108,12 +110,19 @@ board_query_string <- function(id, backend) {
 
   params <- list(board_name = display_name(id))
 
-  if (not_null(id$user) && !identical(id$user, backend$account)) {
+  if (not_null(id$user) &&
+        !identical(id$user, backend$account)) {
     params$user <- id$user
+  }
+
+  if (not_null(id$record_id)) {
+    params$record_id <- id$record_id
   }
 
   if (not_null(id$version)) {
     params$version <- id$version
+  } else if (not_null(id$version_id)) {
+    params$version <- id$version_id
   }
 
   paste0(

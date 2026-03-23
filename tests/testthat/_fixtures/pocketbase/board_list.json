@@ -1,0 +1,27 @@
+{
+  "page": 1,
+  "perPage": 200,
+  "totalItems": 2,
+  "items": [
+    {
+      "id": "board001",
+      "name": "test-board",
+      "owner": "user001",
+      "tags": ["blockr-session"],
+      "acl_type": "acl",
+      "shared_with": [],
+      "created": "2024-01-02 00:00:00.000Z",
+      "updated": "2024-01-02 00:00:00.000Z"
+    },
+    {
+      "id": "board002",
+      "name": "analysis",
+      "owner": "user001",
+      "tags": ["blockr-session", "demo"],
+      "acl_type": "logged_in",
+      "shared_with": [],
+      "created": "2024-01-01 00:00:00.000Z",
+      "updated": "2024-01-01 00:00:00.000Z"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "page": 1,
+  "perPage": 200,
+  "totalItems": 2,
+  "items": [
+    {
+      "id": "ver002",
+      "board": "board001",
+      "data": "{\"blocks\":{\"b\":{\"type\":\"filter_block\"}},\"links\":[],\"format\":\"test\"}",
+      "format": "v1",
+      "created": "2024-01-02 00:00:00.000Z"
+    },
+    {
+      "id": "ver001",
+      "board": "board001",
+      "data": "{\"blocks\":{\"a\":{\"type\":\"dataset_block\"}},\"links\":[],\"format\":\"test\"}",
+      "format": "v1",
+      "created": "2024-01-01 00:00:00.000Z"
+    }
+  ]
+}
