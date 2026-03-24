@@ -23,7 +23,8 @@ Imports:
     bsicons,
     htmltools,
     httr2,
-    utils
+    utils,
+    zip
 Suggests:
     testthat (>= 3.0.0),
     blockr.dock,

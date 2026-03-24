@@ -89,16 +89,15 @@ manage_project_server <- function(id, board, ...) {
 
           prev_query(new_url)
 
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            meta = list(url = new_url),
-            session = session
+          ok <- safe_restore_board(
+            board$board, board_ser, restore_result,
+            meta = list(url = new_url), session = session
           )
 
-          set_board_option_value("board_name", query$board_name, session)
-          updateQueryString(new_url, mode = "replace", session = session)
+          if (ok) {
+            set_board_option_value("board_name", query$board_name, session)
+            updateQueryString(new_url, mode = "replace", session = session)
+          }
         }
       )
 
@@ -178,10 +177,20 @@ manage_project_server <- function(id, board, ...) {
                     user = coal(wf$user, "")
                   ),
                   tags$div(
-                    class = "blockr-workflow-name",
-                    display_name(wf)
+                    class = "blockr-workflow-item-content",
+                    tags$div(
+                      class = "blockr-workflow-name",
+                      display_name(wf)
+                    ),
+                    tags$div(class = "blockr-workflow-meta", wf_time)
                   ),
-                  tags$div(class = "blockr-workflow-meta", wf_time)
+                  tags$a(
+                    class = "blockr-open-newtab",
+                    href = board_query_string(wf, backend),
+                    target = "_blank",
+                    onclick = "event.stopPropagation();",
+                    bsicons::bs_icon("box-arrow-up-right", size = "0.75em")
+                  )
                 )
               }
             )
@@ -212,15 +221,14 @@ manage_project_server <- function(id, board, ...) {
           new_url <- board_query_string(id, backend)
           prev_query(new_url)
 
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            meta = list(url = new_url),
-            session = session
+          ok <- safe_restore_board(
+            board$board, board_ser, restore_result,
+            meta = list(url = new_url), session = session
           )
 
-          updateQueryString(new_url, mode = "replace", session = session)
+          if (ok) {
+            updateQueryString(new_url, mode = "replace", session = session)
+          }
         }
       )
 
@@ -246,8 +254,9 @@ manage_project_server <- function(id, board, ...) {
         input$delete_workflows,
         {
           req(input$delete_workflows)
+          sel <- normalize_js_input(input$delete_workflows)
           deleted <- 0
-          for (wf in input$delete_workflows) {
+          for (wf in sel) {
             id <- rack_id_from_input(wf)
             res <- tryCatch(
               {
@@ -268,6 +277,100 @@ manage_project_server <- function(id, board, ...) {
             notify(
               paste("Deleted", deleted, "workflow(s)"),
               type = "message"
+            )
+            removeModal()
+            refresh_trigger(refresh_trigger() + 1)
+          }
+        }
+      )
+
+      # DOWNLOAD workflows
+      output$download_workflows <- downloadHandler(
+        filename = function() {
+          sel <- normalize_js_input(input$wf_selection)
+          if (length(sel) == 1L) {
+            paste0(sel[[1]]$name, ".json")
+          } else {
+            "workflows.zip"
+          }
+        },
+        content = function(file) {
+          sel <- normalize_js_input(input$wf_selection)
+          req(length(sel) > 0L)
+          tryCatch(
+            file.copy(prepare_download(sel, backend), file),
+            error = function(e) {
+              notify(
+                paste("Download failed:", conditionMessage(e)),
+                type = "error",
+                session = session
+              )
+            }
+          )
+        }
+      )
+
+      # DOWNLOAD versions
+      output$download_versions <- downloadHandler(
+        filename = function() {
+          sel <- normalize_js_input(input$ver_selection)
+          name <- board_name()
+          if (length(sel) == 1L) {
+            paste0(name, "_v", sel[[1]]$version, ".json")
+          } else {
+            paste0(name, "_versions.zip")
+          }
+        },
+        content = function(file) {
+          sel <- normalize_js_input(input$ver_selection)
+          req(length(sel) > 0L)
+          name <- board_name()
+          dl_sel <- lapply(sel, function(v) {
+            list(
+              name = paste0(name, "_v", v$version),
+              user = coal(v$user, ""),
+              version = v$version
+            )
+          })
+          tryCatch(
+            file.copy(prepare_download(dl_sel, backend), file),
+            error = function(e) {
+              notify(
+                paste("Download failed:", conditionMessage(e)),
+                type = "error",
+                session = session
+              )
+            }
+          )
+        }
+      )
+
+      # UPLOAD workflows
+      observeEvent(
+        input$upload_file,
+        {
+          req(input$upload_file)
+
+          result <- tryCatch(
+            upload_workflows(input$upload_file, backend),
+            error = function(e) {
+              list(
+                ok = FALSE, uploaded = 0L,
+                errors = paste("Upload failed:",
+                               conditionMessage(e))
+              )
+            }
+          )
+
+          for (err in result$errors) {
+            notify(err, type = "error", session = session)
+          }
+
+          if (result$ok) {
+            notify(
+              paste("Uploaded", result$uploaded, "workflow(s)"),
+              type = "message",
+              session = session
             )
             removeModal()
             refresh_trigger(refresh_trigger() + 1)
@@ -358,15 +461,14 @@ manage_project_server <- function(id, board, ...) {
           new_url <- board_query_string(id, backend)
           prev_query(new_url)
 
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            meta = list(url = new_url),
-            session = session
+          ok <- safe_restore_board(
+            board$board, board_ser, restore_result,
+            meta = list(url = new_url), session = session
           )
 
-          updateQueryString(new_url, mode = "replace", session = session)
+          if (ok) {
+            updateQueryString(new_url, mode = "replace", session = session)
+          }
         }
       )
 
@@ -395,7 +497,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_versions_modal(id, versions, session)
+          show_versions_modal(id, versions, session, backend)
         }
       )
 
@@ -798,18 +900,62 @@ show_workflows_modal <- function(workflows, backend, session) {
         tags$td(class = "blockr-wf-time", wf_time),
         tags$td(
           class = "blockr-wf-action",
-          tags$button(
-            class = "btn btn-sm btn-primary",
-            onclick = paste0(
-              shiny_input_obj_js(
-                session$ns("load_workflow"),
-                name = display_name(wf),
-                user = coal(wf$user, "")
+          tags$div(
+            class = "blockr-wf-row-actions",
+            tags$button(
+              class = "btn btn-sm btn-primary",
+              onclick = paste0(
+                shiny_input_obj_js(
+                  session$ns("load_workflow"),
+                  name = display_name(wf),
+                  user = coal(wf$user, "")
+                ),
+                "\n",
+                hide_modal_js(session$ns("workflows_modal"))
               ),
-              "\n",
-              hide_modal_js(session$ns("workflows_modal"))
+              "Load"
             ),
-            "Load"
+            tags$a(
+              class = "btn btn-sm btn-outline-secondary",
+              href = board_query_string(wf, backend),
+              target = "_blank",
+              bsicons::bs_icon(
+                "box-arrow-up-right",
+                size = "0.85em"
+              )
+            ),
+            tags$button(
+              class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
+              title = "Download",
+              onclick = sprintf(
+                "Shiny.setInputValue('%s', [{name: '%s',
+                  user: '%s'}], {priority: 'event'});
+                  setTimeout(function() {
+                    document.getElementById('%s').click();
+                  }, 100);",
+                session$ns("wf_selection"),
+                display_name(wf),
+                coal(wf$user, ""),
+                session$ns("download_workflows")
+              ),
+              bsicons::bs_icon("download")
+            ),
+            tags$button(
+              class = "btn btn-sm btn-outline-danger blockr-wf-row-btn",
+              title = "Delete",
+              onclick = sprintf(
+                "if (confirm('Delete %s?')) {
+                  Shiny.setInputValue('%s',
+                    [{name: '%s', user: '%s'}],
+                    {priority: 'event'});
+                }",
+                display_name(wf),
+                session$ns("delete_workflows"),
+                display_name(wf),
+                coal(wf$user, "")
+              ),
+              bsicons::bs_icon("trash")
+            )
           )
         )
       )
@@ -822,7 +968,9 @@ show_workflows_modal <- function(workflows, backend, session) {
     delete_btn_id = session$ns("delete_workflows_btn"),
     delete_input_id = session$ns("delete_workflows"),
     item_type = "workflow",
-    search_id = session$ns("workflow_search")
+    search_id = session$ns("workflow_search"),
+    download_btn_id = session$ns("download_workflows_btn"),
+    selection_input_id = session$ns("wf_selection")
   )
 
   showModal(
@@ -844,6 +992,25 @@ show_workflows_modal <- function(workflows, backend, session) {
               class = "btn btn-sm btn-outline-danger",
               style = "display: none;",
               "Delete"
+            ),
+            tags$div(
+              id = session$ns("download_workflows_btn"),
+              downloadButton(
+                session$ns("download_workflows"),
+                label = "Download",
+                class = "btn-sm btn-primary"
+              )
+            ),
+            tags$div(
+              class = "blockr-wf-upload-compact",
+              fileInput(
+                session$ns("upload_file"),
+                label = NULL,
+                accept = ".json",
+                multiple = TRUE,
+                buttonLabel = "Upload",
+                placeholder = NULL
+              )
             ),
             tags$input(
               type = "text",
@@ -880,7 +1047,7 @@ show_workflows_modal <- function(workflows, backend, session) {
   )
 }
 
-show_versions_modal <- function(id, versions, session) {
+show_versions_modal <- function(id, versions, session, backend) {
 
   rows <- lapply(
     seq_len(nrow(versions)),
@@ -897,6 +1064,8 @@ show_versions_modal <- function(id, versions, session) {
             type = "checkbox",
             class = "blockr-version-select",
             value = v$version,
+            `data-version` = v$version,
+            `data-user` = coal(id$user, ""),
             disabled = if (is_current) "disabled" else NULL
           )
         ),
@@ -909,22 +1078,78 @@ show_versions_modal <- function(id, versions, session) {
         ),
         tags$td(
           class = "blockr-wf-action",
-          if (!is_current) {
-            tags$button(
-              class = "btn btn-sm btn-primary",
-              onclick = paste0(
-                shiny_input_obj_js(
-                  session$ns("load_version"),
+          tags$div(
+            class = "blockr-wf-row-actions",
+            if (!is_current) {
+              tags$button(
+                class = "btn btn-sm btn-primary",
+                onclick = paste0(
+                  shiny_input_obj_js(
+                    session$ns("load_version"),
+                    name = id$name,
+                    user = coal(id$user, ""),
+                    version = v$version
+                  ),
+                  "\n",
+                  hide_modal_js(session$ns("versions_modal"))
+                ),
+                "Load"
+              )
+            },
+            tags$a(
+              class = "btn btn-sm btn-outline-secondary",
+              href = board_query_string(
+                list(
                   name = id$name,
-                  user = coal(id$user, ""),
+                  user = id$user,
                   version = v$version
                 ),
-                "\n",
-                hide_modal_js(session$ns("versions_modal"))
+                backend
               ),
-              "Load"
-            )
-          }
+              target = "_blank",
+              bsicons::bs_icon(
+                "box-arrow-up-right",
+                size = "0.85em"
+              )
+            ),
+            tags$button(
+              class = paste(
+                "btn btn-sm btn-outline-primary blockr-wf-row-btn"
+              ),
+              title = "Download",
+              onclick = sprintf(
+                "Shiny.setInputValue('%s',
+                  [{version: '%s', user: '%s'}],
+                  {priority: 'event'});
+                  setTimeout(function() {
+                    document.getElementById('%s').click();
+                  }, 100);",
+                session$ns("ver_selection"),
+                v$version,
+                coal(id$user, ""),
+                session$ns("download_versions")
+              ),
+              bsicons::bs_icon("download")
+            ),
+            if (!is_current) {
+              tags$button(
+                class = paste(
+                  "btn btn-sm btn-outline-danger blockr-wf-row-btn"
+                ),
+                title = "Delete",
+                onclick = sprintf(
+                  "if (confirm('Delete this version?')) {
+                    Shiny.setInputValue('%s',
+                      ['%s'],
+                      {priority: 'event'});
+                  }",
+                  session$ns("delete_versions"),
+                  v$version
+                ),
+                bsicons::bs_icon("trash")
+              )
+            }
+          )
         )
       )
     }
@@ -936,7 +1161,9 @@ show_versions_modal <- function(id, versions, session) {
     delete_btn_id = session$ns("delete_versions_btn"),
     delete_input_id = session$ns("delete_versions"),
     item_type = "version",
-    has_disabled = TRUE
+    has_disabled = TRUE,
+    download_btn_id = session$ns("download_versions_btn"),
+    selection_input_id = session$ns("ver_selection")
   )
 
   showModal(
@@ -958,6 +1185,14 @@ show_versions_modal <- function(id, versions, session) {
               class = "btn btn-sm btn-outline-danger",
               style = "display: none;",
               "Delete"
+            ),
+            tags$div(
+              id = session$ns("download_versions_btn"),
+              downloadButton(
+                session$ns("download_versions"),
+                label = "Download",
+                class = "btn-sm btn-primary"
+              )
             )
           )
         ),
@@ -989,7 +1224,9 @@ show_versions_modal <- function(id, versions, session) {
 
 modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
                            delete_input_id, item_type = "item",
-                           search_id = NULL, has_disabled = FALSE) {
+                           search_id = NULL, has_disabled = FALSE,
+                           download_btn_id = NULL,
+                           selection_input_id = NULL) {
 
   if (!is.null(search_id)) {
     search_block <- sprintf(
@@ -1013,6 +1250,44 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
     disabled_filter <- ""
   }
 
+  # Download button wrapper visibility + selection sync
+  if (!is.null(download_btn_id)) {
+    download_visibility <- sprintf(
+      "var dlWrap = document.getElementById('%s');
+      if (selected.length > 0) {
+        dlWrap.style.visibility = 'visible';
+        dlWrap.style.position = '';
+      } else {
+        dlWrap.style.visibility = 'hidden';
+        dlWrap.style.position = 'absolute';
+      }
+      var dlLink = dlWrap.querySelector('a');
+      if (dlLink) dlLink.textContent =
+        'Download (' + selected.length + ')';",
+      download_btn_id
+    )
+  } else {
+    download_visibility <- ""
+  }
+
+  # Sync selection to Shiny input for downloadHandler
+  if (!is.null(selection_input_id)) {
+    selection_sync <- sprintf(
+      "var selData = [];
+      selected.forEach(function(cb) {
+        var item = {};
+        for (var key in cb.dataset) {
+          item[key] = cb.dataset[key];
+        }
+        selData.push(item);
+      });
+      Shiny.setInputValue('%s', selData, {priority: 'event'});",
+      selection_input_id
+    )
+  } else {
+    selection_sync <- ""
+  }
+
   sprintf(
     "%s
     document.getElementById('%s').addEventListener('change', function(e) {
@@ -1026,6 +1301,8 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
       var btn = document.getElementById('%s');
       btn.style.display = selected.length > 0 ? '' : 'none';
       btn.textContent = 'Delete (' + selected.length + ')';
+      %s
+      %s
     }
 
     document.querySelectorAll('.%s').forEach(function(cb) {
@@ -1053,6 +1330,8 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
     disabled_filter,
     checkbox_class,
     delete_btn_id,
+    download_visibility,
+    selection_sync,
     checkbox_class,
     delete_btn_id,
     checkbox_class,

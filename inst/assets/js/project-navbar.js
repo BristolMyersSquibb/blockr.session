@@ -10,3 +10,4 @@ Shiny.addCustomMessageHandler('blockr-update-navbar-title', function(title) {
   });
 });
 
+
