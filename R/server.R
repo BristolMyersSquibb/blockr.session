@@ -91,7 +91,6 @@ manage_project_server <- function(id, board, ...) {
 
           ok <- safe_restore_board(
             board$board, board_ser, restore_result,
-            name = display_name(id), version = id$version,
             meta = list(url = new_url), session = session
           )
 
@@ -214,7 +213,6 @@ manage_project_server <- function(id, board, ...) {
 
           ok <- safe_restore_board(
             board$board, board_ser, restore_result,
-            name = display_name(id), version = id$version,
             meta = list(url = new_url), session = session
           )
 
@@ -455,7 +453,6 @@ manage_project_server <- function(id, board, ...) {
 
           ok <- safe_restore_board(
             board$board, board_ser, restore_result,
-            name = display_name(id), version = id$version,
             meta = list(url = new_url), session = session
           )
 

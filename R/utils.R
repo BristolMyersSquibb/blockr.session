@@ -142,8 +142,7 @@ normalize_js_input <- function(x) {
 }
 
 safe_restore_board <- function(board, board_ser, restore_result,
-                               name, version = NULL, meta = NULL,
-                               session) {
+                               meta = NULL, session) {
   tryCatch(
     {
       restore_board(
