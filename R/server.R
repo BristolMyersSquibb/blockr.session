@@ -1098,7 +1098,25 @@ show_versions_modal <- function(id, versions, session) {
                 session$ns("download_versions")
               ),
               bsicons::bs_icon("download")
-            )
+            ),
+            if (!is_current) {
+              tags$button(
+                class = paste(
+                  "btn btn-sm btn-outline-danger blockr-wf-row-btn"
+                ),
+                title = "Delete",
+                onclick = sprintf(
+                  "if (confirm('Delete this version?')) {
+                    Shiny.setInputValue('%s',
+                      ['%s'],
+                      {priority: 'event'});
+                  }",
+                  session$ns("delete_versions"),
+                  v$version
+                ),
+                bsicons::bs_icon("trash")
+              )
+            }
           )
         )
       )
