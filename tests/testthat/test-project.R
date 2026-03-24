@@ -163,6 +163,25 @@ test_that("load_version restores specific version", {
   )
 })
 
+test_that("safe_restore_board returns TRUE on success", {
+  local_mocked_bindings(
+    restore_board = function(...) invisible(NULL)
+  )
+  expect_true(
+    safe_restore_board("board", "ser", "result", session = MockShinySession$new())
+  )
+})
+
+test_that("safe_restore_board returns FALSE and notifies on error", {
+  local_mocked_bindings(
+    restore_board = function(...) stop("boom")
+  )
+  session <- MockShinySession$new()
+  expect_false(
+    safe_restore_board("board", "ser", "result", session = session)
+  )
+})
+
 test_that("delete_workflows removes pin from backend", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
