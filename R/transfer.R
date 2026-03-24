@@ -46,7 +46,7 @@ upload_workflows <- function(file_info, backend) {
     wf_name <- sub("\\.[Jj][Ss][Oo][Nn]$", "", fname)
 
     data <- try(jsonlite::fromJSON(fpath, simplifyDataFrame = FALSE,
-                                    simplifyMatrix = FALSE), silent = TRUE)
+                                   simplifyMatrix = FALSE), silent = TRUE)
     board <- try(blockr_deser(data), silent = TRUE)
 
     if (!inherits(board, "board")) {
