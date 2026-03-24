@@ -288,6 +288,7 @@ manage_project_server <- function(id, board, ...) {
         },
         content = function(file) {
           sel <- normalize_js_input(input$wf_selection)
+          req(length(sel) > 0L)
           result <- tryCatch(
             prepare_download(sel, backend),
             error = function(e) {
@@ -309,29 +310,31 @@ manage_project_server <- function(id, board, ...) {
         input$upload_file,
         {
           req(input$upload_file)
-          f <- input$upload_file
 
-          board_ser <- tryCatch(
-            jsonlite::fromJSON(
-              f$datapath,
-              simplifyDataFrame = FALSE,
-              simplifyMatrix = FALSE
-            ),
-            error = cnd_to_notif(type = "error")
+          result <- tryCatch(
+            upload_workflows(input$upload_file, backend),
+            error = function(e) {
+              list(
+                ok = FALSE, uploaded = 0L,
+                errors = paste("Upload failed:",
+                               conditionMessage(e))
+              )
+            }
           )
 
-          if (is.null(board_ser)) {
-            return()
+          for (err in result$errors) {
+            notify(err, type = "error", session = session)
           }
 
-          removeModal()
-
-          restore_board(
-            board$board,
-            board_ser,
-            restore_result,
-            session = session
-          )
+          if (result$ok) {
+            notify(
+              paste("Uploaded", result$uploaded, "workflow(s)"),
+              type = "message",
+              session = session
+            )
+            removeModal()
+            refresh_trigger(refresh_trigger() + 1)
+          }
         }
       )
 
@@ -956,8 +959,8 @@ show_workflows_modal <- function(workflows, backend, session) {
               fileInput(
                 session$ns("upload_file"),
                 label = NULL,
-                accept = ".json",
-                multiple = FALSE,
+                accept = c(".json", ".zip"),
+                multiple = TRUE,
                 buttonLabel = "Upload",
                 placeholder = NULL
               )
@@ -1136,10 +1139,14 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
   if (!is.null(download_btn_id)) {
     download_visibility <- sprintf(
       "var dlWrap = document.getElementById('%s');
+      var wasHidden = dlWrap.style.display === 'none';
       dlWrap.style.display = selected.length > 0 ? '' : 'none';
       var dlLink = dlWrap.querySelector('a');
       if (dlLink) dlLink.textContent =
-        'Download (' + selected.length + ')';",
+        'Download (' + selected.length + ')';
+      if (wasHidden && selected.length > 0) {
+        $(dlWrap).trigger('shown');
+      }",
       download_btn_id
     )
   } else {
