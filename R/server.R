@@ -959,7 +959,7 @@ show_workflows_modal <- function(workflows, backend, session) {
               fileInput(
                 session$ns("upload_file"),
                 label = NULL,
-                accept = c(".json", ".zip"),
+                accept = ".json",
                 multiple = TRUE,
                 buttonLabel = "Upload",
                 placeholder = NULL

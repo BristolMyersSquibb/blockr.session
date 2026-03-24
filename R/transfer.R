@@ -64,11 +64,10 @@ prepare_download <- function(sel, backend) {
   transfer_ok(zip_path, "application/zip", "workflows.zip")
 }
 
-#' Upload workflow files to the backend
+#' Upload workflow JSON files to the backend
 #'
 #' Processes files from [shiny::fileInput()] and pins each workflow JSON
-#' to the backend.  Accepts `.json` files directly and `.zip` archives
-#' that contain only `.json` files.
+#' to the backend.
 #'
 #' @param file_info Data frame returned by [shiny::fileInput()] with
 #'   columns `name`, `size`, `type`, `datapath`.
@@ -85,77 +84,29 @@ upload_workflows <- function(file_info, backend) {
     fname <- file_info$name[i]
     fpath <- file_info$datapath[i]
 
-    if (grepl("\\.zip$", fname, ignore.case = TRUE)) {
-      res <- upload_zip(fpath, backend)
-      uploaded <- uploaded + res$uploaded
-      errors <- c(errors, res$errors)
-    } else if (grepl("\\.json$", fname, ignore.case = TRUE)) {
-      wf_name <- tools::file_path_sans_ext(fname)
-      res <- upload_single_json(fpath, wf_name, backend)
-      uploaded <- uploaded + res$uploaded
-      errors <- c(errors, res$errors)
-    } else {
-      errors <- c(errors, paste("Skipped unsupported file:", fname))
+    if (!grepl("\\.json$", fname, ignore.case = TRUE)) {
+      errors <- c(errors, paste("Skipped non-JSON file:", fname))
+      next
     }
+
+    wf_name <- tools::file_path_sans_ext(fname)
+
+    tryCatch(
+      {
+        pins::pin_upload(
+          backend, fpath, sanitize_pin_name(wf_name),
+          versioned = TRUE,
+          metadata = list(format = "v1"),
+          tags = blockr_session_tags()
+        )
+        uploaded <- uploaded + 1L
+      },
+      error = function(e) {
+        errors <<- c(errors, paste("Failed to upload", wf_name,
+                                   "-", conditionMessage(e)))
+      }
+    )
   }
 
   list(ok = uploaded > 0L, uploaded = uploaded, errors = errors)
-}
-
-upload_single_json <- function(path, name, backend) {
-  tryCatch(
-    {
-      name <- sanitize_pin_name(name)
-      pins::pin_upload(
-        backend, path, name,
-        versioned = TRUE,
-        metadata = list(format = "v1"),
-        tags = blockr_session_tags()
-      )
-      list(uploaded = 1L, errors = character())
-    },
-    error = function(e) {
-      list(
-        uploaded = 0L,
-        errors = paste("Failed to upload", name, "-",
-                       conditionMessage(e))
-      )
-    }
-  )
-}
-
-upload_zip <- function(path, backend) {
-  uploaded <- 0L
-  errors <- character()
-
-  tmp_dir <- tempfile("wf_upload_")
-  dir.create(tmp_dir)
-  on.exit(unlink(tmp_dir, recursive = TRUE))
-
-  zip::unzip(path, exdir = tmp_dir)
-
-  all_files <- list.files(tmp_dir, recursive = TRUE)
-  non_json <- all_files[!grepl("\\.json$", all_files, ignore.case = TRUE)]
-
-  if (length(non_json) > 0L) {
-    return(list(
-      uploaded = 0L,
-      errors = paste(
-        "ZIP contains non-JSON files:",
-        paste(non_json, collapse = ", ")
-      )
-    ))
-  }
-
-  json_files <- list.files(tmp_dir, pattern = "\\.json$",
-                           full.names = TRUE, recursive = TRUE)
-
-  for (jf in json_files) {
-    wf_name <- tools::file_path_sans_ext(basename(jf))
-    res <- upload_single_json(jf, wf_name, backend)
-    uploaded <- uploaded + res$uploaded
-    errors <- c(errors, res$errors)
-  }
-
-  list(uploaded = uploaded, errors = errors)
 }
