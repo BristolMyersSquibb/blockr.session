@@ -168,7 +168,9 @@ test_that("safe_restore_board returns TRUE on success", {
     restore_board = function(...) invisible(NULL)
   )
   expect_true(
-    safe_restore_board("board", "ser", "result", session = MockShinySession$new())
+    safe_restore_board(
+      "board", "ser", "result", session = MockShinySession$new()
+    )
   )
 })
 
