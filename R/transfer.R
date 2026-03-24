@@ -87,7 +87,7 @@ upload_workflows <- function(file_info, backend) {
       next
     }
 
-    wf_name <- tools::file_path_sans_ext(fname)
+    wf_name <- sub("\\.[Jj][Ss][Oo][Nn]$", "", fname)
 
     tryCatch(
       {
