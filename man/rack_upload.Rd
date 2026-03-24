@@ -11,10 +11,8 @@ rack_upload(backend, path, ...)
 
 \item{path}{Character scalar. Path to the local file to upload.}
 
-\item{...}{Additional arguments passed to the method.}
-
-\item{name}{Character scalar. The name under which the session will be
-stored.}
+\item{...}{Additional arguments passed to the method, including \code{name}
+(character scalar giving the name under which the session will be stored).}
 }
 \value{
 A \code{rack_id} object identifying the newly created version.

@@ -74,9 +74,8 @@ rack_download <- function(id, backend, ...) UseMethod("rack_download")
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param path Character scalar. Path to the local file to upload.
-#' @param ... Additional arguments passed to the method.
-#' @param name Character scalar. The name under which the session will be
-#'   stored.
+#' @param ... Additional arguments passed to the method, including `name`
+#'   (character scalar giving the name under which the session will be stored).
 #'
 #' @return A `rack_id` object identifying the newly created version.
 #'
