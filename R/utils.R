@@ -151,10 +151,7 @@ safe_restore_board <- function(board, board_ser, restore_result,
       )
       TRUE
     },
-    error = function(e) {
-      notify(conditionMessage(e), type = "error", session = session)
-      FALSE
-    }
+    error = cnd_to_notif(return_val = FALSE, type = "error", session = session)
   )
 }
 
