@@ -1,3 +1,4 @@
 ^README\.(Rmd|html)$
 ^\.github$
+^\.claude$
 ^plans$

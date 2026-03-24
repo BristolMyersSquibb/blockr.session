@@ -157,12 +157,14 @@ manage_project_ui <- function(id, x) {
       # Save status
       tags$div(
         class = "blockr-navbar-save-section",
-        textOutput(
-          ns("save_status"),
-          container = tags$span,
-          inline = TRUE
-        ) |>
-          tagAppendAttributes(class = "blockr-navbar-meta"),
+        tagAppendAttributes(
+          textOutput(
+            ns("save_status"),
+            container = tags$span,
+            inline = TRUE
+          ),
+          class = "blockr-navbar-meta"
+        ),
         tags$button(
           id = ns("save_btn"),
           class = "blockr-navbar-save-btn shiny-bound-input",

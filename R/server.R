@@ -497,7 +497,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_versions_modal(id, versions, session)
+          show_versions_modal(id, versions, session, backend)
         }
       )
 
@@ -902,15 +902,6 @@ show_workflows_modal <- function(workflows, backend, session) {
           class = "blockr-wf-action",
           tags$div(
             class = "blockr-wf-row-actions",
-            tags$a(
-              class = "btn btn-sm btn-outline-secondary",
-              href = board_query_string(wf, backend),
-              target = "_blank",
-              bsicons::bs_icon(
-                "box-arrow-up-right",
-                size = "0.85em"
-              )
-            ),
             tags$button(
               class = "btn btn-sm btn-primary",
               onclick = paste0(
@@ -923,6 +914,15 @@ show_workflows_modal <- function(workflows, backend, session) {
                 hide_modal_js(session$ns("workflows_modal"))
               ),
               "Load"
+            ),
+            tags$a(
+              class = "btn btn-sm btn-outline-secondary",
+              href = board_query_string(wf, backend),
+              target = "_blank",
+              bsicons::bs_icon(
+                "box-arrow-up-right",
+                size = "0.85em"
+              )
             ),
             tags$button(
               class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
@@ -1047,7 +1047,7 @@ show_workflows_modal <- function(workflows, backend, session) {
   )
 }
 
-show_versions_modal <- function(id, versions, session) {
+show_versions_modal <- function(id, versions, session, backend) {
 
   rows <- lapply(
     seq_len(nrow(versions)),
@@ -1096,6 +1096,22 @@ show_versions_modal <- function(id, versions, session) {
                 "Load"
               )
             },
+            tags$a(
+              class = "btn btn-sm btn-outline-secondary",
+              href = board_query_string(
+                list(
+                  name = id$name,
+                  user = id$user,
+                  version = v$version
+                ),
+                backend
+              ),
+              target = "_blank",
+              bsicons::bs_icon(
+                "box-arrow-up-right",
+                size = "0.85em"
+              )
+            ),
             tags$button(
               class = paste(
                 "btn btn-sm btn-outline-primary blockr-wf-row-btn"
