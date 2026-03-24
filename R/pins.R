@@ -199,10 +199,10 @@ rack_info.rack_id_pins <- function(id, backend, ...) {
   versions[, c("version", "created", "hash"), drop = FALSE]
 }
 
-# rack_load -----------------------------------------------------------------
+# rack_download -------------------------------------------------------------
 
 #' @export
-rack_load.rack_id_pins <- function(id, backend, ...) {
+rack_download.rack_id_pins <- function(id, backend, ...) {
 
   version <- id$version
 
@@ -229,37 +229,26 @@ rack_load.rack_id_pins <- function(id, backend, ...) {
     )
   }
 
-  dat <- pins::pin_download(backend, pin_name(id), version, meta$pin_hash)
-
-  switch(
-    meta$user$format,
-    v1 = jsonlite::fromJSON(
-      dat,
-      simplifyDataFrame = FALSE,
-      simplifyMatrix = FALSE
-    ),
+  if (!identical(meta$user$format, "v1")) {
     blockr_abort(
       "Unrecognized file format {meta$user$format}.",
       class = "unknown_file_format"
     )
-  )
+  }
+
+  pins::pin_download(backend, pin_name(id), version, meta$pin_hash)
 }
 
-# rack_save -----------------------------------------------------------------
+# rack_upload ---------------------------------------------------------------
 
 #' @export
-rack_save.pins_board <- function(backend, data, ..., name) {
+rack_upload.pins_board <- function(backend, path, ..., name) {
 
   name <- sanitize_pin_name(name)
 
-  tmp <- tempfile(fileext = ".json")
-  on.exit(unlink(tmp))
-
-  jsonlite::write_json(data, tmp, null = "null")
-
   pins::pin_upload(
     backend,
-    tmp,
+    path,
     name,
     versioned = TRUE,
     metadata = list(format = "v1"),
@@ -275,18 +264,13 @@ rack_save.pins_board <- function(backend, data, ..., name) {
 }
 
 #' @export
-rack_save.pins_board_connect <- function(backend, data, ..., name) {
+rack_upload.pins_board_connect <- function(backend, path, ..., name) {
 
   name <- sanitize_pin_name(name)
 
-  tmp <- tempfile(fileext = ".json")
-  on.exit(unlink(tmp))
-
-  jsonlite::write_json(data, tmp, null = "null")
-
   pins::pin_upload(
     backend,
-    tmp,
+    path,
     name,
     versioned = TRUE,
     metadata = list(format = "v1"),

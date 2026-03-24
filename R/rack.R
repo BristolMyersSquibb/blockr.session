@@ -44,13 +44,30 @@ rack_list <- function(backend, tags = NULL, ...) UseMethod("rack_list")
 
 rack_info <- function(id, backend, ...) UseMethod("rack_info")
 
+# rack_download -------------------------------------------------------------
+
+rack_download <- function(id, backend, ...) UseMethod("rack_download")
+
+# rack_upload ---------------------------------------------------------------
+
+rack_upload <- function(backend, path, ...) UseMethod("rack_upload")
+
 # rack_load -----------------------------------------------------------------
 
-rack_load <- function(id, backend, ...) UseMethod("rack_load")
+rack_load <- function(id, backend, ...) {
+  path <- rack_download(id, backend, ...)
+  jsonlite::fromJSON(path, simplifyDataFrame = FALSE,
+                     simplifyMatrix = FALSE)
+}
 
 # rack_save -----------------------------------------------------------------
 
-rack_save <- function(backend, data, ...) UseMethod("rack_save")
+rack_save <- function(backend, data, ..., name) {
+  tmp <- tempfile(fileext = ".json")
+  on.exit(unlink(tmp))
+  jsonlite::write_json(data, tmp, null = "null")
+  rack_upload(backend, tmp, ..., name = name)
+}
 
 # rack_delete ---------------------------------------------------------------
 
