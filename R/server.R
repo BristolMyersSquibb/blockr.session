@@ -177,10 +177,20 @@ manage_project_server <- function(id, board, ...) {
                     user = coal(wf$user, "")
                   ),
                   tags$div(
-                    class = "blockr-workflow-name",
-                    display_name(wf)
+                    class = "blockr-workflow-item-content",
+                    tags$div(
+                      class = "blockr-workflow-name",
+                      display_name(wf)
+                    ),
+                    tags$div(class = "blockr-workflow-meta", wf_time)
                   ),
-                  tags$div(class = "blockr-workflow-meta", wf_time)
+                  tags$a(
+                    class = "blockr-open-newtab",
+                    href = board_query_string(wf, backend),
+                    target = "_blank",
+                    onclick = "event.stopPropagation();",
+                    bsicons::bs_icon("box-arrow-up-right", size = "0.75em")
+                  )
                 )
               }
             )
@@ -892,6 +902,15 @@ show_workflows_modal <- function(workflows, backend, session) {
           class = "blockr-wf-action",
           tags$div(
             class = "blockr-wf-row-actions",
+            tags$a(
+              class = "btn btn-sm btn-outline-secondary",
+              href = board_query_string(wf, backend),
+              target = "_blank",
+              bsicons::bs_icon(
+                "box-arrow-up-right",
+                size = "0.85em"
+              )
+            ),
             tags$button(
               class = "btn btn-sm btn-primary",
               onclick = paste0(
