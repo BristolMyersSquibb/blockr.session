@@ -141,6 +141,20 @@ normalize_js_input <- function(x) {
   list(as.list(x))
 }
 
+safe_restore_board <- function(board, board_ser, restore_result,
+                               meta = NULL, session) {
+  tryCatch(
+    {
+      restore_board(
+        board, board_ser, restore_result,
+        meta = meta, session = session
+      )
+      TRUE
+    },
+    error = cnd_to_notif(return_val = FALSE, type = "error", session = session)
+  )
+}
+
 board_query_string <- function(id, backend) {
 
   params <- list(board_name = display_name(id))
