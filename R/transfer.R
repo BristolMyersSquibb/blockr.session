@@ -24,12 +24,9 @@ transfer_error <- function(msg) {
 prepare_download <- function(sel, backend) {
   if (length(sel) == 1L) {
     id <- rack_id_from_input(sel[[1]], backend)
-    paths <- pins::pin_download(backend, pin_name(id))
-    json_path <- paths[grepl("\\.json$", paths)][1]
-
-    if (is.na(json_path)) {
-      return(transfer_error("No JSON file found for workflow"))
-    }
+    data <- rack_load(id, backend)
+    json_path <- tempfile(fileext = ".json")
+    jsonlite::write_json(data, json_path, null = "null")
 
     fname <- paste0(sel[[1]]$name, ".json")
     return(transfer_ok(json_path, "application/json", fname))
@@ -45,16 +42,17 @@ prepare_download <- function(sel, backend) {
     )
     if (is.null(id)) next
 
-    paths <- tryCatch(
-      pins::pin_download(backend, pin_name(id)),
+    data <- tryCatch(
+      rack_load(id, backend),
       error = function(e) NULL
     )
-    if (is.null(paths)) next
+    if (is.null(data)) next
 
-    json_path <- paths[grepl("\\.json$", paths)][1]
-    if (!is.na(json_path)) {
-      file.copy(json_path, file.path(tmp_dir, paste0(s$name, ".json")))
-    }
+    jsonlite::write_json(
+      data,
+      file.path(tmp_dir, paste0(s$name, ".json")),
+      null = "null"
+    )
   }
 
   zip_path <- tempfile(fileext = ".zip")
@@ -93,12 +91,12 @@ upload_workflows <- function(file_info, backend) {
 
     tryCatch(
       {
-        pins::pin_upload(
-          backend, fpath, sanitize_pin_name(wf_name),
-          versioned = TRUE,
-          metadata = list(format = "v1"),
-          tags = blockr_session_tags()
+        data <- jsonlite::fromJSON(
+          fpath,
+          simplifyDataFrame = FALSE,
+          simplifyMatrix = FALSE
         )
+        rack_save(backend, data, name = wf_name)
         uploaded <- uploaded + 1L
       },
       error = function(e) {
