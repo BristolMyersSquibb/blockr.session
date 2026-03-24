@@ -380,6 +380,23 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  line-height: 1.25;
+}
+
+/* Style downloadButton in modal header */
+.blockr-wf-header-actions .shiny-download-link i {
+  display: none;
+}
+.blockr-wf-header-actions .shiny-download-link.btn-default {
+  background-color: #0d6efd;
+  border-color: #0d6efd;
+  color: #fff;
+}
+.blockr-wf-header-actions .shiny-download-link.btn-default:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
 }
 
 .blockr-wf-header h5 {
@@ -391,10 +408,12 @@
 
 .blockr-wf-search {
   width: 180px;
-  padding: 8px 12px;
+  padding: 6px 12px;
   border: 1px solid #d1d5db;
-  border-radius: 8px;
+  border-radius: 0.375rem;
   font-size: 0.875rem;
+  line-height: 1.25;
+  box-sizing: border-box;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -437,7 +456,7 @@
 }
 
 .blockr-wf-table th:last-child {
-  width: 80px;
+  width: 150px;
 }
 
 .blockr-wf-checkbox {
@@ -483,7 +502,39 @@
   font-size: 0.8125rem;
 }
 
-.blockr-wf-upload-label { cursor: pointer; margin-bottom: 0; }
+.blockr-wf-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.blockr-wf-row-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0 !important;
+  border-radius: 4px;
+}
+
+.blockr-wf-row-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Compact fileInput — show only the button */
+.blockr-wf-upload-compact { display: inline-flex; align-items: center; }
+.blockr-wf-upload-compact .form-group { margin: 0; width: auto; }
+.blockr-wf-upload-compact .input-group { width: auto; }
+.blockr-wf-upload-compact .input-group .form-control { display: none; }
+.blockr-wf-upload-compact .progress { display: none; }
+.blockr-wf-upload-compact .btn-file {
+  font-size: 0.875rem;
+  padding: 8px 12px;
+  line-height: 1.25;
+  border-radius: 0.375rem;
+}
 
 /* Modal overrides */
 .modal-dialog:has(.blockr-workflows-modal) .modal-content {

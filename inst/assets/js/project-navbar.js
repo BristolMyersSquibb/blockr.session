@@ -10,13 +10,4 @@ Shiny.addCustomMessageHandler('blockr-update-navbar-title', function(title) {
   });
 });
 
-// Trigger browser file download from a temporary Shiny URL
-Shiny.addCustomMessageHandler('blockr-download-file', function(url) {
-  var a = document.createElement('a');
-  a.href = url;
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-});
 

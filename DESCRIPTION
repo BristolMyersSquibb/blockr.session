@@ -24,8 +24,7 @@ Imports:
     htmltools,
     httr2,
     utils,
-    zip,
-    base64enc
+    zip
 Suggests:
     testthat (>= 3.0.0),
     blockr.dock,
