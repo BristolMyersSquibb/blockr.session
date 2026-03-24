@@ -1,35 +1,22 @@
-transfer_ok <- function(path, content_type, filename) {
-  list(ok = TRUE, path = path, content_type = content_type,
-       filename = filename, error = NULL)
-}
-
-transfer_error <- function(msg) {
-  list(ok = FALSE, path = NULL, content_type = NULL,
-       filename = NULL, error = msg)
-}
-
 #' Prepare workflow files for download
 #'
-#' Fetches pinned workflow JSON(s) from the backend and returns a structured
-#' result pointing to the file (single workflow) or a ZIP archive (multiple).
+#' Fetches pinned workflow JSON(s) from the backend and returns a path
+#' to the file (single workflow) or a ZIP archive (multiple).
 #'
 #' @param sel Normalized selection list — each element a
 #'   `list(name = ..., user = ...)`.
 #' @param backend A pins board.
 #'
-#' @return A `transfer_result` list with `$ok`, `$path`, `$content_type`,
-#'   `$filename`, `$error`.
+#' @return Path to a temporary `.json` or `.zip` file.
 #'
 #' @keywords internal
 prepare_download <- function(sel, backend) {
   if (length(sel) == 1L) {
     id <- rack_id_from_input(sel[[1]], backend)
     data <- rack_load(id, backend)
-    json_path <- tempfile(fileext = ".json")
-    jsonlite::write_json(data, json_path, null = "null")
-
-    fname <- paste0(sel[[1]]$name, ".json")
-    return(transfer_ok(json_path, "application/json", fname))
+    path <- tempfile(fileext = ".json")
+    jsonlite::write_json(data, path, null = "null")
+    return(path)
   }
 
   tmp_dir <- tempfile("wf_download_")
@@ -59,7 +46,7 @@ prepare_download <- function(sel, backend) {
   zip::zip(zip_path, files = list.files(tmp_dir, full.names = TRUE),
            mode = "cherry-pick")
 
-  transfer_ok(zip_path, "application/zip", "workflows.zip")
+  zip_path
 }
 
 #' Upload workflow JSON files to the backend

@@ -289,19 +289,16 @@ manage_project_server <- function(id, board, ...) {
         content = function(file) {
           sel <- normalize_js_input(input$wf_selection)
           req(length(sel) > 0L)
-          result <- tryCatch(
-            prepare_download(sel, backend),
+          tryCatch(
+            file.copy(prepare_download(sel, backend), file),
             error = function(e) {
-              transfer_error(
-                paste("Download failed:", conditionMessage(e))
+              notify(
+                paste("Download failed:", conditionMessage(e)),
+                type = "error",
+                session = session
               )
             }
           )
-          if (!result$ok) {
-            notify(result$error, type = "error", session = session)
-            return()
-          }
-          file.copy(result$path, file)
         }
       )
 
