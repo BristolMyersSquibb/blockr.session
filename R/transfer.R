@@ -45,15 +45,11 @@ upload_workflows <- function(file_info, backend) {
 
     wf_name <- sub("\\.[Jj][Ss][Oo][Nn]$", "", fname)
 
-    data <- tryCatch(
-      jsonlite::fromJSON(fpath, simplifyDataFrame = FALSE,
-                         simplifyMatrix = FALSE),
-      error = function(e) NULL
-    )
+    data <- try(jsonlite::fromJSON(fpath, simplifyDataFrame = FALSE,
+                                    simplifyMatrix = FALSE), silent = TRUE)
+    board <- try(blockr_deser(data), silent = TRUE)
 
-    board <- tryCatch(blockr.core::blockr_deser(data), error = function(e) NULL)
-
-    if (is.null(data) || !inherits(board, "board")) {
+    if (!inherits(board, "board")) {
       errors <- c(errors, paste("Skipped", fname, "- not a valid board"))
       next
     }
