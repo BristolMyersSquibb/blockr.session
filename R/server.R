@@ -302,6 +302,41 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      # DOWNLOAD versions
+      output$download_versions <- downloadHandler(
+        filename = function() {
+          sel <- normalize_js_input(input$ver_selection)
+          name <- board_name()
+          if (length(sel) == 1L) {
+            paste0(name, "_v", sel[[1]]$version, ".json")
+          } else {
+            paste0(name, "_versions.zip")
+          }
+        },
+        content = function(file) {
+          sel <- normalize_js_input(input$ver_selection)
+          req(length(sel) > 0L)
+          name <- board_name()
+          dl_sel <- lapply(sel, function(v) {
+            list(
+              name = paste0(name, "_v", v$version),
+              user = coal(v$user, ""),
+              version = v$version
+            )
+          })
+          tryCatch(
+            file.copy(prepare_download(dl_sel, backend), file),
+            error = function(e) {
+              notify(
+                paste("Download failed:", conditionMessage(e)),
+                type = "error",
+                session = session
+              )
+            }
+          )
+        }
+      )
+
       # UPLOAD workflows
       observeEvent(
         input$upload_file,
@@ -944,7 +979,6 @@ show_workflows_modal <- function(workflows, backend, session) {
             ),
             tags$div(
               id = session$ns("download_workflows_btn"),
-              style = "display: none;",
               downloadButton(
                 session$ns("download_workflows"),
                 label = "Download",
@@ -1014,6 +1048,8 @@ show_versions_modal <- function(id, versions, session) {
             type = "checkbox",
             class = "blockr-version-select",
             value = v$version,
+            `data-version` = v$version,
+            `data-user` = coal(id$user, ""),
             disabled = if (is_current) "disabled" else NULL
           )
         ),
@@ -1026,22 +1062,44 @@ show_versions_modal <- function(id, versions, session) {
         ),
         tags$td(
           class = "blockr-wf-action",
-          if (!is_current) {
-            tags$button(
-              class = "btn btn-sm btn-primary",
-              onclick = paste0(
-                shiny_input_obj_js(
-                  session$ns("load_version"),
-                  name = id$name,
-                  user = coal(id$user, ""),
-                  version = v$version
+          tags$div(
+            class = "blockr-wf-row-actions",
+            if (!is_current) {
+              tags$button(
+                class = "btn btn-sm btn-primary",
+                onclick = paste0(
+                  shiny_input_obj_js(
+                    session$ns("load_version"),
+                    name = id$name,
+                    user = coal(id$user, ""),
+                    version = v$version
+                  ),
+                  "\n",
+                  hide_modal_js(session$ns("versions_modal"))
                 ),
-                "\n",
-                hide_modal_js(session$ns("versions_modal"))
+                "Load"
+              )
+            },
+            tags$button(
+              class = paste(
+                "btn btn-sm btn-outline-primary blockr-wf-row-btn"
               ),
-              "Load"
+              title = "Download",
+              onclick = sprintf(
+                "Shiny.setInputValue('%s',
+                  [{version: '%s', user: '%s'}],
+                  {priority: 'event'});
+                  setTimeout(function() {
+                    document.getElementById('%s').click();
+                  }, 100);",
+                session$ns("ver_selection"),
+                v$version,
+                coal(id$user, ""),
+                session$ns("download_versions")
+              ),
+              bsicons::bs_icon("download")
             )
-          }
+          )
         )
       )
     }
@@ -1053,7 +1111,9 @@ show_versions_modal <- function(id, versions, session) {
     delete_btn_id = session$ns("delete_versions_btn"),
     delete_input_id = session$ns("delete_versions"),
     item_type = "version",
-    has_disabled = TRUE
+    has_disabled = TRUE,
+    download_btn_id = session$ns("download_versions_btn"),
+    selection_input_id = session$ns("ver_selection")
   )
 
   showModal(
@@ -1075,6 +1135,14 @@ show_versions_modal <- function(id, versions, session) {
               class = "btn btn-sm btn-outline-danger",
               style = "display: none;",
               "Delete"
+            ),
+            tags$div(
+              id = session$ns("download_versions_btn"),
+              downloadButton(
+                session$ns("download_versions"),
+                label = "Download",
+                class = "btn-sm btn-primary"
+              )
             )
           )
         ),
@@ -1136,14 +1204,16 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
   if (!is.null(download_btn_id)) {
     download_visibility <- sprintf(
       "var dlWrap = document.getElementById('%s');
-      var wasHidden = dlWrap.style.display === 'none';
-      dlWrap.style.display = selected.length > 0 ? '' : 'none';
+      if (selected.length > 0) {
+        dlWrap.style.visibility = 'visible';
+        dlWrap.style.position = '';
+      } else {
+        dlWrap.style.visibility = 'hidden';
+        dlWrap.style.position = 'absolute';
+      }
       var dlLink = dlWrap.querySelector('a');
       if (dlLink) dlLink.textContent =
-        'Download (' + selected.length + ')';
-      if (wasHidden && selected.length > 0) {
-        $(dlWrap).trigger('shown');
-      }",
+        'Download (' + selected.length + ')';",
       download_btn_id
     )
   } else {
@@ -1155,10 +1225,11 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
     selection_sync <- sprintf(
       "var selData = [];
       selected.forEach(function(cb) {
-        selData.push({
-          name: cb.dataset.name || '',
-          user: cb.dataset.user || ''
-        });
+        var item = {};
+        for (var key in cb.dataset) {
+          item[key] = cb.dataset[key];
+        }
+        selData.push(item);
       });
       Shiny.setInputValue('%s', selData, {priority: 'event'});",
       selection_input_id
