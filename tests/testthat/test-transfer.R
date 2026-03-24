@@ -151,12 +151,18 @@ test_that("prepare_download skips missing workflows in multi", {
 
 # upload_workflows ---------------------------------------------------------
 
+write_board_json <- function(path) {
+  board <- blockr.core::new_board()
+  ser <- blockr.core::blockr_ser(board)
+  jsonlite::write_json(ser, path, auto_unbox = TRUE, null = "null")
+}
+
 test_that("upload_workflows pins a single JSON file", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
   tmp <- withr::local_tempfile(fileext = ".json")
-  jsonlite::write_json(list(blocks = list()), tmp, null = "null")
+  write_board_json(tmp)
 
   file_info <- data.frame(
     name = "my_workflow.json",
@@ -183,8 +189,8 @@ test_that("upload_workflows handles multiple files", {
 
   tmp1 <- withr::local_tempfile(fileext = ".json")
   tmp2 <- withr::local_tempfile(fileext = ".json")
-  jsonlite::write_json(list(v = 1), tmp1, null = "null")
-  jsonlite::write_json(list(v = 2), tmp2, null = "null")
+  write_board_json(tmp1)
+  write_board_json(tmp2)
 
   file_info <- data.frame(
     name = c("wf_one.json", "wf_two.json"),
@@ -228,7 +234,7 @@ test_that("upload_workflows skips non-JSON files", {
   expect_match(result$errors, "non-JSON")
 })
 
-test_that("upload_workflows stores file even with invalid JSON", {
+test_that("upload_workflows rejects invalid JSON", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
@@ -243,8 +249,30 @@ test_that("upload_workflows stores file even with invalid JSON", {
     stringsAsFactors = FALSE
   )
 
-  # Upload succeeds (pins stores any file); error surfaces on rack_load
   result <- upload_workflows(file_info, backend)
-  expect_true(result$ok)
-  expect_equal(result$uploaded, 1L)
+  expect_false(result$ok)
+  expect_equal(result$uploaded, 0L)
+  expect_length(result$errors, 1L)
+  expect_match(result$errors, "not a valid board")
+})
+
+test_that("upload_workflows rejects valid JSON that is not a board", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  tmp <- withr::local_tempfile(fileext = ".json")
+  jsonlite::write_json(list(x = 1), tmp)
+
+  file_info <- data.frame(
+    name = "not_a_board.json",
+    size = file.size(tmp),
+    type = "application/json",
+    datapath = tmp,
+    stringsAsFactors = FALSE
+  )
+
+  result <- upload_workflows(file_info, backend)
+  expect_false(result$ok)
+  expect_equal(result$uploaded, 0L)
+  expect_match(result$errors, "not a valid board")
 })
