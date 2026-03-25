@@ -409,12 +409,18 @@ manage_project_server <- function(id, board, ...) {
             )
           }
 
+          active_version <- parseQueryString(coal(prev_query(), ""))$version
+
           items <- lapply(
             seq_len(min(nrow(versions), 4)),
             function(i) {
               v <- versions[i, ]
               time_ago <- format_time_ago(v$created)
-              is_current <- i == 1
+              is_current <- if (is.null(active_version)) {
+                i == 1L
+              } else {
+                identical(v$version, active_version)
+              }
 
               tags$div(
                 class = paste(
@@ -1049,12 +1055,18 @@ show_workflows_modal <- function(workflows, backend, session) {
 
 show_versions_modal <- function(id, versions, session, backend) {
 
+  active_version <- getQueryString(session)$version
+
   rows <- lapply(
     seq_len(nrow(versions)),
     function(i) {
       v <- versions[i, ]
       time_ago <- format_time_ago(v$created)
-      is_current <- i == 1
+      is_current <- if (is.null(active_version)) {
+        i == 1L
+      } else {
+        identical(v$version, active_version)
+      }
 
       tags$tr(
         class = "blockr-workflow-row",
