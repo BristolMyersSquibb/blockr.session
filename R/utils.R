@@ -155,6 +155,14 @@ safe_restore_board <- function(board, board_ser, restore_result,
   )
 }
 
+reset_board_name <- function(board, name) {
+  board_options(board) <- combine_board_options(
+    new_board_name_option(name),
+    board_options(board)
+  )
+  board
+}
+
 board_query_string <- function(id, backend) {
 
   params <- list(board_name = display_name(id))

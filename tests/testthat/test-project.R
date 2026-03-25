@@ -402,6 +402,37 @@ test_that("new_btn sets restore_result to cleared board", {
   )
 })
 
+test_that("new_btn resets board_name to match new board ID", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris")),
+    options = c(
+      new_board_name_option("Old name"),
+      default_board_options()[-1]
+    )
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(new_btn = 1)
+
+      res <- session$returned()
+      new_id <- attr(res, "id")
+      board_name_opt <- res[["options"]][[1]]
+      expect_equal(
+        board_option_default(board_name_opt),
+        id_to_sentence_case(new_id)
+      )
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "old-test")
+    )
+  )
+})
+
 test_that("sharing tab absent with pins backend", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)

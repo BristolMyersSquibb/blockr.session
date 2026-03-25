@@ -9,5 +9,3 @@ Shiny.addCustomMessageHandler('blockr-update-navbar-title', function(title) {
     el.value = title;
   });
 });
-
-

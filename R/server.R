@@ -141,7 +141,9 @@ manage_project_server <- function(id, board, ...) {
         input$new_btn,
         {
           new <- clear_board(board$board)
-          attr(new, "id") <- rand_names()
+          new_id <- rand_names()
+          attr(new, "id") <- new_id
+          new <- reset_board_name(new, id_to_sentence_case(new_id))
           restore_result(new)
 
           updateQueryString("?", mode = "replace", session = session)
