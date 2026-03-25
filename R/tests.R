@@ -143,6 +143,7 @@ fixture_normalize_obj <- function(x) {
   val <- fixture_shift_ts(x, ts_offset)
   val <- fixture_round_ts(val)
   val <- fixture_stabilize_sizes(val)
+  val <- fixture_stabilize_volatile_ts(val)
 
   list(val = val, ts_offset = ts_offset)
 }
@@ -231,6 +232,31 @@ fixture_stabilize_sizes <- function(x) {
   if ("size" %in% names(x) && is.numeric(x$size)) {
     x$size <- rep(0L, length(x$size))
   }
+  x
+}
+
+# Freeze volatile timestamp fields whose day-level drift across recordings
+# is not absorbed by fixture_round_ts (which only handles sub-day jitter).
+# active_time reflects real server activity and shifts by whole days between
+# recording sessions.
+fixture_stabilize_volatile_ts <- function(x,
+                                          anchor = "2020-01-01T00:00:00Z") {
+
+  if (!is.list(x)) return(x)
+
+  nms <- names(x)
+
+  if (!is.null(nms) && "active_time" %in% nms) {
+    val <- x[["active_time"]]
+    if (is.character(val)) {
+      iso_re <- "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+      if (all(grepl(iso_re, val, perl = TRUE))) {
+        x[["active_time"]] <- rep(anchor, length(val))
+      }
+    }
+  }
+
+  x[] <- lapply(x, fixture_stabilize_volatile_ts, anchor = anchor)
   x
 }
 
