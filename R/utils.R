@@ -156,10 +156,12 @@ safe_restore_board <- function(board, board_ser, restore_result,
 }
 
 reset_board_name <- function(board, name) {
-  board_options(board) <- combine_board_options(
-    new_board_name_option(name),
-    board_options(board)
-  )
+  if ("board_name" %in% board_option_ids(board)) {
+    board_options(board) <- combine_board_options(
+      new_board_name_option(name),
+      board_options(board)
+    )
+  }
   board
 }
 
