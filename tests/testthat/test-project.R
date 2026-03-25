@@ -163,6 +163,54 @@ test_that("load_version restores specific version", {
   )
 })
 
+test_that("version history marks loaded version as current (#19)", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      Sys.sleep(1)
+      session$setInputs(save_btn = 2)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "hist-current")
+    )
+  )
+
+  versions <- pins::pin_versions(backend, "hist-current")
+  versions <- versions[order(versions$created, decreasing = TRUE), ]
+  newer_version <- versions$version[1]
+  older_version <- versions$version[2]
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(
+        load_version = list(
+          name = "hist-current",
+          version = older_version,
+          user = ""
+        )
+      )
+
+      html <- output$version_history
+
+      expect_true(any(grepl(newer_version, html, fixed = TRUE)))
+      expect_false(any(grepl(older_version, html, fixed = TRUE)))
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "hist-current")
+    )
+  )
+})
+
 test_that("safe_restore_board returns TRUE on success", {
   local_mocked_bindings(
     restore_board = function(...) invisible(NULL)
