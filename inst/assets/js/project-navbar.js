@@ -1,11 +1,10 @@
 // Project navbar JavaScript handlers
 
-(function() {
+Shiny.addCustomMessageHandler('blockr-get-nav-type', function(inputId) {
   var nav = performance.getEntriesByType('navigation');
-  if (nav.length > 0 && nav[0].type === 'reload') {
-    history.replaceState({}, '', window.location.pathname);
-  }
-})();
+  var type = nav.length > 0 ? nav[0].type : 'navigate';
+  Shiny.setInputValue(inputId, type, {priority: 'event'});
+});
 
 // Update navbar title from server
 Shiny.addCustomMessageHandler('blockr-update-navbar-title', function(title) {

@@ -27,7 +27,6 @@ manage_project_server <- function(id, board, ...) {
       use_url <- url_params_enabled()
 
       active_version <- reactiveVal(NULL)
-      last_url <- reactiveVal(NULL)
 
       log_debug(
         "reload: manage_project_server | init | ",
@@ -60,11 +59,15 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      session$sendCustomMessage(
+        "blockr-get-nav-type", session$ns("nav_type")
+      )
+
       observeEvent(
-        session$clientData$url_search,
+        input$nav_type,
         {
           log_debug(
-            "reload: url_search | fired | ",
+            "reload: nav_type | fired | ",
             "session: {substr(session$token, 1, 8)} | ",
             "use_url: {use_url} | ",
             "url_search: {coal(session$clientData$url_search, '(empty)')}"
@@ -72,9 +75,18 @@ manage_project_server <- function(id, board, ...) {
 
           if (!use_url) {
             log_debug(
-              "reload: url_search | use_url=FALSE, returning | ",
+              "reload: nav_type | use_url=FALSE, returning | ",
               "session: {substr(session$token, 1, 8)}"
             )
+            return()
+          }
+
+          if (identical(input$nav_type, "reload")) {
+            log_debug(
+              "reload: nav_type | clearing params (reload) | ",
+              "session: {substr(session$token, 1, 8)}"
+            )
+            updateQueryString("?", mode = "replace", session = session)
             return()
           }
 
@@ -82,7 +94,7 @@ manage_project_server <- function(id, board, ...) {
 
           if (is.null(query$board_name)) {
             log_debug(
-              "reload: url_search | no board_name, returning | ",
+              "reload: nav_type | no board_name, returning | ",
               "session: {substr(session$token, 1, 8)}"
             )
             return()
@@ -97,24 +109,6 @@ manage_project_server <- function(id, board, ...) {
             backend
           )
 
-          new_url <- board_query_string(id, backend)
-
-          if (identical(new_url, last_url())) {
-            log_debug(
-              "reload: url_search | guard MATCHED, skipping | ",
-              "session: {substr(session$token, 1, 8)} | ",
-              "url: {new_url}"
-            )
-            return()
-          }
-
-          log_debug(
-            "reload: url_search | guard MISSED, will restore | ",
-            "session: {substr(session$token, 1, 8)} | ",
-            "new_url: {new_url} | ",
-            "last_url: {coal(last_url(), '(null)')}"
-          )
-
           board_ser <- tryCatch(
             rack_load(id, backend),
             error = cnd_to_notif(type = "error")
@@ -126,8 +120,6 @@ manage_project_server <- function(id, board, ...) {
             active_version(query$version)
           }
 
-          last_url(new_url)
-
           ok <- safe_restore_board(
             board$board, board_ser, restore_result,
             session = session
@@ -135,14 +127,15 @@ manage_project_server <- function(id, board, ...) {
 
           if (ok) {
             log_debug(
-              "reload: url_search | restore OK, will reload | ",
+              "reload: nav_type | restore OK, will reload | ",
               "session: {substr(session$token, 1, 8)}"
             )
             set_board_option_value(
               "board_name", query$board_name, session
             )
             updateQueryString(
-              new_url, mode = "replace", session = session
+              board_query_string(id, backend),
+              mode = "replace", session = session
             )
           }
         }
@@ -181,7 +174,6 @@ manage_project_server <- function(id, board, ...) {
               backend
             )
 
-            last_url(new_url)
 
             if (use_url) {
               updateQueryString(
@@ -200,8 +192,6 @@ manage_project_server <- function(id, board, ...) {
           attr(new, "id") <- new_id
           new <- reset_board_name(new, id_to_sentence_case(new_id))
           restore_result(new)
-
-          last_url(NULL)
 
           if (use_url) {
             updateQueryString("?", mode = "replace", session = session)
@@ -292,7 +282,6 @@ manage_project_server <- function(id, board, ...) {
           active_version(NULL)
 
           new_url <- board_query_string(id, backend)
-          last_url(new_url)
 
           ok <- safe_restore_board(
             board$board, board_ser, restore_result,
@@ -557,7 +546,6 @@ manage_project_server <- function(id, board, ...) {
           active_version(input$load_version$version)
 
           new_url <- board_query_string(id, backend)
-          last_url(new_url)
 
           ok <- safe_restore_board(
             board$board, board_ser, restore_result,
