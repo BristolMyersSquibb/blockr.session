@@ -1,3 +1,7 @@
+url_params_enabled <- function() {
+  isTRUE(blockr_option("session_url_params", FALSE))
+}
+
 get_session_backend <- function() {
 
   val <- blockr_option("session_mgmt_backend", pins::board_local)
