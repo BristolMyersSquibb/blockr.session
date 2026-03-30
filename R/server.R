@@ -28,8 +28,8 @@ manage_project_server <- function(id, board, ...) {
 
       prev_query <- reactiveVal(isolate(board$reload_meta$url))
 
-      log_info(
-        "[RELOAD-DEBUG] manage_project_server init | ",
+      log_debug(
+        "reload: manage_project_server | init | ",
         "session: {substr(session$token, 1, 8)} | ",
         "use_url: {use_url} | ",
         "prev_query: {coal(isolate(board$reload_meta$url), '(null)')}"
@@ -63,16 +63,16 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         session$clientData$url_search,
         {
-          log_info(
-            "[RELOAD-DEBUG] URL observer fired | ",
+          log_debug(
+            "reload: url_search | fired | ",
             "session: {substr(session$token, 1, 8)} | ",
             "use_url: {use_url} | ",
             "url_search: {coal(session$clientData$url_search, '(empty)')}"
           )
 
           if (!use_url) {
-            log_info(
-              "[RELOAD-DEBUG] URL observer: use_url=FALSE, returning | ",
+            log_debug(
+              "reload: url_search | use_url=FALSE, returning | ",
               "session: {substr(session$token, 1, 8)}"
             )
             return()
@@ -81,8 +81,8 @@ manage_project_server <- function(id, board, ...) {
           query <- getQueryString(session)
 
           if (is.null(query$board_name)) {
-            log_info(
-              "[RELOAD-DEBUG] URL observer: no board_name, returning | ",
+            log_debug(
+              "reload: url_search | no board_name, returning | ",
               "session: {substr(session$token, 1, 8)}"
             )
             return()
@@ -104,8 +104,8 @@ manage_project_server <- function(id, board, ...) {
           # the post-session$reload() case (prev_query is initialized from the
           # pkg-level reload state that persists across session reloads).
           if (identical(new_url, prev_query())) {
-            log_info(
-              "[RELOAD-DEBUG] URL observer: guard MATCHED, skipping | ",
+            log_debug(
+              "reload: url_search | guard MATCHED, skipping | ",
               "session: {substr(session$token, 1, 8)} | ",
               "url: {new_url}"
             )
@@ -113,8 +113,8 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          log_info(
-            "[RELOAD-DEBUG] URL observer: guard MISSED, will restore | ",
+          log_debug(
+            "reload: url_search | guard MISSED, will restore | ",
             "session: {substr(session$token, 1, 8)} | ",
             "new_url: {new_url} | ",
             "prev_query: {coal(prev_query(), '(null)')}"
@@ -135,8 +135,8 @@ manage_project_server <- function(id, board, ...) {
           )
 
           if (ok) {
-            log_info(
-              "[RELOAD-DEBUG] URL observer: restore OK, will reload | ",
+            log_debug(
+              "reload: url_search | restore OK, will reload | ",
               "session: {substr(session$token, 1, 8)}"
             )
             set_board_option_value("board_name", query$board_name, session)
@@ -264,8 +264,8 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$load_workflow,
         {
-          log_info(
-            "[RELOAD-DEBUG] load_workflow clicked | ",
+          log_debug(
+            "reload: load_workflow | clicked | ",
             "session: {substr(session$token, 1, 8)} | ",
             "name: {coal(input$load_workflow$name, '?')}"
           )
@@ -290,8 +290,8 @@ manage_project_server <- function(id, board, ...) {
           )
 
           if (ok) {
-            log_info(
-              "[RELOAD-DEBUG] load_workflow: restore OK, will reload | ",
+            log_debug(
+              "reload: load_workflow | restore OK, will reload | ",
               "session: {substr(session$token, 1, 8)} | ",
               "url: {new_url} | ",
               "use_url: {use_url}"
@@ -526,8 +526,8 @@ manage_project_server <- function(id, board, ...) {
         {
           req(input$load_version$name, input$load_version$version)
 
-          log_info(
-            "[RELOAD-DEBUG] load_version clicked | ",
+          log_debug(
+            "reload: load_version | clicked | ",
             "session: {substr(session$token, 1, 8)} | ",
             "name: {input$load_version$name} | ",
             "version: {input$load_version$version}"
@@ -553,8 +553,8 @@ manage_project_server <- function(id, board, ...) {
           )
 
           if (ok) {
-            log_info(
-              "[RELOAD-DEBUG] load_version: restore OK, will reload | ",
+            log_debug(
+              "reload: load_version | restore OK, will reload | ",
               "session: {substr(session$token, 1, 8)} | ",
               "url: {new_url} | ",
               "use_url: {use_url}"
