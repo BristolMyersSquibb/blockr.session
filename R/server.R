@@ -28,6 +28,13 @@ manage_project_server <- function(id, board, ...) {
 
       prev_query <- reactiveVal(isolate(board$reload_meta$url))
 
+      log_info(
+        "[RELOAD-DEBUG] manage_project_server init | ",
+        "session: {substr(session$token, 1, 8)} | ",
+        "use_url: {use_url} | ",
+        "prev_query: {coal(isolate(board$reload_meta$url), '(null)')}"
+      )
+
       prev_board_name <- reactiveVal(NULL)
 
       observeEvent(
@@ -56,11 +63,28 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         session$clientData$url_search,
         {
-          if (!use_url) return()
+          log_info(
+            "[RELOAD-DEBUG] URL observer fired | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "use_url: {use_url} | ",
+            "url_search: {coal(session$clientData$url_search, '(empty)')}"
+          )
+
+          if (!use_url) {
+            log_info(
+              "[RELOAD-DEBUG] URL observer: use_url=FALSE, returning | ",
+              "session: {substr(session$token, 1, 8)}"
+            )
+            return()
+          }
 
           query <- getQueryString(session)
 
           if (is.null(query$board_name)) {
+            log_info(
+              "[RELOAD-DEBUG] URL observer: no board_name, returning | ",
+              "session: {substr(session$token, 1, 8)}"
+            )
             return()
           }
 
@@ -80,9 +104,21 @@ manage_project_server <- function(id, board, ...) {
           # the post-session$reload() case (prev_query is initialized from the
           # pkg-level reload state that persists across session reloads).
           if (identical(new_url, prev_query())) {
+            log_info(
+              "[RELOAD-DEBUG] URL observer: guard MATCHED, skipping | ",
+              "session: {substr(session$token, 1, 8)} | ",
+              "url: {new_url}"
+            )
             set_board_option_value("board_name", query$board_name, session)
             return()
           }
+
+          log_info(
+            "[RELOAD-DEBUG] URL observer: guard MISSED, will restore | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "new_url: {new_url} | ",
+            "prev_query: {coal(prev_query(), '(null)')}"
+          )
 
           board_ser <- tryCatch(
             rack_load(id, backend),
@@ -99,6 +135,10 @@ manage_project_server <- function(id, board, ...) {
           )
 
           if (ok) {
+            log_info(
+              "[RELOAD-DEBUG] URL observer: restore OK, will reload | ",
+              "session: {substr(session$token, 1, 8)}"
+            )
             set_board_option_value("board_name", query$board_name, session)
             updateQueryString(new_url, mode = "replace", session = session)
           }
@@ -224,6 +264,12 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$load_workflow,
         {
+          log_info(
+            "[RELOAD-DEBUG] load_workflow clicked | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "name: {coal(input$load_workflow$name, '?')}"
+          )
+
           id <- rack_id_from_input(input$load_workflow)
 
           board_ser <- tryCatch(
@@ -243,10 +289,18 @@ manage_project_server <- function(id, board, ...) {
             meta = list(url = new_url), session = session
           )
 
-          if (ok && use_url) {
-            updateQueryString(
-              new_url, mode = "replace", session = session
+          if (ok) {
+            log_info(
+              "[RELOAD-DEBUG] load_workflow: restore OK, will reload | ",
+              "session: {substr(session$token, 1, 8)} | ",
+              "url: {new_url} | ",
+              "use_url: {use_url}"
             )
+            if (use_url) {
+              updateQueryString(
+                new_url, mode = "replace", session = session
+              )
+            }
           }
         }
       )
@@ -472,6 +526,13 @@ manage_project_server <- function(id, board, ...) {
         {
           req(input$load_version$name, input$load_version$version)
 
+          log_info(
+            "[RELOAD-DEBUG] load_version clicked | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "name: {input$load_version$name} | ",
+            "version: {input$load_version$version}"
+          )
+
           id <- rack_id_from_input(input$load_version)
 
           board_ser <- tryCatch(
@@ -491,10 +552,18 @@ manage_project_server <- function(id, board, ...) {
             meta = list(url = new_url), session = session
           )
 
-          if (ok && use_url) {
-            updateQueryString(
-              new_url, mode = "replace", session = session
+          if (ok) {
+            log_info(
+              "[RELOAD-DEBUG] load_version: restore OK, will reload | ",
+              "session: {substr(session$token, 1, 8)} | ",
+              "url: {new_url} | ",
+              "use_url: {use_url}"
             )
+            if (use_url) {
+              updateQueryString(
+                new_url, mode = "replace", session = session
+              )
+            }
           }
         }
       )
