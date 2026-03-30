@@ -449,7 +449,7 @@ manage_project_server <- function(id, board, ...) {
                 onclick = if (!is_current) {
                   shiny_input_obj_js(
                     session$ns("load_version"),
-                    name = name,
+                    name = id$name,
                     user = coal(id$user, ""),
                     version = v$version
                   )
