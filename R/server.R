@@ -260,48 +260,18 @@ manage_project_server <- function(id, board, ...) {
         save_status()
       )
 
-      # LOAD workflow
+      # LOAD workflow — navigate to URL, preload handles the rest
       observeEvent(
         input$load_workflow,
         {
-          log_info(
-            "[RELOAD-DEBUG] load_workflow clicked | ",
-            "session: {substr(session$token, 1, 8)} | ",
-            "name: {coal(input$load_workflow$name, '?')}"
-          )
-
           id <- rack_id_from_input(input$load_workflow)
-
-          board_ser <- tryCatch(
-            rack_load(id, backend),
-            error = cnd_to_notif(type = "error")
-          )
-
-          if (is.null(board_ser)) {
-            return()
-          }
-
           new_url <- board_query_string(id, backend)
-          prev_query(new_url)
-
-          ok <- safe_restore_board(
-            board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
+          log_info(
+            "[RELOAD-DEBUG] load_workflow: navigating | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "url: {new_url}"
           )
-
-          if (ok) {
-            log_info(
-              "[RELOAD-DEBUG] load_workflow: restore OK, will reload | ",
-              "session: {substr(session$token, 1, 8)} | ",
-              "url: {new_url} | ",
-              "use_url: {use_url}"
-            )
-            if (use_url) {
-              updateQueryString(
-                new_url, mode = "replace", session = session
-              )
-            }
-          }
+          navigate_to(new_url, session)
         }
       )
 
@@ -520,51 +490,20 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      # Load specific version
+      # Load specific version — navigate to URL, preload handles the rest
       observeEvent(
         input$load_version,
         {
           req(input$load_version$name, input$load_version$version)
 
-          log_info(
-            "[RELOAD-DEBUG] load_version clicked | ",
-            "session: {substr(session$token, 1, 8)} | ",
-            "name: {input$load_version$name} | ",
-            "version: {input$load_version$version}"
-          )
-
           id <- rack_id_from_input(input$load_version)
-
-          board_ser <- tryCatch(
-            rack_load(id, backend),
-            error = cnd_to_notif(type = "error")
-          )
-
-          if (is.null(board_ser)) {
-            return()
-          }
-
           new_url <- board_query_string(id, backend)
-          prev_query(new_url)
-
-          ok <- safe_restore_board(
-            board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
+          log_info(
+            "[RELOAD-DEBUG] load_version: navigating | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "url: {new_url}"
           )
-
-          if (ok) {
-            log_info(
-              "[RELOAD-DEBUG] load_version: restore OK, will reload | ",
-              "session: {substr(session$token, 1, 8)} | ",
-              "url: {new_url} | ",
-              "use_url: {use_url}"
-            )
-            if (use_url) {
-              updateQueryString(
-                new_url, mode = "replace", session = session
-              )
-            }
-          }
+          navigate_to(new_url, session)
         }
       )
 

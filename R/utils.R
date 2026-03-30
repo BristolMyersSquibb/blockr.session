@@ -186,3 +186,44 @@ board_query_string <- function(id, backend) {
     paste(names(params), params, sep = "=", collapse = "&")
   )
 }
+
+navigate_to <- function(url, session = get_session()) {
+  session$sendCustomMessage("blockr_navigate", url)
+}
+
+preload_board_from_query <- function(query) {
+
+  if (is.null(query$board_name)) {
+    return(NULL)
+  }
+
+  backend <- tryCatch(get_session_backend(), error = function(e) NULL)
+  if (is.null(backend)) {
+    return(NULL)
+  }
+
+  id <- tryCatch(
+    rack_id_from_input(
+      list(name = query$board_name, user = query$user, version = query$version),
+      backend
+    ),
+    error = function(e) NULL
+  )
+
+  if (is.null(id)) {
+    return(NULL)
+  }
+
+  board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
+  if (is.null(board_ser)) {
+    return(NULL)
+  }
+
+  board <- tryCatch(blockr_deser(board_ser), error = function(e) NULL)
+  if (is.null(board)) {
+    return(NULL)
+  }
+
+  url <- board_query_string(id, backend)
+  list(board = board, meta = list(url = url))
+}
