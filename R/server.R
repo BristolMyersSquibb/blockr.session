@@ -26,13 +26,12 @@ manage_project_server <- function(id, board, ...) {
 
       use_url <- url_params_enabled()
 
-      prev_query <- reactiveVal(isolate(board$reload_meta$url))
+      active_version <- reactiveVal(NULL)
 
       log_debug(
         "reload: manage_project_server | init | ",
         "session: {substr(session$token, 1, 8)} | ",
-        "use_url: {use_url} | ",
-        "prev_query: {coal(isolate(board$reload_meta$url), '(null)')}"
+        "use_url: {use_url}"
       )
 
       prev_board_name <- reactiveVal(NULL)
@@ -60,11 +59,15 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      session$sendCustomMessage(
+        "blockr-get-nav-type", session$ns("nav_type")
+      )
+
       observeEvent(
-        session$clientData$url_search,
+        input$nav_type,
         {
           log_debug(
-            "reload: url_search | fired | ",
+            "reload: nav_type | fired | ",
             "session: {substr(session$token, 1, 8)} | ",
             "use_url: {use_url} | ",
             "url_search: {coal(session$clientData$url_search, '(empty)')}"
@@ -72,9 +75,18 @@ manage_project_server <- function(id, board, ...) {
 
           if (!use_url) {
             log_debug(
-              "reload: url_search | use_url=FALSE, returning | ",
+              "reload: nav_type | use_url=FALSE, returning | ",
               "session: {substr(session$token, 1, 8)}"
             )
+            return()
+          }
+
+          if (identical(input$nav_type, "reload")) {
+            log_debug(
+              "reload: nav_type | clearing params (reload) | ",
+              "session: {substr(session$token, 1, 8)}"
+            )
+            updateQueryString("?", mode = "replace", session = session)
             return()
           }
 
@@ -82,7 +94,7 @@ manage_project_server <- function(id, board, ...) {
 
           if (is.null(query$board_name)) {
             log_debug(
-              "reload: url_search | no board_name, returning | ",
+              "reload: nav_type | no board_name, returning | ",
               "session: {substr(session$token, 1, 8)}"
             )
             return()
@@ -97,29 +109,6 @@ manage_project_server <- function(id, board, ...) {
             backend
           )
 
-          new_url <- board_query_string(id, backend)
-
-          # Skip if the URL matches what we last set ourselves. This prevents
-          # re-triggering after our own updateQueryString calls and also handles
-          # the post-session$reload() case (prev_query is initialized from the
-          # pkg-level reload state that persists across session reloads).
-          if (identical(new_url, prev_query())) {
-            log_debug(
-              "reload: url_search | guard MATCHED, skipping | ",
-              "session: {substr(session$token, 1, 8)} | ",
-              "url: {new_url}"
-            )
-            set_board_option_value("board_name", query$board_name, session)
-            return()
-          }
-
-          log_debug(
-            "reload: url_search | guard MISSED, will restore | ",
-            "session: {substr(session$token, 1, 8)} | ",
-            "new_url: {new_url} | ",
-            "prev_query: {coal(prev_query(), '(null)')}"
-          )
-
           board_ser <- tryCatch(
             rack_load(id, backend),
             error = cnd_to_notif(type = "error")
@@ -127,20 +116,27 @@ manage_project_server <- function(id, board, ...) {
 
           if (is.null(board_ser)) return()
 
-          prev_query(new_url)
+          if (not_null(query$version)) {
+            active_version(query$version)
+          }
 
           ok <- safe_restore_board(
             board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
+            session = session
           )
 
           if (ok) {
             log_debug(
-              "reload: url_search | restore OK, will reload | ",
+              "reload: nav_type | restore OK, will reload | ",
               "session: {substr(session$token, 1, 8)}"
             )
-            set_board_option_value("board_name", query$board_name, session)
-            updateQueryString(new_url, mode = "replace", session = session)
+            set_board_option_value(
+              "board_name", query$board_name, session
+            )
+            updateQueryString(
+              board_query_string(id, backend),
+              mode = "replace", session = session
+            )
           }
         }
       )
@@ -171,11 +167,13 @@ manage_project_server <- function(id, board, ...) {
             save_status("Just now")
             refresh_trigger(refresh_trigger() + 1)
 
+            active_version(NULL)
+
             new_url <- board_query_string(
               rack_id_for_board(board_name(), backend),
               backend
             )
-            prev_query(new_url)
+
 
             if (use_url) {
               updateQueryString(
@@ -281,12 +279,13 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
+          active_version(NULL)
+
           new_url <- board_query_string(id, backend)
-          prev_query(new_url)
 
           ok <- safe_restore_board(
             board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
+            session = session
           )
 
           if (ok) {
@@ -482,17 +481,17 @@ manage_project_server <- function(id, board, ...) {
             )
           }
 
-          active_version <- parseQueryString(coal(prev_query(), ""))$version
+          cur_version <- active_version()
 
           items <- lapply(
             seq_len(min(nrow(versions), 4)),
             function(i) {
               v <- versions[i, ]
               time_ago <- format_time_ago(v$created)
-              is_current <- if (is.null(active_version)) {
+              is_current <- if (is.null(cur_version)) {
                 i == 1L
               } else {
-                identical(v$version, active_version)
+                identical(v$version, cur_version)
               }
 
               tags$div(
@@ -544,12 +543,13 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
+          active_version(input$load_version$version)
+
           new_url <- board_query_string(id, backend)
-          prev_query(new_url)
 
           ok <- safe_restore_board(
             board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
+            session = session
           )
 
           if (ok) {
@@ -593,7 +593,9 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_versions_modal(id, versions, session, backend, use_url)
+          show_versions_modal(
+            id, versions, session, backend, use_url, active_version()
+          )
         }
       )
 
@@ -1145,9 +1147,8 @@ show_workflows_modal <- function(workflows, backend, session, use_url) {
   )
 }
 
-show_versions_modal <- function(id, versions, session, backend, use_url) {
-
-  active_version <- getQueryString(session)$version
+show_versions_modal <- function(id, versions, session, backend, use_url,
+                                active_version = NULL) {
 
   rows <- lapply(
     seq_len(nrow(versions)),
