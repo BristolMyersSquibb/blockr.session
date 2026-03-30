@@ -24,6 +24,8 @@ manage_project_server <- function(id, board, ...) {
         )
       )
 
+      use_url <- url_params_enabled()
+
       prev_query <- reactiveVal(isolate(board$reload_meta$url))
 
       prev_board_name <- reactiveVal(NULL)
@@ -54,6 +56,8 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         session$clientData$url_search,
         {
+          if (!use_url) return()
+
           query <- getQueryString(session)
 
           if (is.null(query$board_name)) {
@@ -132,7 +136,12 @@ manage_project_server <- function(id, board, ...) {
               backend
             )
             prev_query(new_url)
-            updateQueryString(new_url, mode = "replace", session = session)
+
+            if (use_url) {
+              updateQueryString(
+                new_url, mode = "replace", session = session
+              )
+            }
           }
         }
       )
@@ -146,7 +155,9 @@ manage_project_server <- function(id, board, ...) {
           new <- reset_board_name(new, id_to_sentence_case(new_id))
           restore_result(new)
 
-          updateQueryString("?", mode = "replace", session = session)
+          if (use_url) {
+            updateQueryString("?", mode = "replace", session = session)
+          }
         }
       )
 
@@ -186,13 +197,17 @@ manage_project_server <- function(id, board, ...) {
                     ),
                     tags$div(class = "blockr-workflow-meta", wf_time)
                   ),
-                  tags$a(
-                    class = "blockr-open-newtab",
-                    href = board_query_string(wf, backend),
-                    target = "_blank",
-                    onclick = "event.stopPropagation();",
-                    bsicons::bs_icon("box-arrow-up-right", size = "0.75em")
-                  )
+                  if (use_url) {
+                    tags$a(
+                      class = "blockr-open-newtab",
+                      href = board_query_string(wf, backend),
+                      target = "_blank",
+                      onclick = "event.stopPropagation();",
+                      bsicons::bs_icon(
+                        "box-arrow-up-right", size = "0.75em"
+                      )
+                    )
+                  }
                 )
               }
             )
@@ -228,8 +243,10 @@ manage_project_server <- function(id, board, ...) {
             meta = list(url = new_url), session = session
           )
 
-          if (ok) {
-            updateQueryString(new_url, mode = "replace", session = session)
+          if (ok && use_url) {
+            updateQueryString(
+              new_url, mode = "replace", session = session
+            )
           }
         }
       )
@@ -248,7 +265,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_workflows_modal(workflows, backend, session)
+          show_workflows_modal(workflows, backend, session, use_url)
         }
       )
 
@@ -474,8 +491,10 @@ manage_project_server <- function(id, board, ...) {
             meta = list(url = new_url), session = session
           )
 
-          if (ok) {
-            updateQueryString(new_url, mode = "replace", session = session)
+          if (ok && use_url) {
+            updateQueryString(
+              new_url, mode = "replace", session = session
+            )
           }
         }
       )
@@ -505,7 +524,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_versions_modal(id, versions, session, backend)
+          show_versions_modal(id, versions, session, backend, use_url)
         }
       )
 
@@ -884,7 +903,7 @@ hide_modal_js <- function(modal_id) {
   )
 }
 
-show_workflows_modal <- function(workflows, backend, session) {
+show_workflows_modal <- function(workflows, backend, session, use_url) {
 
   rows <- lapply(
     seq_along(workflows),
@@ -923,15 +942,17 @@ show_workflows_modal <- function(workflows, backend, session) {
               ),
               "Load"
             ),
-            tags$a(
-              class = "btn btn-sm btn-outline-secondary",
-              href = board_query_string(wf, backend),
-              target = "_blank",
-              bsicons::bs_icon(
-                "box-arrow-up-right",
-                size = "0.85em"
+            if (use_url) {
+              tags$a(
+                class = "btn btn-sm btn-outline-secondary",
+                href = board_query_string(wf, backend),
+                target = "_blank",
+                bsicons::bs_icon(
+                  "box-arrow-up-right",
+                  size = "0.85em"
+                )
               )
-            ),
+            },
             tags$button(
               class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
               title = "Download",
@@ -1055,7 +1076,7 @@ show_workflows_modal <- function(workflows, backend, session) {
   )
 }
 
-show_versions_modal <- function(id, versions, session, backend) {
+show_versions_modal <- function(id, versions, session, backend, use_url) {
 
   active_version <- getQueryString(session)$version
 
@@ -1110,22 +1131,24 @@ show_versions_modal <- function(id, versions, session, backend) {
                 "Load"
               )
             },
-            tags$a(
-              class = "btn btn-sm btn-outline-secondary",
-              href = board_query_string(
-                list(
-                  name = id$name,
-                  user = id$user,
-                  version = v$version
+            if (use_url) {
+              tags$a(
+                class = "btn btn-sm btn-outline-secondary",
+                href = board_query_string(
+                  list(
+                    name = id$name,
+                    user = id$user,
+                    version = v$version
+                  ),
+                  backend
                 ),
-                backend
-              ),
-              target = "_blank",
-              bsicons::bs_icon(
-                "box-arrow-up-right",
-                size = "0.85em"
+                target = "_blank",
+                bsicons::bs_icon(
+                  "box-arrow-up-right",
+                  size = "0.85em"
+                )
               )
-            ),
+            },
             tags$button(
               class = paste(
                 "btn btn-sm btn-outline-primary blockr-wf-row-btn"
