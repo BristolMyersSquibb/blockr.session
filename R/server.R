@@ -24,7 +24,16 @@ manage_project_server <- function(id, board, ...) {
         )
       )
 
+      use_url <- url_params_enabled()
+
       prev_query <- reactiveVal(isolate(board$reload_meta$url))
+
+      log_info(
+        "[RELOAD-DEBUG] manage_project_server init | ",
+        "session: {substr(session$token, 1, 8)} | ",
+        "use_url: {use_url} | ",
+        "prev_query: {coal(isolate(board$reload_meta$url), '(null)')}"
+      )
 
       prev_board_name <- reactiveVal(NULL)
 
@@ -54,9 +63,28 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         session$clientData$url_search,
         {
+          log_info(
+            "[RELOAD-DEBUG] URL observer fired | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "use_url: {use_url} | ",
+            "url_search: {coal(session$clientData$url_search, '(empty)')}"
+          )
+
+          if (!use_url) {
+            log_info(
+              "[RELOAD-DEBUG] URL observer: use_url=FALSE, returning | ",
+              "session: {substr(session$token, 1, 8)}"
+            )
+            return()
+          }
+
           query <- getQueryString(session)
 
           if (is.null(query$board_name)) {
+            log_info(
+              "[RELOAD-DEBUG] URL observer: no board_name, returning | ",
+              "session: {substr(session$token, 1, 8)}"
+            )
             return()
           }
 
@@ -76,9 +104,21 @@ manage_project_server <- function(id, board, ...) {
           # the post-session$reload() case (prev_query is initialized from the
           # pkg-level reload state that persists across session reloads).
           if (identical(new_url, prev_query())) {
+            log_info(
+              "[RELOAD-DEBUG] URL observer: guard MATCHED, skipping | ",
+              "session: {substr(session$token, 1, 8)} | ",
+              "url: {new_url}"
+            )
             set_board_option_value("board_name", query$board_name, session)
             return()
           }
+
+          log_info(
+            "[RELOAD-DEBUG] URL observer: guard MISSED, will restore | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "new_url: {new_url} | ",
+            "prev_query: {coal(prev_query(), '(null)')}"
+          )
 
           board_ser <- tryCatch(
             rack_load(id, backend),
@@ -95,6 +135,10 @@ manage_project_server <- function(id, board, ...) {
           )
 
           if (ok) {
+            log_info(
+              "[RELOAD-DEBUG] URL observer: restore OK, will reload | ",
+              "session: {substr(session$token, 1, 8)}"
+            )
             set_board_option_value("board_name", query$board_name, session)
             updateQueryString(new_url, mode = "replace", session = session)
           }
@@ -132,7 +176,12 @@ manage_project_server <- function(id, board, ...) {
               backend
             )
             prev_query(new_url)
-            updateQueryString(new_url, mode = "replace", session = session)
+
+            if (use_url) {
+              updateQueryString(
+                new_url, mode = "replace", session = session
+              )
+            }
           }
         }
       )
@@ -146,7 +195,9 @@ manage_project_server <- function(id, board, ...) {
           new <- reset_board_name(new, id_to_sentence_case(new_id))
           restore_result(new)
 
-          updateQueryString("?", mode = "replace", session = session)
+          if (use_url) {
+            updateQueryString("?", mode = "replace", session = session)
+          }
         }
       )
 
@@ -186,13 +237,17 @@ manage_project_server <- function(id, board, ...) {
                     ),
                     tags$div(class = "blockr-workflow-meta", wf_time)
                   ),
-                  tags$a(
-                    class = "blockr-open-newtab",
-                    href = board_query_string(wf, backend),
-                    target = "_blank",
-                    onclick = "event.stopPropagation();",
-                    bsicons::bs_icon("box-arrow-up-right", size = "0.75em")
-                  )
+                  if (use_url) {
+                    tags$a(
+                      class = "blockr-open-newtab",
+                      href = board_query_string(wf, backend),
+                      target = "_blank",
+                      onclick = "event.stopPropagation();",
+                      bsicons::bs_icon(
+                        "box-arrow-up-right", size = "0.75em"
+                      )
+                    )
+                  }
                 )
               }
             )
@@ -205,32 +260,18 @@ manage_project_server <- function(id, board, ...) {
         save_status()
       )
 
-      # LOAD workflow
+      # LOAD workflow — navigate to URL, preload handles the rest
       observeEvent(
         input$load_workflow,
         {
           id <- rack_id_from_input(input$load_workflow)
-
-          board_ser <- tryCatch(
-            rack_load(id, backend),
-            error = cnd_to_notif(type = "error")
-          )
-
-          if (is.null(board_ser)) {
-            return()
-          }
-
           new_url <- board_query_string(id, backend)
-          prev_query(new_url)
-
-          ok <- safe_restore_board(
-            board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
+          log_info(
+            "[RELOAD-DEBUG] load_workflow: navigating | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "url: {new_url}"
           )
-
-          if (ok) {
-            updateQueryString(new_url, mode = "replace", session = session)
-          }
+          navigate_to(new_url, session)
         }
       )
 
@@ -248,7 +289,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_workflows_modal(workflows, backend, session)
+          show_workflows_modal(workflows, backend, session, use_url)
         }
       )
 
@@ -432,7 +473,7 @@ manage_project_server <- function(id, board, ...) {
                 onclick = if (!is_current) {
                   shiny_input_obj_js(
                     session$ns("load_version"),
-                    name = name,
+                    name = id$name,
                     user = coal(id$user, ""),
                     version = v$version
                   )
@@ -449,34 +490,20 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      # Load specific version
+      # Load specific version — navigate to URL, preload handles the rest
       observeEvent(
         input$load_version,
         {
           req(input$load_version$name, input$load_version$version)
 
           id <- rack_id_from_input(input$load_version)
-
-          board_ser <- tryCatch(
-            rack_load(id, backend),
-            error = cnd_to_notif(type = "error")
-          )
-
-          if (is.null(board_ser)) {
-            return()
-          }
-
           new_url <- board_query_string(id, backend)
-          prev_query(new_url)
-
-          ok <- safe_restore_board(
-            board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
+          log_info(
+            "[RELOAD-DEBUG] load_version: navigating | ",
+            "session: {substr(session$token, 1, 8)} | ",
+            "url: {new_url}"
           )
-
-          if (ok) {
-            updateQueryString(new_url, mode = "replace", session = session)
-          }
+          navigate_to(new_url, session)
         }
       )
 
@@ -505,7 +532,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_versions_modal(id, versions, session, backend)
+          show_versions_modal(id, versions, session, backend, use_url)
         }
       )
 
@@ -884,7 +911,7 @@ hide_modal_js <- function(modal_id) {
   )
 }
 
-show_workflows_modal <- function(workflows, backend, session) {
+show_workflows_modal <- function(workflows, backend, session, use_url) {
 
   rows <- lapply(
     seq_along(workflows),
@@ -923,15 +950,17 @@ show_workflows_modal <- function(workflows, backend, session) {
               ),
               "Load"
             ),
-            tags$a(
-              class = "btn btn-sm btn-outline-secondary",
-              href = board_query_string(wf, backend),
-              target = "_blank",
-              bsicons::bs_icon(
-                "box-arrow-up-right",
-                size = "0.85em"
+            if (use_url) {
+              tags$a(
+                class = "btn btn-sm btn-outline-secondary",
+                href = board_query_string(wf, backend),
+                target = "_blank",
+                bsicons::bs_icon(
+                  "box-arrow-up-right",
+                  size = "0.85em"
+                )
               )
-            ),
+            },
             tags$button(
               class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
               title = "Download",
@@ -1055,7 +1084,7 @@ show_workflows_modal <- function(workflows, backend, session) {
   )
 }
 
-show_versions_modal <- function(id, versions, session, backend) {
+show_versions_modal <- function(id, versions, session, backend, use_url) {
 
   active_version <- getQueryString(session)$version
 
@@ -1110,22 +1139,24 @@ show_versions_modal <- function(id, versions, session, backend) {
                 "Load"
               )
             },
-            tags$a(
-              class = "btn btn-sm btn-outline-secondary",
-              href = board_query_string(
-                list(
-                  name = id$name,
-                  user = id$user,
-                  version = v$version
+            if (use_url) {
+              tags$a(
+                class = "btn btn-sm btn-outline-secondary",
+                href = board_query_string(
+                  list(
+                    name = id$name,
+                    user = id$user,
+                    version = v$version
+                  ),
+                  backend
                 ),
-                backend
-              ),
-              target = "_blank",
-              bsicons::bs_icon(
-                "box-arrow-up-right",
-                size = "0.85em"
+                target = "_blank",
+                bsicons::bs_icon(
+                  "box-arrow-up-right",
+                  size = "0.85em"
+                )
               )
-            ),
+            },
             tags$button(
               class = paste(
                 "btn btn-sm btn-outline-primary blockr-wf-row-btn"
