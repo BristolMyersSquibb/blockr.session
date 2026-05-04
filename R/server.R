@@ -536,6 +536,38 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      # VIEW VERSIONS for a workflow picked from the workflows list
+      # (does not require the workflow to be loaded — supports recovering
+      # from corrupted-latest by loading an older version directly)
+      observeEvent(
+        input$view_versions_for,
+        {
+          req(input$view_versions_for$name)
+
+          id <- rack_id_from_input(input$view_versions_for, backend)
+
+          versions <- tryCatch(
+            rack_info(id, backend),
+            error = function(e) NULL
+          )
+
+          if (is.null(versions) || nrow(versions) == 0L) {
+            notify("No versions found", type = "message")
+            return()
+          }
+
+          loaded <- board_name()
+          match_active <- !is.null(loaded) &&
+            nzchar(loaded) &&
+            identical(sanitize_pin_name(loaded), id$name)
+
+          show_versions_modal(
+            id, versions, session, backend, use_url,
+            match_active = match_active
+          )
+        }
+      )
+
       # Delete versions
       observeEvent(
         input$delete_versions,
@@ -962,6 +994,20 @@ show_workflows_modal <- function(workflows, backend, session, use_url) {
               )
             },
             tags$button(
+              class = "btn btn-sm btn-outline-secondary blockr-wf-row-btn",
+              title = "Version history",
+              onclick = paste0(
+                shiny_input_obj_js(
+                  session$ns("view_versions_for"),
+                  name = display_name(wf),
+                  user = coal(wf$user, "")
+                ),
+                "\n",
+                hide_modal_js(session$ns("workflows_modal"))
+              ),
+              bsicons::bs_icon("clock-history")
+            ),
+            tags$button(
               class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
               title = "Download",
               onclick = sprintf(
@@ -1084,16 +1130,19 @@ show_workflows_modal <- function(workflows, backend, session, use_url) {
   )
 }
 
-show_versions_modal <- function(id, versions, session, backend, use_url) {
+show_versions_modal <- function(id, versions, session, backend, use_url,
+                                match_active = TRUE) {
 
-  active_version <- getQueryString(session)$version
+  active_version <- if (match_active) getQueryString(session)$version else NULL
 
   rows <- lapply(
     seq_len(nrow(versions)),
     function(i) {
       v <- versions[i, ]
       time_ago <- format_time_ago(v$created)
-      is_current <- if (is.null(active_version)) {
+      is_current <- if (!match_active) {
+        FALSE
+      } else if (is.null(active_version)) {
         i == 1L
       } else {
         identical(v$version, active_version)
@@ -1143,10 +1192,13 @@ show_versions_modal <- function(id, versions, session, backend, use_url) {
               tags$a(
                 class = "btn btn-sm btn-outline-secondary",
                 href = board_query_string(
-                  list(
-                    name = id$name,
-                    user = id$user,
-                    version = v$version
+                  rack_id_from_input(
+                    list(
+                      name = id$name,
+                      user = id$user,
+                      version = v$version
+                    ),
+                    backend
                   ),
                   backend
                 ),
