@@ -16,6 +16,12 @@ manage_project_ui <- function(id, x) {
       stylesheet = "css/project-navbar.css",
       script = "js/project-navbar.js"
     ),
+    # Navigate handler for workflow/version loading
+    tags$script(HTML(
+      "Shiny.addCustomMessageHandler('blockr_navigate', function(url) {
+        window.location.search = url;
+      });"
+    )),
     # Full-width navbar container - single flex row with spacer
     tags$div(
       class = "manage-project-navbar",
