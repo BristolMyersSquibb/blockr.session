@@ -73,15 +73,10 @@ cnd_to_notif <- function(return_val = NULL, type = "warning",
                          session = get_session()) {
 
   function(cnd) {
-    msg <- conditionMessage(cnd)
-    # Escape curly braces so cli/glue won't interpret them (e.g. JSON in
-    # Connect API error bodies like {"code":5, ...} would crash glue::glue).
-    msg <- gsub("{", "{{", msg, fixed = TRUE)
-    msg <- gsub("}", "}}", msg, fixed = TRUE)
-
     notify(
-      msg,
+      conditionMessage(cnd),
       type = type,
+      glue = FALSE,
       session = session
     )
 
