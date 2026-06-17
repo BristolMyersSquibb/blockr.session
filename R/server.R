@@ -305,6 +305,7 @@ manage_project_server <- function(id, board, ...) {
               notify(
                 paste("Download failed:", conditionMessage(e)),
                 type = "error",
+                glue = FALSE,
                 session = session
               )
             }
@@ -340,6 +341,7 @@ manage_project_server <- function(id, board, ...) {
               notify(
                 paste("Download failed:", conditionMessage(e)),
                 type = "error",
+                glue = FALSE,
                 session = session
               )
             }
@@ -365,7 +367,7 @@ manage_project_server <- function(id, board, ...) {
           )
 
           for (err in result$errors) {
-            notify(err, type = "error", session = session)
+            notify(err, type = "error", glue = FALSE, session = session)
           }
 
           if (result$ok) {
