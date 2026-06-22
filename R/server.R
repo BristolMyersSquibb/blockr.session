@@ -333,7 +333,7 @@ manage_project_server <- function(id, board, ...) {
       output$download_versions <- downloadHandler(
         filename = function() {
           sel <- normalize_js_input(input$ver_selection)
-          name <- board_name()
+          name <- current_id()$name
           if (length(sel) == 1L) {
             paste0(name, "_v", sel[[1]]$version, ".json")
           } else {
@@ -399,7 +399,13 @@ manage_project_server <- function(id, board, ...) {
       )
 
       output$history_title <- renderUI(
-        tags$span(board_name())
+        {
+          id <- current_id()
+
+          if (not_null(id)) {
+            tags$span(display_name(id))
+          }
+        }
       )
 
       output$version_history <- renderUI(
