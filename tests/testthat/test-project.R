@@ -74,6 +74,29 @@ test_that("save persists board to backend", {
   expect_true("save-test" %in% saved$name)
 })
 
+test_that("recent_workflows lists by pin name, not the board name", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      html <- as.character(output$recent_workflows)
+
+      expect_true(any(grepl("Rebel_eyas", html, fixed = TRUE)))
+      expect_false(any(grepl("Rebel eyas", html, fixed = TRUE)))
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "Rebel eyas")
+    )
+  )
+})
+
 test_that("saving multiple times creates versions", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
@@ -281,31 +304,23 @@ test_that("delete_versions removes specific version", {
       session$setInputs(save_btn = 1)
       Sys.sleep(1)
       session$setInputs(save_btn = 2)
-    },
-    args = list(
-      board = reactiveValues(board = test_board, board_id = "ver-del-test")
-    )
-  )
 
-  versions <- pins::pin_versions(backend, "ver-del-test")
-  expect_equal(nrow(versions), 2)
+      versions <- pins::pin_versions(backend, "ver-del-test")
+      expect_equal(nrow(versions), 2)
 
-  versions <- versions[order(versions$created), ]
-  older_version <- versions$version[1]
+      versions <- versions[order(versions$created), ]
+      older_version <- versions$version[1]
 
-  testServer(
-    manage_project_server,
-    {
       session$setInputs(delete_versions = list(older_version))
+
+      remaining <- pins::pin_versions(backend, "ver-del-test")
+      expect_equal(nrow(remaining), 1)
+      expect_false(older_version %in% remaining$version)
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "ver-del-test")
     )
   )
-
-  remaining <- pins::pin_versions(backend, "ver-del-test")
-  expect_equal(nrow(remaining), 1)
-  expect_false(older_version %in% remaining$version)
 })
 
 test_that("version_history output shows versions after save", {

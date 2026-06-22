@@ -26,29 +26,39 @@ manage_project_server <- function(id, board, ...) {
 
       prev_query <- reactiveVal(isolate(board$reload_meta$url))
 
-      prev_board_name <- reactiveVal(NULL)
+      current_id <- reactive({
+
+        query <- parseQueryString(coal(prev_query(), ""))
+
+        if (is.null(query$board_name) || !nzchar(query$board_name)) {
+          return(NULL)
+        }
+
+        rack_id_from_input(
+          list(name = query$board_name, user = query$user),
+          backend
+        )
+      })
 
       observeEvent(
-        req(!identical(board_name(), prev_board_name())),
+        current_id(),
         {
-          name <- board_name()
+          id <- current_id()
 
-          if (!is.null(name) && nchar(name) > 0) {
-
-            prev_board_name(name)
-
-            info <- tryCatch(
-              rack_info(rack_id_for_board(name, backend), backend),
-              error = function(e) NULL
-            )
-
-            if (!is.null(info) && nrow(info) > 0L) {
-              save_status(format_time_ago(info$created[1L]))
-            } else {
-              save_status("Not saved")
-            }
+          if (is.null(id)) {
+            save_status("Not saved")
+            return()
           }
-        }
+
+          info <- tryCatch(rack_info(id, backend), error = function(e) NULL)
+
+          if (not_null(info) && nrow(info) > 0L) {
+            save_status(format_time_ago(info$created[1L]))
+          } else {
+            save_status("Not saved")
+          }
+        },
+        ignoreNULL = FALSE
       )
 
       observeEvent(
@@ -74,9 +84,10 @@ manage_project_server <- function(id, board, ...) {
           # Skip if the URL matches what we last set ourselves. This prevents
           # re-triggering after our own updateQueryString calls and also handles
           # the post-session$reload() case (prev_query is initialized from the
-          # pkg-level reload state that persists across session reloads).
+          # pkg-level reload state that persists across session reloads). The
+          # board name is carried by the restored board, so we must not
+          # overwrite it with the (sanitized) pin name from the URL.
           if (identical(new_url, prev_query())) {
-            set_board_option_value("board_name", query$board_name, session)
             return()
           }
 
@@ -95,7 +106,6 @@ manage_project_server <- function(id, board, ...) {
           )
 
           if (ok) {
-            set_board_option_value("board_name", query$board_name, session)
             updateQueryString(new_url, mode = "replace", session = session)
           }
         }
@@ -114,7 +124,11 @@ manage_project_server <- function(id, board, ...) {
                   list(session = session)
                 )
               )
-              rack_save(backend, data, name = board_name())
+              rack_save(
+                backend, data,
+                name = board_name(),
+                id = current_id()
+              )
             },
             error = cnd_to_notif(type = "error")
           )
@@ -127,10 +141,11 @@ manage_project_server <- function(id, board, ...) {
             save_status("Just now")
             refresh_trigger(refresh_trigger() + 1)
 
-            new_url <- board_query_string(
-              rack_id_for_board(board_name(), backend),
+            saved <- rack_id_from_input(
+              list(name = res$name, user = res$user),
               backend
             )
+            new_url <- board_query_string(saved, backend)
             prev_query(new_url)
             updateQueryString(new_url, mode = "replace", session = session)
           }
@@ -146,6 +161,7 @@ manage_project_server <- function(id, board, ...) {
           new <- reset_board_name(new, id_to_sentence_case(new_id))
           restore_result(new)
 
+          prev_query(NULL)
           updateQueryString("?", mode = "replace", session = session)
         }
       )
@@ -317,7 +333,7 @@ manage_project_server <- function(id, board, ...) {
       output$download_versions <- downloadHandler(
         filename = function() {
           sel <- normalize_js_input(input$ver_selection)
-          name <- board_name()
+          name <- current_id()$name
           if (length(sel) == 1L) {
             paste0(name, "_v", sel[[1]]$version, ".json")
           } else {
@@ -326,8 +342,8 @@ manage_project_server <- function(id, board, ...) {
         },
         content = function(file) {
           sel <- normalize_js_input(input$ver_selection)
-          req(length(sel) > 0L)
-          name <- board_name()
+          req(length(sel) > 0L, current_id())
+          name <- current_id()$name
           dl_sel <- lapply(sel, function(v) {
             list(
               name = paste0(name, "_v", v$version),
@@ -383,15 +399,21 @@ manage_project_server <- function(id, board, ...) {
       )
 
       output$history_title <- renderUI(
-        tags$span(board_name())
+        {
+          id <- current_id()
+
+          if (not_null(id)) {
+            tags$span(display_name(id))
+          }
+        }
       )
 
       output$version_history <- renderUI(
         {
           refresh_trigger()
 
-          name <- board_name()
-          if (is.null(name) || name == "") {
+          id <- current_id()
+          if (is.null(id)) {
             return(
               tags$div(
                 class = "blockr-history-empty",
@@ -399,8 +421,6 @@ manage_project_server <- function(id, board, ...) {
               )
             )
           }
-
-          id <- rack_id_for_board(name, backend)
 
           versions <- tryCatch(
             rack_info(id, backend),
@@ -434,7 +454,7 @@ manage_project_server <- function(id, board, ...) {
                 onclick = if (!is_current) {
                   shiny_input_obj_js(
                     session$ns("load_version"),
-                    name = name,
+                    name = id$name,
                     user = coal(id$user, ""),
                     version = v$version
                   )
@@ -486,16 +506,14 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$view_all_versions,
         {
-          name <- board_name()
-          if (is.null(name) || name == "") {
+          id <- current_id()
+          if (is.null(id)) {
             notify(
               "Save workflow first to see versions",
               type = "message"
             )
             return()
           }
-
-          id <- rack_id_for_board(name, backend)
 
           versions <- tryCatch(
             rack_info(id, backend),
@@ -515,8 +533,8 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$delete_versions,
         {
-          req(input$delete_versions)
-          id <- rack_id_for_board(board_name(), backend)
+          req(input$delete_versions, current_id())
+          id <- current_id()
           deleted <- 0
           for (version in input$delete_versions) {
             ver_id <- rack_id_from_input(
@@ -642,14 +660,13 @@ manage_project_server <- function(id, board, ...) {
         caps <- capabilities()
         req(isTRUE(caps$visibility))
 
-        name <- board_name()
-        if (is.null(name) || !nzchar(name)) {
+        id <- current_id()
+        if (is.null(id)) {
           return(
             tags$div(class = "blockr-sharing-hint", "Save workflow first")
           )
         }
 
-        id <- rack_id_for_board(name, backend)
         acl <- tryCatch(rack_acl(id, backend), error = function(e) "acl")
 
         selected <- if (identical(acl, "acl")) {
@@ -681,14 +698,13 @@ manage_project_server <- function(id, board, ...) {
         caps <- capabilities()
         req(isTRUE(caps$sharing))
 
-        name <- board_name()
-        if (is.null(name) || !nzchar(name)) {
+        id <- current_id()
+        if (is.null(id)) {
           return(
             tags$div(class = "blockr-sharing-hint", "Save workflow first")
           )
         }
 
-        id <- rack_id_for_board(name, backend)
         shares <- tryCatch(
           rack_shares(id, backend),
           error = function(e) list()
@@ -772,8 +788,8 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$visibility_select,
         {
-          req(board_name())
-          id <- rack_id_for_board(board_name(), backend)
+          req(current_id())
+          id <- current_id()
 
           acl_value <- if (identical(input$visibility_select, "private")) {
             "acl"
@@ -801,8 +817,8 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$share_user,
         {
-          req(board_name())
-          id <- rack_id_for_board(board_name(), backend)
+          req(current_id())
+          id <- current_id()
           tryCatch(
             {
               rack_share(id, backend, input$share_user)
@@ -821,8 +837,8 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$unshare_user,
         {
-          req(board_name())
-          id <- rack_id_for_board(board_name(), backend)
+          req(current_id())
+          id <- current_id()
           tryCatch(
             {
               rack_unshare(id, backend, input$unshare_user)

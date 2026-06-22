@@ -11,16 +11,18 @@ rack_upload(backend, path, ...)
 
 \item{path}{Character scalar. Path to the local file to upload.}
 
-\item{...}{Additional arguments passed to the method, including \code{name}
-(character scalar giving the name under which the session will be stored).}
+\item{...}{Additional arguments passed to the method, including \code{name} (the
+board name, used to mint a handle when creating) and \code{id} (an existing
+\code{rack_id} to add a version to, or \code{NULL} to create a record).}
 }
 \value{
 A \code{rack_id} object identifying the newly created version.
 }
 \description{
-Stores the file at \code{path} under the given \code{backend}, creating a new versioned
-entry. This is a low-level generic; most callers should use \code{\link[=rack_save]{rack_save()}}
-instead.
+Stores the file at \code{path} under the given \code{backend}. With \code{id = NULL} a new
+record is created and the backend mints its storage handle; otherwise a new
+version is added to the existing record identified by \code{id}. This is a
+low-level generic; most callers should use \code{\link[=rack_save]{rack_save()}} instead.
 }
 \seealso{
 \code{\link[=rack_save]{rack_save()}} for the high-level wrapper that serialises R data

@@ -126,16 +126,6 @@ test_that("rack_id_from_input connect backend infers user", {
   expect_equal(id$name, "board")
 })
 
-test_that("rack_id_for_board local", {
-
-  backend <- pins::board_temp()
-  id <- rack_id_for_board("my_board", backend)
-
-  expect_s3_class(id, "rack_id_pins")
-  is_connect <- inherits(id, "rack_id_pins_connect")
-  expect_false(is_connect)
-})
-
 test_that("sanitize_pin_name replaces spaces and invalid chars", {
   expect_equal(sanitize_pin_name("Rebel eyas"), "Rebel_eyas")
   expect_equal(sanitize_pin_name("hello world!"), "hello_world")
@@ -148,13 +138,6 @@ test_that("sanitize_pin_name replaces spaces and invalid chars", {
   )
 })
 
-test_that("rack_id_for_board sanitizes name", {
-
-  backend <- pins::board_temp()
-  id <- rack_id_for_board("Rebel eyas", backend)
-  expect_equal(id$name, "Rebel_eyas")
-})
-
 test_that("rack_save sanitizes name", {
 
   backend <- pins::board_temp(versioned = TRUE)
@@ -162,6 +145,27 @@ test_that("rack_save sanitizes name", {
 
   res <- rack_save(backend, data, name = "Rebel eyas")
   expect_equal(res$name, "Rebel_eyas")
+})
+
+test_that("rack_save with an existing id updates the record, no new pin", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  created <- rack_save(
+    backend, list(blocks = list(a = 1)),
+    name = "Rebel eyas"
+  )
+  Sys.sleep(1.1)
+  renamed <- rack_save(
+    backend, list(blocks = list(a = 2)),
+    name = "Falcon", id = created
+  )
+
+  expect_equal(renamed$name, created$name)
+  expect_length(pins::pin_list(backend), 1L)
+
+  info <- rack_info(created, backend)
+  expect_equal(nrow(info), 2L)
 })
 
 test_that("rack_save persists and rack_list finds it", {

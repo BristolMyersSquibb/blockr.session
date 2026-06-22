@@ -162,7 +162,7 @@ reset_board_name <- function(board, name) {
 
 board_query_string <- function(id, backend) {
 
-  params <- list(board_name = display_name(id))
+  params <- list(board_name = id$name)
 
   if (not_null(id$user) && !identical(id$user, backend$account)) {
     params$user <- id$user

@@ -53,15 +53,6 @@ rack_id_from_input <- function(x, backend = NULL) {
   }
 }
 
-rack_id_for_board <- function(name, backend) {
-  name <- sanitize_pin_name(name)
-  if (inherits(backend, "pins_board_connect")) {
-    new_rack_id_pins_connect(backend$account, name)
-  } else {
-    new_rack_id_pins(name)
-  }
-}
-
 # pin_name ------------------------------------------------------------------
 
 #' @export
@@ -242,9 +233,12 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
 # rack_upload ---------------------------------------------------------------
 
 #' @export
-rack_upload.pins_board <- function(backend, path, ..., name) {
+rack_upload.pins_board <- function(backend, path, name, id = NULL, ...) {
 
-  name <- sanitize_pin_name(name)
+  # Minting the storage handle is backend-specific: pins slugs the board name
+  # into a readable pin name, whereas e.g. a database backend keys on its own
+  # generated id. An existing `id` reuses its handle (a new version).
+  name <- if (is.null(id)) sanitize_pin_name(name) else id$name
 
   pins::pin_upload(
     backend,
@@ -257,16 +251,14 @@ rack_upload.pins_board <- function(backend, path, ..., name) {
 
   info <- rack_info(new_rack_id_pins(name), backend)
 
-  new_rack_id_pins(
-    name = name,
-    version = info$version[1L]
-  )
+  new_rack_id_pins(name = name, version = info$version[1L])
 }
 
 #' @export
-rack_upload.pins_board_connect <- function(backend, path, ..., name) {
+rack_upload.pins_board_connect <- function(backend, path, name, id = NULL,
+                                           ...) {
 
-  name <- sanitize_pin_name(name)
+  name <- if (is.null(id)) sanitize_pin_name(name) else id$name
 
   pins::pin_upload(
     backend,
