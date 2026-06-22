@@ -121,79 +121,97 @@ test_that("saving multiple times creates versions", {
   expect_equal(nrow(versions), 2)
 })
 
-test_that("load_workflow triggers restore", {
+test_that("load_workflow navigates to the selected board", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
-  test_board <- new_board(
-    blocks = c(a = new_dataset_block("iris"))
+  navigated <- NULL
+  local_mocked_bindings(
+    navigate_to_board = function(id, backend, session) navigated <<- id
   )
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
   testServer(
     manage_project_server,
-    {
-      session$setInputs(save_btn = 1)
-      session$setInputs(load_workflow = list(name = "load-test", user = ""))
-
-      res <- session$returned()
-      expect_true(!is.null(res))
-      expect_true(is_board(res$board))
-    },
+    session$setInputs(load_workflow = list(name = "load-test", user = "")),
     args = list(
       board = reactiveValues(board = test_board, board_id = "load-test")
     )
   )
+
+  expect_s3_class(navigated, "rack_id")
+  expect_identical(navigated$name, "load-test")
 })
 
-test_that("load_version restores specific version", {
+test_that("load_version navigates to the selected version", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
-  test_board <- new_board(
-    blocks = c(a = new_dataset_block("iris"))
+  navigated <- NULL
+  local_mocked_bindings(
+    navigate_to_board = function(id, backend, session) navigated <<- id
   )
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
   testServer(
     manage_project_server,
-    {
-      session$setInputs(save_btn = 1)
-      Sys.sleep(1)
-      session$setInputs(save_btn = 2)
-    },
+    session$setInputs(
+      load_version = list(name = "ver-test", version = "20240101", user = "")
+    ),
     args = list(
-      board = reactiveValues(board = test_board, board_id = "ver-load-test")
+      board = reactiveValues(board = test_board, board_id = "ver-test")
     )
   )
 
-  versions <- pins::pin_versions(backend, "ver-load-test")
-  versions <- versions[order(versions$created), ]
-  older_version <- versions$version[1]
+  expect_s3_class(navigated, "rack_id")
+  expect_identical(navigated$name, "ver-test")
+  expect_identical(navigated$version, "20240101")
+})
+
+test_that("manage_project_loader returns NULL without a board reference", {
+  expect_null(manage_project_loader(list(query = list())))
+  expect_null(manage_project_loader(list(query = list(board_name = ""))))
+})
+
+test_that("manage_project_loader resolves a saved board from the backend", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
   testServer(
     manage_project_server,
-    {
-      session$setInputs(
-        load_version = list(name = "ver-load-test", version = older_version)
-      )
-
-      res <- session$returned()
-      expect_true(!is.null(res))
-      expect_true(is_board(res$board))
-    },
+    session$setInputs(save_btn = 1),
     args = list(
-      board = reactiveValues(board = test_board, board_id = "ver-load-test")
+      board = reactiveValues(board = test_board, board_id = "loader-test")
     )
+  )
+
+  loaded <- manage_project_loader(
+    list(query = list(board_name = "loader-test"))
+  )
+
+  expect_s3_class(loaded, "board")
+  expect_setequal(board_block_ids(loaded), "a")
+})
+
+test_that("manage_project_loader returns NULL for an unknown board", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  expect_null(
+    manage_project_loader(list(query = list(board_name = "does-not-exist")))
   )
 })
 
-test_that("version history marks loaded version as current (#19)", {
+test_that("version history marks the URL version as current (#19)", {
 
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
-  test_board <- new_board(
-    blocks = c(a = new_dataset_block("iris"))
-  )
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
   testServer(
     manage_project_server,
@@ -215,13 +233,7 @@ test_that("version history marks loaded version as current (#19)", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(
-        load_version = list(
-          name = "hist-current",
-          version = older_version,
-          user = ""
-        )
-      )
+      prev_query(paste0("?board_name=hist-current&version=", older_version))
 
       html <- output$version_history
 
@@ -234,25 +246,21 @@ test_that("version history marks loaded version as current (#19)", {
   )
 })
 
-test_that("safe_restore_board returns TRUE on success", {
-  local_mocked_bindings(
-    restore_board = function(...) invisible(NULL)
-  )
-  expect_true(
-    safe_restore_board(
-      "board", "ser", "result", session = MockShinySession$new()
-    )
-  )
-})
+test_that("loader handoff is kept at GET and consumed at WS", {
+  withr::defer(rm(list = ls(new_board_handoff), envir = new_board_handoff))
 
-test_that("safe_restore_board returns FALSE and notifies on error", {
-  local_mocked_bindings(
-    restore_board = function(...) stop("boom")
-  )
-  session <- MockShinySession$new()
-  expect_false(
-    safe_restore_board("board", "ser", "result", session = session)
-  )
+  stage_new_board("tok", new_board())
+
+  q <- list()
+  q[[new_board_param]] <- "tok"
+  get_req <- list(query = q, session = NULL)
+
+  expect_s3_class(manage_project_loader(get_req), "board")
+  expect_s3_class(manage_project_loader(get_req), "board")
+
+  ws_req <- list(query = q, session = list(token = "x"))
+  expect_s3_class(manage_project_loader(ws_req), "board")
+  expect_null(manage_project_loader(ws_req))
 })
 
 test_that("delete_workflows removes pin from backend", {
@@ -394,58 +402,33 @@ test_that("view_all_versions triggers modal", {
   )
 })
 
-test_that("new_btn sets restore_result to cleared board", {
+test_that("new_btn stages a fresh cleared board for the loader", {
+  rm(list = ls(new_board_handoff), envir = new_board_handoff)
+  withr::defer(rm(list = ls(new_board_handoff), envir = new_board_handoff))
+
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
-  test_board <- new_board(
-    blocks = c(a = new_dataset_block("iris"))
-  )
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
   testServer(
     manage_project_server,
-    {
-      session$setInputs(new_btn = 1)
-
-      res <- session$returned()
-      expect_true(!is.null(res))
-      expect_s3_class(res, "board")
-    },
-    args = list(
-      board = reactiveValues(board = test_board, board_id = "new-test")
-    )
-  )
-})
-
-test_that("new_btn resets board_name to match new board ID", {
-  backend <- pins::board_temp(versioned = TRUE)
-  withr::local_options(blockr.session_mgmt_backend = backend)
-
-  test_board <- new_board(
-    blocks = c(a = new_dataset_block("iris")),
-    options = c(
-      new_board_name_option("Old name"),
-      default_board_options()[-1]
-    )
-  )
-
-  testServer(
-    manage_project_server,
-    {
-      session$setInputs(new_btn = 1)
-
-      res <- session$returned()
-      new_id <- attr(res, "id")
-      board_name_opt <- res[["options"]][[1]]
-      expect_equal(
-        board_option_default(board_name_opt),
-        id_to_sentence_case(new_id)
-      )
-    },
+    session$setInputs(new_btn = 1),
     args = list(
       board = reactiveValues(board = test_board, board_id = "old-test")
     )
   )
+
+  token <- ls(new_board_handoff)
+  expect_length(token, 1)
+
+  q <- list()
+  q[[new_board_param]] <- token
+  staged <- manage_project_loader(list(query = q, session = NULL))
+
+  expect_s3_class(staged, "board")
+  expect_length(board_block_ids(staged), 0)
+  expect_false(identical(attr(staged, "id"), "old-test"))
 })
 
 test_that("sharing tab absent with pins backend", {

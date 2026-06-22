@@ -10,7 +10,8 @@
 #'
 #' @export
 manage_project <- function(server = manage_project_server,
-                           ui = manage_project_ui) {
+                           ui = manage_project_ui,
+                           loader = manage_project_loader) {
 
-  preserve_board(server, ui)
+  preserve_board(server, ui, loader = loader)
 }
