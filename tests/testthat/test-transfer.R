@@ -7,7 +7,7 @@ test_that("rack_upload stores file and rack_download retrieves it", {
   tmp <- withr::local_tempfile(fileext = ".json")
   jsonlite::write_json(list(blocks = list(a = 1)), tmp, null = "null")
 
-  id <- rack_upload(backend, tmp, name = "upload-test")
+  id <- rack_upload(backend, tmp, title = "upload-test")
 
   expect_s3_class(id, "rack_id_pins")
   expect_equal(id$name, "upload-test")
@@ -27,7 +27,7 @@ test_that("rack_upload sanitizes name", {
   tmp <- withr::local_tempfile(fileext = ".json")
   jsonlite::write_json(list(x = 1), tmp, null = "null")
 
-  id <- rack_upload(backend, tmp, name = "Rebel eyas")
+  id <- rack_upload(backend, tmp, title = "Rebel eyas")
   expect_equal(id$name, "Rebel_eyas")
 })
 
@@ -65,8 +65,8 @@ test_that("rack_download with specific version", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
-  id1 <- rack_save(backend, list(v = 1), name = "ver-dl")
-  rack_save(backend, list(v = 2), name = "ver-dl")
+  id1 <- rack_save(backend, list(v = 1), title = "ver-dl")
+  rack_save(backend, list(v = 2), title = "ver-dl")
 
   path <- rack_download(id1, backend)
   data <- jsonlite::fromJSON(path, simplifyDataFrame = FALSE)
@@ -78,7 +78,7 @@ test_that("rack_load and rack_save compose download/upload correctly", {
   backend <- pins::board_temp(versioned = TRUE)
   data <- list(blocks = list(x = "hello"), links = list())
 
-  id <- rack_save(backend, data, name = "roundtrip")
+  id <- rack_save(backend, data, title = "roundtrip")
   result <- rack_load(id, backend)
 
   expect_equal(result$blocks$x, "hello")
@@ -90,7 +90,7 @@ test_that("rack_load and rack_save compose download/upload correctly", {
 test_that("prepare_download returns JSON path for single workflow", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  rack_save(backend, list(blocks = list(a = 1)), name = "single-dl")
+  rack_save(backend, list(blocks = list(a = 1)), title = "single-dl")
 
   sel <- list(list(name = "single-dl", user = ""))
   path <- prepare_download(sel, backend)
@@ -105,8 +105,8 @@ test_that("prepare_download returns JSON path for single workflow", {
 test_that("prepare_download returns ZIP for multiple workflows", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  rack_save(backend, list(v = 1), name = "multi-a")
-  rack_save(backend, list(v = 2), name = "multi-b")
+  rack_save(backend, list(v = 1), title = "multi-a")
+  rack_save(backend, list(v = 2), title = "multi-b")
 
   sel <- list(
     list(name = "multi-a", user = ""),
@@ -130,7 +130,7 @@ test_that("prepare_download returns ZIP for multiple workflows", {
 test_that("prepare_download skips missing workflows in multi", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  rack_save(backend, list(v = 1), name = "exists")
+  rack_save(backend, list(v = 1), title = "exists")
 
   sel <- list(
     list(name = "exists", user = ""),

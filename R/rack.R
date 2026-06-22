@@ -70,14 +70,16 @@ rack_download <- function(id, backend, ...) UseMethod("rack_download")
 
 #' Upload a session file to a rack backend
 #'
-#' Stores the file at `path` under the given `backend`, creating a new versioned
-#' entry. This is a low-level generic; most callers should use [rack_save()]
-#' instead.
+#' Stores the file at `path` under the given `backend`. With `id = NULL` a new
+#' record is created and the backend mints its storage handle; otherwise a new
+#' version is added to the existing record identified by `id`. This is a
+#' low-level generic; most callers should use [rack_save()] instead.
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param path Character scalar. Path to the local file to upload.
-#' @param ... Additional arguments passed to the method, including `name`
-#'   (character scalar giving the name under which the session will be stored).
+#' @param ... Additional arguments passed to the method, including `id` (an
+#'   existing `rack_id` to add a version to, or `NULL` to create a record) and
+#'   `title` (the human-readable board title, stored as metadata).
 #'
 #' @return A `rack_id` object identifying the newly created version.
 #'
@@ -116,29 +118,31 @@ rack_load <- function(id, backend, ...) {
 
 #' Save a session to a rack backend
 #'
-#' Serialises `data` to a temporary JSON file and uploads it to `backend` under
-#' `name`. This is a convenience wrapper around [rack_upload()] that handles
-#' JSON serialisation automatically.
+#' Serialises `data` to a temporary JSON file and uploads it to `backend`. This
+#' is a convenience wrapper around [rack_upload()] that handles JSON
+#' serialisation automatically.
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param data An R object to serialise and store (typically the session list
 #'   returned by the blockr session machinery).
+#' @param id A `rack_id` identifying an existing record to add a new version to,
+#'   or `NULL` to create a new record (the backend mints the storage handle).
 #' @param ... Additional arguments forwarded to [rack_upload()].
-#' @param name Character scalar. The name under which the session will be
-#'   stored.
+#' @param title Character scalar. Human-readable board title, stored as record
+#'   metadata. Backends that derive a storage handle from it (e.g. pins) use it
+#'   only when minting a new record (`id = NULL`).
 #'
-#' @return A `rack_id` object identifying the newly created version, returned
-#'   invisibly by the underlying [rack_upload()] call.
+#' @return A `rack_id` object identifying the newly created version.
 #'
 #' @seealso [rack_load()] for the complementary load function,
 #'   [rack_upload()] for the underlying upload generic.
 #'
 #' @export
-rack_save <- function(backend, data, ..., name) {
+rack_save <- function(backend, data, id = NULL, ..., title) {
   tmp <- tempfile(fileext = ".json")
   on.exit(unlink(tmp))
   jsonlite::write_json(data, tmp, null = "null")
-  rack_upload(backend, tmp, ..., name = name)
+  rack_upload(backend, tmp, id = id, ..., title = title)
 }
 
 # rack_delete ---------------------------------------------------------------

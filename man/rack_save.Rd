@@ -4,7 +4,7 @@
 \alias{rack_save}
 \title{Save a session to a rack backend}
 \usage{
-rack_save(backend, data, ..., name)
+rack_save(backend, data, id = NULL, ..., title)
 }
 \arguments{
 \item{backend}{A rack backend object (e.g. a \code{pins_board}).}
@@ -12,19 +12,22 @@ rack_save(backend, data, ..., name)
 \item{data}{An R object to serialise and store (typically the session list
 returned by the blockr session machinery).}
 
+\item{id}{A \code{rack_id} identifying an existing record to add a new version to,
+or \code{NULL} to create a new record (the backend mints the storage handle).}
+
 \item{...}{Additional arguments forwarded to \code{\link[=rack_upload]{rack_upload()}}.}
 
-\item{name}{Character scalar. The name under which the session will be
-stored.}
+\item{title}{Character scalar. Human-readable board title, stored as record
+metadata. Backends that derive a storage handle from it (e.g. pins) use it
+only when minting a new record (\code{id = NULL}).}
 }
 \value{
-A \code{rack_id} object identifying the newly created version, returned
-invisibly by the underlying \code{\link[=rack_upload]{rack_upload()}} call.
+A \code{rack_id} object identifying the newly created version.
 }
 \description{
-Serialises \code{data} to a temporary JSON file and uploads it to \code{backend} under
-\code{name}. This is a convenience wrapper around \code{\link[=rack_upload]{rack_upload()}} that handles
-JSON serialisation automatically.
+Serialises \code{data} to a temporary JSON file and uploads it to \code{backend}. This
+is a convenience wrapper around \code{\link[=rack_upload]{rack_upload()}} that handles JSON
+serialisation automatically.
 }
 \seealso{
 \code{\link[=rack_load]{rack_load()}} for the complementary load function,

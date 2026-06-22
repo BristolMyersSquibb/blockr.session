@@ -55,18 +55,6 @@ rack_id_from_input <- function(x, backend = NULL) {
   }
 }
 
-rack_id_for_board <- function(name, backend) {
-
-  title <- name
-  name <- sanitize_pin_name(name)
-
-  if (inherits(backend, "pins_board_connect")) {
-    new_rack_id_pins_connect(backend$account, name, title = title)
-  } else {
-    new_rack_id_pins(name, title = title)
-  }
-}
-
 # pin_name ------------------------------------------------------------------
 
 #' @export
@@ -249,10 +237,11 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
 # rack_upload ---------------------------------------------------------------
 
 #' @export
-rack_upload.pins_board <- function(backend, path, ..., name) {
+rack_upload.pins_board <- function(backend, path, id = NULL, ..., title) {
 
-  title <- name
-  name <- sanitize_pin_name(name)
+  # Minting is backend-specific: pins slugs the title into a readable handle,
+  # whereas e.g. a database backend would key on its own generated id.
+  name <- if (is.null(id)) sanitize_pin_name(title) else id$name
 
   pins::pin_upload(
     backend,
@@ -273,10 +262,10 @@ rack_upload.pins_board <- function(backend, path, ..., name) {
 }
 
 #' @export
-rack_upload.pins_board_connect <- function(backend, path, ..., name) {
+rack_upload.pins_board_connect <- function(backend, path, id = NULL, ...,
+                                           title) {
 
-  title <- name
-  name <- sanitize_pin_name(name)
+  name <- if (is.null(id)) sanitize_pin_name(title) else id$name
 
   pins::pin_upload(
     backend,
