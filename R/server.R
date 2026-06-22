@@ -85,7 +85,7 @@ manage_project_server <- function(id, board, ...) {
           # re-triggering after our own updateQueryString calls and also handles
           # the post-session$reload() case (prev_query is initialized from the
           # pkg-level reload state that persists across session reloads). The
-          # display title is carried by the restored board, so we must not
+          # board name is carried by the restored board, so we must not
           # overwrite it with the (sanitized) pin name from the URL.
           if (identical(new_url, prev_query())) {
             return()
@@ -126,8 +126,8 @@ manage_project_server <- function(id, board, ...) {
               )
               rack_save(
                 backend, data,
-                id = current_id(),
-                title = board_name()
+                name = board_name(),
+                id = current_id()
               )
             },
             error = cnd_to_notif(type = "error")
@@ -191,7 +191,7 @@ manage_project_server <- function(id, board, ...) {
                   class = "blockr-workflow-item",
                   onclick = shiny_input_obj_js(
                     session$ns("load_workflow"),
-                    name = wf$name,
+                    name = display_name(wf),
                     user = coal(wf$user, "")
                   ),
                   tags$div(
@@ -519,7 +519,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          show_versions_modal(id, board_name(), versions, session, backend)
+          show_versions_modal(id, versions, session, backend)
         }
       )
 
@@ -912,7 +912,7 @@ show_workflows_modal <- function(workflows, backend, session) {
           tags$input(
             type = "checkbox",
             class = "blockr-wf-select",
-            `data-name` = wf$name,
+            `data-name` = display_name(wf),
             `data-user` = coal(wf$user, "")
           )
         ),
@@ -927,7 +927,7 @@ show_workflows_modal <- function(workflows, backend, session) {
               onclick = paste0(
                 shiny_input_obj_js(
                   session$ns("load_workflow"),
-                  name = wf$name,
+                  name = display_name(wf),
                   user = coal(wf$user, "")
                 ),
                 "\n",
@@ -954,7 +954,7 @@ show_workflows_modal <- function(workflows, backend, session) {
                     document.getElementById('%s').click();
                   }, 100);",
                 session$ns("wf_selection"),
-                wf$name,
+                display_name(wf),
                 coal(wf$user, ""),
                 session$ns("download_workflows")
               ),
@@ -971,7 +971,7 @@ show_workflows_modal <- function(workflows, backend, session) {
                 }",
                 display_name(wf),
                 session$ns("delete_workflows"),
-                wf$name,
+                display_name(wf),
                 coal(wf$user, "")
               ),
               bsicons::bs_icon("trash")
@@ -1067,7 +1067,7 @@ show_workflows_modal <- function(workflows, backend, session) {
   )
 }
 
-show_versions_modal <- function(id, title, versions, session, backend) {
+show_versions_modal <- function(id, versions, session, backend) {
 
   active_version <- getQueryString(session)$version
 
@@ -1203,7 +1203,7 @@ show_versions_modal <- function(id, title, versions, session, backend) {
         class = "blockr-workflows-modal",
         tags$div(
           class = "blockr-wf-header",
-          tags$h5(paste("Version History:", title)),
+          tags$h5(paste("Version History:", display_name(id))),
           tags$div(
             class = "blockr-wf-header-actions",
             tags$button(

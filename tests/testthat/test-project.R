@@ -74,7 +74,7 @@ test_that("save persists board to backend", {
   expect_true("save-test" %in% saved$name)
 })
 
-test_that("recent_workflows shows display title but addresses pin name", {
+test_that("recent_workflows lists by pin name, not the board name", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -88,8 +88,8 @@ test_that("recent_workflows shows display title but addresses pin name", {
       session$setInputs(save_btn = 1)
       html <- as.character(output$recent_workflows)
 
-      expect_true(any(grepl("Rebel eyas", html, fixed = TRUE)))
-      expect_true(any(grepl("board_name=Rebel_eyas", html, fixed = TRUE)))
+      expect_true(any(grepl("Rebel_eyas", html, fixed = TRUE)))
+      expect_false(any(grepl("Rebel eyas", html, fixed = TRUE)))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "Rebel eyas")

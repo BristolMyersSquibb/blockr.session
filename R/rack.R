@@ -17,9 +17,7 @@ new_rack_id <- function(name, ..., class = character()) {
 display_name <- function(id, ...) UseMethod("display_name")
 
 #' @export
-display_name.rack_id <- function(id, ...) {
-  coal(id$title, id$name, fail_all = FALSE)
-}
+display_name.rack_id <- function(id, ...) id$name
 
 last_saved <- function(id, ...) UseMethod("last_saved")
 
@@ -77,9 +75,9 @@ rack_download <- function(id, backend, ...) UseMethod("rack_download")
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param path Character scalar. Path to the local file to upload.
-#' @param ... Additional arguments passed to the method, including `id` (an
-#'   existing `rack_id` to add a version to, or `NULL` to create a record) and
-#'   `title` (the human-readable board title, stored as metadata).
+#' @param ... Additional arguments passed to the method, including `name` (the
+#'   board name, used to mint a handle when creating) and `id` (an existing
+#'   `rack_id` to add a version to, or `NULL` to create a record).
 #'
 #' @return A `rack_id` object identifying the newly created version.
 #'
@@ -125,12 +123,12 @@ rack_load <- function(id, backend, ...) {
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param data An R object to serialise and store (typically the session list
 #'   returned by the blockr session machinery).
+#' @param name Character scalar. The board name. Backends that derive a storage
+#'   handle from it (e.g. pins) use it only when creating a new record
+#'   (`id = NULL`); for an update it is ignored in favour of `id`.
 #' @param id A `rack_id` identifying an existing record to add a new version to,
 #'   or `NULL` to create a new record (the backend mints the storage handle).
 #' @param ... Additional arguments forwarded to [rack_upload()].
-#' @param title Character scalar. Human-readable board title, stored as record
-#'   metadata. Backends that derive a storage handle from it (e.g. pins) use it
-#'   only when minting a new record (`id = NULL`).
 #'
 #' @return A `rack_id` object identifying the newly created version.
 #'
@@ -138,11 +136,11 @@ rack_load <- function(id, backend, ...) {
 #'   [rack_upload()] for the underlying upload generic.
 #'
 #' @export
-rack_save <- function(backend, data, id = NULL, ..., title) {
+rack_save <- function(backend, data, name, id = NULL, ...) {
   tmp <- tempfile(fileext = ".json")
   on.exit(unlink(tmp))
   jsonlite::write_json(data, tmp, null = "null")
-  rack_upload(backend, tmp, id = id, ..., title = title)
+  rack_upload(backend, tmp, name, id = id, ...)
 }
 
 # rack_delete ---------------------------------------------------------------

@@ -1,6 +1,6 @@
 # Constructors --------------------------------------------------------------
 
-new_rack_id_pins <- function(name, version = NULL, title = NULL) {
+new_rack_id_pins <- function(name, version = NULL) {
 
   if (not_null(version) && (!is_string(version) || !nzchar(version))) {
     blockr_abort(
@@ -9,11 +9,10 @@ new_rack_id_pins <- function(name, version = NULL, title = NULL) {
     )
   }
 
-  new_rack_id(name, version = version, title = title, class = "rack_id_pins")
+  new_rack_id(name, version = version, class = "rack_id_pins")
 }
 
-new_rack_id_pins_connect <- function(user, name, version = NULL,
-                                     title = NULL) {
+new_rack_id_pins_connect <- function(user, name, version = NULL) {
 
   if (!is_string(user) || !nzchar(user)) {
     blockr_abort(
@@ -33,7 +32,6 @@ new_rack_id_pins_connect <- function(user, name, version = NULL,
     name,
     user = user,
     version = version,
-    title = title,
     class = c("rack_id_pins_connect", "rack_id_pins")
   )
 }
@@ -64,6 +62,11 @@ pin_name.rack_id_pins <- function(id, ...) id$name
 pin_name.rack_id_pins_connect <- function(id, ...) {
   paste0(id$user, "/", id$name)
 }
+
+# display_name --------------------------------------------------------------
+
+#' @export
+display_name.rack_id_pins_connect <- function(id, ...) id$name
 
 # format --------------------------------------------------------------------
 
@@ -113,7 +116,7 @@ rack_list.pins_board <- function(backend, tags = NULL, ...) {
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
 
-  map(new_rack_id_pins, df$name, title = lst_xtr(df$meta, "user", "title"))
+  lapply(df$name, new_rack_id_pins)
 }
 
 #' @export
@@ -139,17 +142,10 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
 
-  map(
-    function(qualified, meta) {
-      parts <- strsplit(qualified, "/", fixed = TRUE)[[1L]]
-      new_rack_id_pins_connect(
-        user = parts[1L],
-        name = parts[2L],
-        title = meta$user$title
-      )
-    },
-    df$name, df$meta
-  )
+  lapply(df$name, function(qualified) {
+    parts <- strsplit(qualified, "/", fixed = TRUE)[[1L]]
+    new_rack_id_pins_connect(user = parts[1L], name = parts[2L])
+  })
 }
 
 # rack_info -----------------------------------------------------------------
@@ -237,42 +233,39 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
 # rack_upload ---------------------------------------------------------------
 
 #' @export
-rack_upload.pins_board <- function(backend, path, id = NULL, ..., title) {
+rack_upload.pins_board <- function(backend, path, name, id = NULL, ...) {
 
-  # Minting is backend-specific: pins slugs the title into a readable handle,
-  # whereas e.g. a database backend would key on its own generated id.
-  name <- if (is.null(id)) sanitize_pin_name(title) else id$name
+  # Minting the storage handle is backend-specific: pins slugs the board name
+  # into a readable pin name, whereas e.g. a database backend keys on its own
+  # generated id. An existing `id` reuses its handle (a new version).
+  name <- if (is.null(id)) sanitize_pin_name(name) else id$name
 
   pins::pin_upload(
     backend,
     path,
     name,
     versioned = TRUE,
-    metadata = list(format = "v1", title = title),
+    metadata = list(format = "v1"),
     tags = blockr_session_tags()
   )
 
   info <- rack_info(new_rack_id_pins(name), backend)
 
-  new_rack_id_pins(
-    name = name,
-    version = info$version[1L],
-    title = title
-  )
+  new_rack_id_pins(name = name, version = info$version[1L])
 }
 
 #' @export
-rack_upload.pins_board_connect <- function(backend, path, id = NULL, ...,
-                                           title) {
+rack_upload.pins_board_connect <- function(backend, path, name, id = NULL,
+                                           ...) {
 
-  name <- if (is.null(id)) sanitize_pin_name(title) else id$name
+  name <- if (is.null(id)) sanitize_pin_name(name) else id$name
 
   pins::pin_upload(
     backend,
     path,
     name,
     versioned = TRUE,
-    metadata = list(format = "v1", title = title),
+    metadata = list(format = "v1"),
     tags = blockr_session_tags()
   )
 
@@ -281,8 +274,7 @@ rack_upload.pins_board_connect <- function(backend, path, id = NULL, ...,
   new_rack_id_pins_connect(
     user = backend$account,
     name = name,
-    version = info$version[1L],
-    title = title
+    version = info$version[1L]
   )
 }
 

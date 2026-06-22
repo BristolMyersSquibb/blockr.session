@@ -11,9 +11,9 @@ rack_upload(backend, path, ...)
 
 \item{path}{Character scalar. Path to the local file to upload.}
 
-\item{...}{Additional arguments passed to the method, including \code{id} (an
-existing \code{rack_id} to add a version to, or \code{NULL} to create a record) and
-\code{title} (the human-readable board title, stored as metadata).}
+\item{...}{Additional arguments passed to the method, including \code{name} (the
+board name, used to mint a handle when creating) and \code{id} (an existing
+\code{rack_id} to add a version to, or \code{NULL} to create a record).}
 }
 \value{
 A \code{rack_id} object identifying the newly created version.

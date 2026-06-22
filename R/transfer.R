@@ -56,7 +56,7 @@ upload_workflows <- function(file_info, backend) {
 
     tryCatch(
       {
-        rack_upload(backend, fpath, title = wf_name)
+        rack_upload(backend, fpath, name = wf_name)
         uploaded <- uploaded + 1L
       },
       error = function(e) {
