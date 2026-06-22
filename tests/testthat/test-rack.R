@@ -26,3 +26,8 @@ test_that("display_name.rack_id returns name", {
   id <- new_rack_id("my_board")
   expect_equal(display_name(id), "my_board")
 })
+
+test_that("display_name.rack_id prefers title over name", {
+  id <- new_rack_id("Rebel_eyas", title = "Rebel eyas")
+  expect_equal(display_name(id), "Rebel eyas")
+})

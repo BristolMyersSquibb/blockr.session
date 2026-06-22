@@ -11,6 +11,18 @@ test_that("new_rack_id_pins with version", {
   expect_equal(id$version, "v1")
 })
 
+test_that("new_rack_id_pins stores title separate from name", {
+  id <- new_rack_id_pins("Rebel_eyas", title = "Rebel eyas")
+  expect_equal(id$name, "Rebel_eyas")
+  expect_equal(display_name(id), "Rebel eyas")
+})
+
+test_that("new_rack_id_pins_connect stores title separate from name", {
+  id <- new_rack_id_pins_connect("alice", "Rebel_eyas", title = "Rebel eyas")
+  expect_equal(id$name, "Rebel_eyas")
+  expect_equal(display_name(id), "Rebel eyas")
+})
+
 test_that("new_rack_id_pins rejects empty version", {
   expect_error(
     new_rack_id_pins("my_board", ""),
@@ -52,7 +64,7 @@ test_that("pin_name.rack_id_pins_connect returns qualified name", {
   expect_equal(pin_name(id), "alice/my_board")
 })
 
-test_that("display_name.rack_id_pins_connect returns bare name", {
+test_that("display_name on connect rack_id returns bare name", {
   id <- new_rack_id_pins_connect("alice", "my_board")
   expect_equal(display_name(id), "my_board")
 })
@@ -155,6 +167,15 @@ test_that("rack_id_for_board sanitizes name", {
   expect_equal(id$name, "Rebel_eyas")
 })
 
+test_that("rack_id_for_board keeps original name as display title", {
+
+  backend <- pins::board_temp()
+  id <- rack_id_for_board("Rebel eyas", backend)
+
+  expect_equal(id$name, "Rebel_eyas")
+  expect_equal(display_name(id), "Rebel eyas")
+})
+
 test_that("rack_save sanitizes name", {
 
   backend <- pins::board_temp(versioned = TRUE)
@@ -162,6 +183,44 @@ test_that("rack_save sanitizes name", {
 
   res <- rack_save(backend, data, name = "Rebel eyas")
   expect_equal(res$name, "Rebel_eyas")
+})
+
+test_that("rack_save stores title in metadata and rack_list surfaces it", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  data <- list(blocks = list(), links = list())
+
+  res <- rack_save(backend, data, name = "Rebel eyas")
+
+  expect_equal(res$name, "Rebel_eyas")
+  expect_equal(display_name(res), "Rebel eyas")
+
+  meta <- pins::pin_meta(backend, "Rebel_eyas")
+  expect_equal(meta$user$title, "Rebel eyas")
+
+  boards <- rack_list(backend)
+  expect_length(boards, 1L)
+  expect_equal(boards[[1L]]$name, "Rebel_eyas")
+  expect_equal(display_name(boards[[1L]]), "Rebel eyas")
+})
+
+test_that("rack_list falls back to pin name when title metadata absent", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  tmp <- withr::local_tempfile(fileext = ".json")
+  jsonlite::write_json(list(blocks = list()), tmp, null = "null")
+
+  pins::pin_upload(
+    backend, tmp, "legacy_board",
+    versioned = TRUE,
+    metadata = list(format = "v1"),
+    tags = blockr_session_tags()
+  )
+
+  boards <- rack_list(backend)
+  expect_length(boards, 1L)
+  expect_equal(display_name(boards[[1L]]), "legacy_board")
 })
 
 test_that("rack_save persists and rack_list finds it", {

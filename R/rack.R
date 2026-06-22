@@ -17,7 +17,9 @@ new_rack_id <- function(name, ..., class = character()) {
 display_name <- function(id, ...) UseMethod("display_name")
 
 #' @export
-display_name.rack_id <- function(id, ...) id$name
+display_name.rack_id <- function(id, ...) {
+  coal(id$title, id$name, fail_all = FALSE)
+}
 
 last_saved <- function(id, ...) UseMethod("last_saved")
 

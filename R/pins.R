@@ -1,6 +1,6 @@
 # Constructors --------------------------------------------------------------
 
-new_rack_id_pins <- function(name, version = NULL) {
+new_rack_id_pins <- function(name, version = NULL, title = NULL) {
 
   if (not_null(version) && (!is_string(version) || !nzchar(version))) {
     blockr_abort(
@@ -9,10 +9,11 @@ new_rack_id_pins <- function(name, version = NULL) {
     )
   }
 
-  new_rack_id(name, version = version, class = "rack_id_pins")
+  new_rack_id(name, version = version, title = title, class = "rack_id_pins")
 }
 
-new_rack_id_pins_connect <- function(user, name, version = NULL) {
+new_rack_id_pins_connect <- function(user, name, version = NULL,
+                                     title = NULL) {
 
   if (!is_string(user) || !nzchar(user)) {
     blockr_abort(
@@ -32,6 +33,7 @@ new_rack_id_pins_connect <- function(user, name, version = NULL) {
     name,
     user = user,
     version = version,
+    title = title,
     class = c("rack_id_pins_connect", "rack_id_pins")
   )
 }
@@ -54,11 +56,14 @@ rack_id_from_input <- function(x, backend = NULL) {
 }
 
 rack_id_for_board <- function(name, backend) {
+
+  title <- name
   name <- sanitize_pin_name(name)
+
   if (inherits(backend, "pins_board_connect")) {
-    new_rack_id_pins_connect(backend$account, name)
+    new_rack_id_pins_connect(backend$account, name, title = title)
   } else {
-    new_rack_id_pins(name)
+    new_rack_id_pins(name, title = title)
   }
 }
 
@@ -71,11 +76,6 @@ pin_name.rack_id_pins <- function(id, ...) id$name
 pin_name.rack_id_pins_connect <- function(id, ...) {
   paste0(id$user, "/", id$name)
 }
-
-# display_name --------------------------------------------------------------
-
-#' @export
-display_name.rack_id_pins_connect <- function(id, ...) id$name
 
 # format --------------------------------------------------------------------
 
@@ -125,7 +125,7 @@ rack_list.pins_board <- function(backend, tags = NULL, ...) {
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
 
-  lapply(df$name, new_rack_id_pins)
+  map(new_rack_id_pins, df$name, title = lst_xtr(df$meta, "user", "title"))
 }
 
 #' @export
@@ -151,10 +151,17 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
 
-  lapply(df$name, function(qualified) {
-    parts <- strsplit(qualified, "/", fixed = TRUE)[[1L]]
-    new_rack_id_pins_connect(user = parts[1L], name = parts[2L])
-  })
+  map(
+    function(qualified, meta) {
+      parts <- strsplit(qualified, "/", fixed = TRUE)[[1L]]
+      new_rack_id_pins_connect(
+        user = parts[1L],
+        name = parts[2L],
+        title = meta$user$title
+      )
+    },
+    df$name, df$meta
+  )
 }
 
 # rack_info -----------------------------------------------------------------
@@ -244,6 +251,7 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
 #' @export
 rack_upload.pins_board <- function(backend, path, ..., name) {
 
+  title <- name
   name <- sanitize_pin_name(name)
 
   pins::pin_upload(
@@ -251,7 +259,7 @@ rack_upload.pins_board <- function(backend, path, ..., name) {
     path,
     name,
     versioned = TRUE,
-    metadata = list(format = "v1"),
+    metadata = list(format = "v1", title = title),
     tags = blockr_session_tags()
   )
 
@@ -259,13 +267,15 @@ rack_upload.pins_board <- function(backend, path, ..., name) {
 
   new_rack_id_pins(
     name = name,
-    version = info$version[1L]
+    version = info$version[1L],
+    title = title
   )
 }
 
 #' @export
 rack_upload.pins_board_connect <- function(backend, path, ..., name) {
 
+  title <- name
   name <- sanitize_pin_name(name)
 
   pins::pin_upload(
@@ -273,7 +283,7 @@ rack_upload.pins_board_connect <- function(backend, path, ..., name) {
     path,
     name,
     versioned = TRUE,
-    metadata = list(format = "v1"),
+    metadata = list(format = "v1", title = title),
     tags = blockr_session_tags()
   )
 
@@ -282,7 +292,8 @@ rack_upload.pins_board_connect <- function(backend, path, ..., name) {
   new_rack_id_pins_connect(
     user = backend$account,
     name = name,
-    version = info$version[1L]
+    version = info$version[1L],
+    title = title
   )
 }
 

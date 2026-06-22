@@ -4,6 +4,12 @@ test_that("board_query_string local board, no version", {
   expect_equal(board_query_string(id, backend), "?board_name=my_board")
 })
 
+test_that("board_query_string uses pin name, not display title", {
+  id <- new_rack_id_pins("Rebel_eyas", title = "Rebel eyas")
+  backend <- pins::board_temp()
+  expect_equal(board_query_string(id, backend), "?board_name=Rebel_eyas")
+})
+
 test_that("board_query_string local board with version", {
   id <- new_rack_id_pins("my_board", version = "v1")
   backend <- pins::board_temp()
