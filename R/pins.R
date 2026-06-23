@@ -263,7 +263,7 @@ rack_upload.pins_board_connect <- function(backend, path, name, id = NULL,
   pins::pin_upload(
     backend,
     path,
-    name,
+    paste0(backend$account, "/", name),
     versioned = TRUE,
     metadata = list(format = "v1"),
     tags = blockr_session_tags()
