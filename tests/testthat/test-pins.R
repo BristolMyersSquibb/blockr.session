@@ -124,6 +124,8 @@ test_that("rack_id_from_input connect backend infers user", {
   expect_s3_class(id, "rack_id_pins_connect")
   expect_equal(id$user, "nicolas")
   expect_equal(id$name, "board")
+
+  expect_equal(pin_name(id), "nicolas/board")
 })
 
 test_that("sanitize_pin_name replaces spaces and invalid chars", {
@@ -652,7 +654,7 @@ test_that("rack_save on Connect returns rack_id_pins_connect", {
   expect_true(has_version)
 })
 
-test_that("rack_save on Connect passes bare name to pin_upload", {
+test_that("rack_save on Connect passes owner-qualified name to pin_upload", {
 
   board <- mock_board_connect(account = "user_a")
 
@@ -687,7 +689,38 @@ test_that("rack_save on Connect passes bare name to pin_upload", {
   expect_equal(result$user, "user_a")
   expect_equal(result$name, "my_new_board")
   expect_equal(result$version, versions$version[1L])
-  expect_equal(uploaded_name, "my_new_board")
+  expect_equal(uploaded_name, "user_a/my_new_board")
+})
+
+test_that("rack_save on Connect scopes the write to the caller's account", {
+
+  versions <- data.frame(
+    version = "20200101T000000Z-aaaaa",
+    created = as.POSIXct("2020-01-01", tz = "UTC"),
+    hash = "abc123",
+    stringsAsFactors = FALSE
+  )
+
+  upload_target <- function(account) {
+
+    board <- mock_board_connect(account = account)
+    uploaded_name <- NULL
+
+    local_mocked_bindings(
+      pin_upload = function(board, paths, name, ...) {
+        uploaded_name <<- name
+        invisible()
+      },
+      pin_versions = function(...) versions,
+      .package = "pins"
+    )
+
+    rack_save(board, blockr_test_session, name = "shared_board")
+    uploaded_name
+  }
+
+  expect_equal(upload_target("user_a"), "user_a/shared_board")
+  expect_equal(upload_target("user_b"), "user_b/shared_board")
 })
 
 test_that("rack_save on Connect queries versions with qualified name", {

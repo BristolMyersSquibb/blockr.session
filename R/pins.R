@@ -116,6 +116,8 @@ rack_list.pins_board <- function(backend, tags = NULL, ...) {
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
 
+  log_debug("rack_list matched {nrow(df)} pin(s)")
+
   lapply(df$name, new_rack_id_pins)
 }
 
@@ -141,6 +143,8 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
   }
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
+
+  log_debug("rack_list matched {nrow(df)} pin(s)")
 
   lapply(df$name, function(qualified) {
     parts <- strsplit(qualified, "/", fixed = TRUE)[[1L]]
@@ -195,6 +199,7 @@ rack_info.rack_id_pins <- function(id, backend, ...) {
 #' @export
 rack_download.rack_id_pins <- function(id, backend, ...) {
 
+  name <- pin_name(id)
   version <- id$version
 
   if (is.null(version)) {
@@ -202,7 +207,7 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
 
     if (nrow(info) == 0L) {
       blockr_abort(
-        "No versions found for pin {pin_name(id)}.",
+        "No versions found for pin {name}.",
         class = "rack_load_no_versions"
       )
     }
@@ -210,11 +215,13 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
     version <- info$version[1L]
   }
 
-  meta <- pins::pin_meta(backend, pin_name(id), version)
+  log_debug("Pin download target {name} (version {version})")
+
+  meta <- pins::pin_meta(backend, name, version)
 
   if (!has_tags(meta)) {
     blockr_abort(
-      "Pin {pin_name(id)} is not compatible with blockr ",
+      "Pin {name} is not compatible with blockr ",
       "(missing session tags).",
       class = "rack_load_invalid_tags"
     )
@@ -227,7 +234,7 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
     )
   }
 
-  pins::pin_download(backend, pin_name(id), version, meta$pin_hash)
+  pins::pin_download(backend, name, version, meta$pin_hash)
 }
 
 # rack_upload ---------------------------------------------------------------
@@ -239,6 +246,8 @@ rack_upload.pins_board <- function(backend, path, name, id = NULL, ...) {
   # into a readable pin name, whereas e.g. a database backend keys on its own
   # generated id. An existing `id` reuses its handle (a new version).
   name <- if (is.null(id)) sanitize_pin_name(name) else id$name
+
+  log_debug("Pin upload target {name}")
 
   pins::pin_upload(
     backend,
@@ -259,11 +268,14 @@ rack_upload.pins_board_connect <- function(backend, path, name, id = NULL,
                                            ...) {
 
   name <- if (is.null(id)) sanitize_pin_name(name) else id$name
+  qualified <- paste0(backend$account, "/", name)
+
+  log_debug("Connect pin upload target {qualified}")
 
   pins::pin_upload(
     backend,
     path,
-    name,
+    qualified,
     versioned = TRUE,
     metadata = list(format = "v1"),
     tags = blockr_session_tags()
