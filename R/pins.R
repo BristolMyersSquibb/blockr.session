@@ -199,6 +199,7 @@ rack_info.rack_id_pins <- function(id, backend, ...) {
 #' @export
 rack_download.rack_id_pins <- function(id, backend, ...) {
 
+  name <- pin_name(id)
   version <- id$version
 
   if (is.null(version)) {
@@ -206,7 +207,7 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
 
     if (nrow(info) == 0L) {
       blockr_abort(
-        "No versions found for pin {pin_name(id)}.",
+        "No versions found for pin {name}.",
         class = "rack_load_no_versions"
       )
     }
@@ -214,13 +215,13 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
     version <- info$version[1L]
   }
 
-  log_debug("Pin download target {pin_name(id)} (version {version})")
+  log_debug("Pin download target {name} (version {version})")
 
-  meta <- pins::pin_meta(backend, pin_name(id), version)
+  meta <- pins::pin_meta(backend, name, version)
 
   if (!has_tags(meta)) {
     blockr_abort(
-      "Pin {pin_name(id)} is not compatible with blockr ",
+      "Pin {name} is not compatible with blockr ",
       "(missing session tags).",
       class = "rack_load_invalid_tags"
     )
@@ -233,7 +234,7 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
     )
   }
 
-  pins::pin_download(backend, pin_name(id), version, meta$pin_hash)
+  pins::pin_download(backend, name, version, meta$pin_hash)
 }
 
 # rack_upload ---------------------------------------------------------------

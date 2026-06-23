@@ -124,6 +124,8 @@ test_that("rack_id_from_input connect backend infers user", {
   expect_s3_class(id, "rack_id_pins_connect")
   expect_equal(id$user, "nicolas")
   expect_equal(id$name, "board")
+
+  expect_equal(pin_name(id), "nicolas/board")
 })
 
 test_that("sanitize_pin_name replaces spaces and invalid chars", {
