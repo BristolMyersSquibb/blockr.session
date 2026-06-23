@@ -108,6 +108,7 @@ rack_upload <- function(backend, path, ...) UseMethod("rack_upload")
 #' @export
 rack_load <- function(id, backend, ...) {
   path <- rack_download(id, backend, ...)
+  log_info("Loaded board {pin_name(id)}")
   jsonlite::fromJSON(path, simplifyDataFrame = FALSE,
                      simplifyMatrix = FALSE)
 }

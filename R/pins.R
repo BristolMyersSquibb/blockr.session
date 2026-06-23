@@ -116,6 +116,8 @@ rack_list.pins_board <- function(backend, tags = NULL, ...) {
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
 
+  log_debug("rack_list matched {nrow(df)} pin(s)")
+
   lapply(df$name, new_rack_id_pins)
 }
 
@@ -141,6 +143,8 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
   }
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
+
+  log_debug("rack_list matched {nrow(df)} pin(s)")
 
   lapply(df$name, function(qualified) {
     parts <- strsplit(qualified, "/", fixed = TRUE)[[1L]]
@@ -210,6 +214,8 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
     version <- info$version[1L]
   }
 
+  log_debug("Pin download target {pin_name(id)} (version {version})")
+
   meta <- pins::pin_meta(backend, pin_name(id), version)
 
   if (!has_tags(meta)) {
@@ -240,6 +246,8 @@ rack_upload.pins_board <- function(backend, path, name, id = NULL, ...) {
   # generated id. An existing `id` reuses its handle (a new version).
   name <- if (is.null(id)) sanitize_pin_name(name) else id$name
 
+  log_debug("Pin upload target {name}")
+
   pins::pin_upload(
     backend,
     path,
@@ -259,6 +267,8 @@ rack_upload.pins_board_connect <- function(backend, path, name, id = NULL,
                                            ...) {
 
   name <- if (is.null(id)) sanitize_pin_name(name) else id$name
+
+  log_debug("Connect pin upload target {backend$account}/{name}")
 
   pins::pin_upload(
     backend,
