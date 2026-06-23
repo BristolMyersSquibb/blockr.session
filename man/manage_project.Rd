@@ -10,31 +10,25 @@
 manage_project(
   server = manage_project_server,
   ui = manage_project_ui,
-  loader = manage_project_loader
+  loader = manage_project_loader()
 )
 
-manage_project_server(id, board, ...)
+manage_project_server(id, board, ..., loader = NULL)
 
-manage_project_loader(request)
+manage_project_loader()
 
 manage_project_ui(id, x)
 }
 \arguments{
 \item{server, ui}{Server/UI for the plugin module}
 
-\item{loader}{Request-phase board loader (see \code{\link[blockr.core:new_plugin]{new_plugin()}})}
+\item{loader}{A \code{board_loader()} object, or \code{NULL}}
 
 \item{id}{Namespace ID}
 
 \item{board}{Reactive values object containing board state}
 
 \item{...}{Extra arguments (may include dock object)}
-
-\item{request}{Request wrapper supplied by core at the board UI (GET) and
-server (WS connect) entry points (see \code{\link[blockr.core:preserve_board]{blockr.core::preserve_board()}}). A
-freshly created board is read back from a one-shot handoff keyed by a token
-in the URL; otherwise the board is resolved from the rack backend configured
-through the \code{blockr.session_mgmt_backend} option.}
 
 \item{x}{Board object}
 }

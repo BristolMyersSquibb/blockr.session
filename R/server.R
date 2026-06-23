@@ -3,7 +3,7 @@
 #'
 #' @rdname manage_project
 #' @export
-manage_project_server <- function(id, board, ...) {
+manage_project_server <- function(id, board, ..., loader = NULL) {
 
   dot_args <- list(...)
 
@@ -113,15 +113,7 @@ manage_project_server <- function(id, board, ...) {
           attr(new, "id") <- new_id
           new <- reset_board_name(new, id_to_sentence_case(new_id))
 
-          token <- rand_names()
-          stage_new_board(token, new)
-
-          updateQueryString(
-            paste0("?", new_board_param, "=", token),
-            mode = "replace",
-            session = session
-          )
-          session$reload()
+          loader$stage(new, session)
         }
       )
 
@@ -796,69 +788,85 @@ manage_project_server <- function(id, board, ...) {
 
 new_board_param <- "__blockr_new__"
 
-new_board_handoff <- new.env(parent = emptyenv())
-
-stage_new_board <- function(token, board) {
-  assign(token, board, envir = new_board_handoff)
-  invisible(board)
-}
-
-take_new_board <- function(token, consume) {
-
-  board <- get0(token, envir = new_board_handoff, inherits = FALSE)
-
-  if (consume && exists(token, envir = new_board_handoff, inherits = FALSE)) {
-    rm(list = token, envir = new_board_handoff)
-  }
-
-  board
-}
-
-#' @param request Request wrapper supplied by core at the board UI (GET) and
-#' server (WS connect) entry points (see [blockr.core::preserve_board()]). A
-#' freshly created board is read back from a one-shot handoff keyed by a token
-#' in the URL; otherwise the board is resolved from the rack backend configured
-#' through the `blockr.session_mgmt_backend` option.
+#' `manage_project_loader()` returns a [blockr.core::board_loader()]: its
+#' `resolve()` reads a freshly created board from a one-shot reload handoff
+#' (keyed by a token in the URL), else resolves the board from the rack backend
+#' (configured through the `blockr.session_mgmt_backend` option) by the URL
+#' handle; its `stage()` parks a new board for the next reload.
 #'
 #' @rdname manage_project
 #' @export
-manage_project_loader <- function(request) {
+manage_project_loader <- function() {
 
-  token <- request$query[[new_board_param]]
+  store <- new.env(parent = emptyenv())
 
-  if (not_null(token)) {
-    return(take_new_board(token, consume = not_null(request$session)))
+  resolve <- function(request) {
+
+    token <- request$query[[new_board_param]]
+
+    if (not_null(token)) {
+
+      new <- get0(token, envir = store, inherits = FALSE)
+
+      if (not_null(request$session)) {
+
+        if (not_null(new)) {
+          rm(list = token, envir = store)
+        }
+
+        updateQueryString("?", mode = "replace", session = request$session)
+      }
+
+      return(new)
+    }
+
+    name <- request$query$board_name
+
+    if (is.null(name) || !nzchar(name)) {
+      return(NULL)
+    }
+
+    backend <- get_session_backend()
+
+    id <- rack_id_from_input(
+      list(
+        name = name,
+        user = request$query$user,
+        version = request$query$version
+      ),
+      backend
+    )
+
+    # Core calls resolve at both the GET (UI) and the WS connect (server), so a
+    # rack-backed board is fetched and deserialized twice per page load. The
+    # double fetch is deliberate: a shared cache keyed by the URL handle would
+    # leak across sessions once backend credentials become visitor-scoped, and a
+    # session-scoped cache cannot span the GET -> WS boundary.
+    board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
+
+    if (is.null(board_ser)) {
+      return(NULL)
+    }
+
+    tryCatch(blockr_deser(board_ser), error = function(e) NULL)
   }
 
-  name <- request$query$board_name
+  stage <- function(board, session) {
 
-  if (is.null(name) || !nzchar(name)) {
-    return(NULL)
+    token <- rand_names()
+    assign(token, board, envir = store)
+
+    updateQueryString(
+      paste0("?", new_board_param, "=", token),
+      mode = "replace",
+      session = session
+    )
+    session$reload()
+
+    invisible(token)
   }
 
-  backend <- get_session_backend()
-
-  id <- rack_id_from_input(
-    list(
-      name = name,
-      user = request$query$user,
-      version = request$query$version
-    ),
-    backend
-  )
-
-  # Core calls this loader at both the GET (UI) and the WS connect (server), so
-  # a rack-backed board is fetched and deserialized twice per page load. The
-  # double fetch is deliberate: a shared cache keyed by the URL handle would
-  # leak across sessions once backend credentials become visitor-scoped, and a
-  # session-scoped cache cannot span the GET -> WS boundary.
-  board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
-
-  if (is.null(board_ser)) {
-    return(NULL)
-  }
-
-  tryCatch(blockr_deser(board_ser), error = function(e) NULL)
+  board_loader(resolve, stage)
 }
 
 navigate_to_board <- function(id, backend, session) {

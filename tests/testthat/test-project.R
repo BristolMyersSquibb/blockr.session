@@ -34,7 +34,10 @@ test_that("manage_project server", {
       session$setInputs(new_btn = 1)
       expect_no_error(session$flushReact())
     },
-    args = list(board = reactiveValues(board = test_board, board_id = "test"))
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "test"),
+      loader = manage_project_loader()
+    )
   )
 
   testServer(
@@ -170,12 +173,19 @@ test_that("load_version navigates to the selected version", {
   expect_identical(navigated$version, "20240101")
 })
 
-test_that("manage_project_loader returns NULL without a board reference", {
-  expect_null(manage_project_loader(list(query = list())))
-  expect_null(manage_project_loader(list(query = list(board_name = ""))))
+test_that("manage_project_loader returns a board_loader", {
+  expect_true(is_board_loader(manage_project_loader()))
 })
 
-test_that("manage_project_loader resolves a saved board from the backend", {
+test_that("loader resolve returns NULL without a board reference", {
+  loader <- manage_project_loader()
+  expect_null(loader$resolve(list(query = list(), session = NULL)))
+  expect_null(
+    loader$resolve(list(query = list(board_name = ""), session = NULL))
+  )
+})
+
+test_that("loader resolve loads a saved board from the backend", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -189,20 +199,22 @@ test_that("manage_project_loader resolves a saved board from the backend", {
     )
   )
 
-  loaded <- manage_project_loader(
-    list(query = list(board_name = "loader-test"))
+  loaded <- manage_project_loader()$resolve(
+    list(query = list(board_name = "loader-test"), session = NULL)
   )
 
   expect_s3_class(loaded, "board")
   expect_setequal(board_block_ids(loaded), "a")
 })
 
-test_that("manage_project_loader returns NULL for an unknown board", {
+test_that("loader resolve returns NULL for an unknown board", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
   expect_null(
-    manage_project_loader(list(query = list(board_name = "does-not-exist")))
+    manage_project_loader()$resolve(
+      list(query = list(board_name = "does-not-exist"), session = NULL)
+    )
   )
 })
 
@@ -246,21 +258,19 @@ test_that("version history marks the URL version as current (#19)", {
   )
 })
 
-test_that("loader handoff is kept at GET and consumed at WS", {
-  withr::defer(rm(list = ls(new_board_handoff), envir = new_board_handoff))
-
-  stage_new_board("tok", new_board())
+test_that("loader stage handoff is kept at GET and consumed at WS", {
+  loader <- manage_project_loader()
+  token <- loader$stage(new_board(), MockShinySession$new())
 
   q <- list()
-  q[[new_board_param]] <- "tok"
-  get_req <- list(query = q, session = NULL)
+  q[[new_board_param]] <- token
 
-  expect_s3_class(manage_project_loader(get_req), "board")
-  expect_s3_class(manage_project_loader(get_req), "board")
+  expect_s3_class(loader$resolve(list(query = q, session = NULL)), "board")
+  expect_s3_class(loader$resolve(list(query = q, session = NULL)), "board")
 
-  ws_req <- list(query = q, session = list(token = "x"))
-  expect_s3_class(manage_project_loader(ws_req), "board")
-  expect_null(manage_project_loader(ws_req))
+  ws <- MockShinySession$new()
+  expect_s3_class(loader$resolve(list(query = q, session = ws)), "board")
+  expect_null(loader$resolve(list(query = q, session = MockShinySession$new())))
 })
 
 test_that("delete_workflows removes pin from backend", {
@@ -402,12 +412,18 @@ test_that("view_all_versions triggers modal", {
   )
 })
 
-test_that("new_btn stages a fresh cleared board for the loader", {
-  rm(list = ls(new_board_handoff), envir = new_board_handoff)
-  withr::defer(rm(list = ls(new_board_handoff), envir = new_board_handoff))
-
+test_that("new_btn stages a fresh cleared board via the loader", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
+
+  staged <- NULL
+  fake_loader <- structure(
+    list(
+      resolve = function(request) NULL,
+      stage = function(board, session) staged <<- board
+    ),
+    class = "board_loader"
+  )
 
   test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
@@ -415,16 +431,10 @@ test_that("new_btn stages a fresh cleared board for the loader", {
     manage_project_server,
     session$setInputs(new_btn = 1),
     args = list(
-      board = reactiveValues(board = test_board, board_id = "old-test")
+      board = reactiveValues(board = test_board, board_id = "old-test"),
+      loader = fake_loader
     )
   )
-
-  token <- ls(new_board_handoff)
-  expect_length(token, 1)
-
-  q <- list()
-  q[[new_board_param]] <- token
-  staged <- manage_project_loader(list(query = q, session = NULL))
 
   expect_s3_class(staged, "board")
   expect_length(board_block_ids(staged), 0)
