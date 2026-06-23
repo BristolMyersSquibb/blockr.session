@@ -12,8 +12,6 @@ manage_project_server <- function(id, board, ...) {
     function(input, output, session) {
 
       backend <- get_session_backend()
-      log_session_backend(backend, session)
-
       restore_result <- reactiveVal()
 
       refresh_trigger <- reactiveVal(0)

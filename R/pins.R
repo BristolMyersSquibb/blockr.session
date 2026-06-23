@@ -267,13 +267,14 @@ rack_upload.pins_board_connect <- function(backend, path, name, id = NULL,
                                            ...) {
 
   name <- if (is.null(id)) sanitize_pin_name(name) else id$name
+  qualified <- paste0(backend$account, "/", name)
 
-  log_debug("Connect pin upload target {backend$account}/{name}")
+  log_debug("Connect pin upload target {qualified}")
 
   pins::pin_upload(
     backend,
     path,
-    paste0(backend$account, "/", name),
+    qualified,
     versioned = TRUE,
     metadata = list(format = "v1"),
     tags = blockr_session_tags()

@@ -19,24 +19,6 @@ get_session_backend <- function() {
   val
 }
 
-log_session_backend <- function(backend, session = NULL) {
-
-  if (inherits(backend, "pins_board_connect")) {
-
-    log_info("Session backend: Posit Connect (account {backend$account})")
-
-    token <- not_null(session) && # nolint: object_usage.
-      not_null(session$request$HTTP_POSIT_CONNECT_USER_SESSION_TOKEN)
-
-    log_debug("Connect user session token present: {token}")
-
-  } else {
-    log_info("Session backend: {class(backend)[[1L]]}")
-  }
-
-  invisible(backend)
-}
-
 format_time_ago <- function(time) {
 
   if (is.character(time)) {

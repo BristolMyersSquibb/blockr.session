@@ -28,6 +28,7 @@ Imports:
 Suggests:
     testthat (>= 3.0.0),
     blockr.dock,
+    connectapi,
     withr
 Config/testthat/edition: 3
 Remotes:
