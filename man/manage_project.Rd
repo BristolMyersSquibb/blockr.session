@@ -7,13 +7,9 @@
 \alias{manage_project_ui}
 \title{Project management}
 \usage{
-manage_project(
-  server = manage_project_server,
-  ui = manage_project_ui,
-  loader = manage_project_loader()
-)
+manage_project(server = manage_project_server, ui = manage_project_ui)
 
-manage_project_server(id, board, ..., loader = NULL)
+manage_project_server(id, board, ...)
 
 manage_project_loader()
 
@@ -21,8 +17,6 @@ manage_project_ui(id, x)
 }
 \arguments{
 \item{server, ui}{Server/UI for the plugin module}
-
-\item{loader}{A \code{board_loader()} object, or \code{NULL}}
 
 \item{id}{Namespace ID}
 

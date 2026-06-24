@@ -3,7 +3,7 @@
 #'
 #' @rdname manage_project
 #' @export
-manage_project_server <- function(id, board, ..., loader = NULL) {
+manage_project_server <- function(id, board, ...) {
 
   dot_args <- list(...)
 
@@ -12,6 +12,7 @@ manage_project_server <- function(id, board, ..., loader = NULL) {
     function(input, output, session) {
 
       backend <- get_session_backend()
+      restore_result <- reactiveVal()
 
       refresh_trigger <- reactiveVal(0)
       save_status <- reactiveVal("Not saved")
@@ -32,6 +33,10 @@ manage_project_server <- function(id, board, ..., loader = NULL) {
       current_id <- reactive({
 
         query <- parseQueryString(current_query())
+
+        if (not_null(query[[new_board_param]])) {
+          return(NULL)
+        }
 
         if (is.null(query$board_name) || !nzchar(query$board_name)) {
           return(NULL)
@@ -113,7 +118,7 @@ manage_project_server <- function(id, board, ..., loader = NULL) {
           attr(new, "id") <- new_id
           new <- reset_board_name(new, id_to_sentence_case(new_id))
 
-          loader$stage(new, session)
+          restore_result(new)
         }
       )
 
@@ -781,18 +786,19 @@ manage_project_server <- function(id, board, ..., loader = NULL) {
         }
       )
 
-      invisible()
+      restore_result
     }
   )
 }
 
 new_board_param <- "__blockr_new__"
 
-#' `manage_project_loader()` returns a [blockr.core::board_loader()]: its
-#' `resolve()` reads a freshly created board from a one-shot reload handoff
-#' (keyed by a token in the URL), else resolves the board from the rack backend
-#' (configured through the `blockr.session_mgmt_backend` option) by the URL
-#' handle; its `stage()` parks a new board for the next reload.
+#' `manage_project_loader()` returns a [blockr.core::board_loader()] to pass to
+#' [blockr.core::serve()]: its `resolve()` returns a freshly created board
+#' staged for a reload (referenced by a token in the URL), else resolves the
+#' board from the rack backend (the `blockr.session_mgmt_backend` option) by the
+#' URL handle, else `NULL`; its `stage()` parks a new board and returns the URL
+#' token referencing it (core writes the URL and drives the reload).
 #'
 #' @rdname manage_project
 #' @export
@@ -800,27 +806,27 @@ manage_project_loader <- function() {
 
   store <- new.env(parent = emptyenv())
 
-  resolve <- function(request) {
+  resolve <- function(query, session) {
 
-    token <- request$query[[new_board_param]]
+    token <- query[[new_board_param]]
 
     if (not_null(token)) {
 
       new <- get0(token, envir = store, inherits = FALSE)
 
-      if (not_null(request$session)) {
+      if (not_null(session)) {
 
         if (not_null(new)) {
           rm(list = token, envir = store)
         }
 
-        updateQueryString("?", mode = "replace", session = request$session)
+        updateQueryString("?", mode = "replace", session = session)
       }
 
       return(new)
     }
 
-    name <- request$query$board_name
+    name <- query$board_name
 
     if (is.null(name) || !nzchar(name)) {
       return(NULL)
@@ -829,19 +835,15 @@ manage_project_loader <- function() {
     backend <- get_session_backend()
 
     id <- rack_id_from_input(
-      list(
-        name = name,
-        user = request$query$user,
-        version = request$query$version
-      ),
+      list(name = name, user = query$user, version = query$version),
       backend
     )
 
-    # Core calls resolve at both the GET (UI) and the WS connect (server), so a
-    # rack-backed board is fetched and deserialized twice per page load. The
-    # double fetch is deliberate: a shared cache keyed by the URL handle would
-    # leak across sessions once backend credentials become visitor-scoped, and a
-    # session-scoped cache cannot span the GET -> WS boundary.
+    # serve() calls resolve at both the GET (UI) and the WS connect (server),
+    # so a rack-backed board is fetched and deserialized twice per page load.
+    # The double fetch is deliberate: a shared cache keyed by the URL handle
+    # would leak across sessions once backend credentials become visitor-scoped,
+    # and a session-scoped cache cannot span the GET -> WS boundary.
     board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
 
     if (is.null(board_ser)) {
@@ -852,18 +854,9 @@ manage_project_loader <- function() {
   }
 
   stage <- function(board, session) {
-
-    token <- rand_names()
+    token <- rand_names(ls(store))
     assign(token, board, envir = store)
-
-    updateQueryString(
-      paste0("?", new_board_param, "=", token),
-      mode = "replace",
-      session = session
-    )
-    session$reload()
-
-    invisible(token)
+    set_names(list(token), new_board_param)
   }
 
   board_loader(resolve, stage)
