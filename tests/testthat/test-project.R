@@ -47,6 +47,32 @@ test_that("manage_project server", {
   )
 })
 
+test_that("title edit forwards a board to set_board_option_value (#60)", {
+
+  captured <- new.env()
+
+  testServer(
+    manage_project_server,
+    {
+      local_mocked_bindings(
+        set_board_option_value = function(opt, val, board, ...) {
+          captured$board <- board
+          invisible(val)
+        },
+        .package = "blockr.session"
+      )
+
+      session$setInputs(title_edit = "Renamed board")
+      session$flushReact()
+
+      expect_true(is_board(captured$board))
+    },
+    args = list(
+      board = reactiveValues(board = new_board(), board_id = "title-test")
+    )
+  )
+})
+
 test_that("manage_project ui", {
   expect_s3_class(manage_project_ui("project", new_board()), "shiny.tag.list")
 })
