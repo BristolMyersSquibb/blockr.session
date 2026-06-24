@@ -174,10 +174,15 @@ test_that("manage_project_loader returns a board_loader", {
   expect_true(is_board_loader(manage_project_loader()))
 })
 
-test_that("loader resolve returns NULL without a board reference", {
-  loader <- manage_project_loader()
-  expect_null(loader$resolve(list(), NULL))
-  expect_null(loader$resolve(list(board_name = ""), NULL))
+test_that("loader resolve serves the cleared default without a board ref", {
+  initial <- new_board(blocks = c(a = new_dataset_block("iris")))
+  loader <- manage_project_loader(initial)
+
+  res <- loader$resolve(list(), NULL)
+  expect_s3_class(res, "board")
+  expect_length(board_block_ids(res), 0)
+
+  expect_s3_class(loader$resolve(list(board_name = ""), NULL), "board")
 })
 
 test_that("loader resolve loads a saved board from the backend", {
@@ -202,13 +207,15 @@ test_that("loader resolve loads a saved board from the backend", {
   expect_setequal(board_block_ids(loaded), "a")
 })
 
-test_that("loader resolve returns NULL for an unknown board", {
+test_that("loader resolve serves the cleared default for an unknown board", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
-  expect_null(
-    manage_project_loader()$resolve(list(board_name = "does-not-exist"), NULL)
+  res <- manage_project_loader()$resolve(
+    list(board_name = "does-not-exist"), NULL
   )
+  expect_s3_class(res, "board")
+  expect_length(board_block_ids(res), 0)
 })
 
 test_that("version history marks the URL version as current (#19)", {
@@ -249,21 +256,6 @@ test_that("version history marks the URL version as current (#19)", {
       board = reactiveValues(board = test_board, board_id = "hist-current")
     )
   )
-})
-
-test_that("loader stage handoff is kept at GET and consumed at WS", {
-  loader <- manage_project_loader()
-  params <- loader$stage(new_board(), NULL)
-  token <- params[[new_board_param]]
-
-  q <- list()
-  q[[new_board_param]] <- token
-
-  expect_s3_class(loader$resolve(q, NULL), "board")
-  expect_s3_class(loader$resolve(q, NULL), "board")
-
-  expect_s3_class(loader$resolve(q, MockShinySession$new()), "board")
-  expect_null(loader$resolve(q, MockShinySession$new()))
 })
 
 test_that("delete_workflows removes pin from backend", {
@@ -401,28 +393,6 @@ test_that("view_all_versions triggers modal", {
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "vav-test")
-    )
-  )
-})
-
-test_that("new_btn returns a fresh cleared board for core to stage", {
-  backend <- pins::board_temp(versioned = TRUE)
-  withr::local_options(blockr.session_mgmt_backend = backend)
-
-  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
-
-  testServer(
-    manage_project_server,
-    {
-      session$setInputs(new_btn = 1)
-
-      new <- session$returned()
-      expect_s3_class(new, "board")
-      expect_length(board_block_ids(new), 0)
-      expect_false(identical(attr(new, "id"), "old-test"))
-    },
-    args = list(
-      board = reactiveValues(board = test_board, board_id = "old-test")
     )
   )
 })

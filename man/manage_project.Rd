@@ -11,7 +11,7 @@ manage_project(server = manage_project_server, ui = manage_project_ui)
 
 manage_project_server(id, board, ...)
 
-manage_project_loader()
+manage_project_loader(board = new_board())
 
 manage_project_ui(id, x)
 }
@@ -20,7 +20,9 @@ manage_project_ui(id, x)
 
 \item{id}{Namespace ID}
 
-\item{board}{Reactive values object containing board state}
+\item{board}{For \code{manage_project_server}, the reactive values holding board
+state; for \code{manage_project_loader()}, the initial board whose \code{clear_board()}
+copy is served for requests that carry no rack handle.}
 
 \item{...}{Extra arguments (may include dock object)}
 

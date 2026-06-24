@@ -1,4 +1,6 @@
-#' @param board Reactive values object containing board state
+#' @param board For `manage_project_server`, the reactive values holding board
+#' state; for `manage_project_loader()`, the initial board whose `clear_board()`
+#' copy is served for requests that carry no rack handle.
 #' @param ... Extra arguments (may include dock object)
 #'
 #' @rdname manage_project
@@ -12,7 +14,6 @@ manage_project_server <- function(id, board, ...) {
     function(input, output, session) {
 
       backend <- get_session_backend()
-      restore_result <- reactiveVal()
 
       refresh_trigger <- reactiveVal(0)
       save_status <- reactiveVal("Not saved")
@@ -33,10 +34,6 @@ manage_project_server <- function(id, board, ...) {
       current_id <- reactive({
 
         query <- parseQueryString(current_query())
-
-        if (not_null(query[[new_board_param]])) {
-          return(NULL)
-        }
 
         if (is.null(query$board_name) || !nzchar(query$board_name)) {
           return(NULL)
@@ -113,12 +110,8 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$new_btn,
         {
-          new <- clear_board(board$board)
-          new_id <- rand_names()
-          attr(new, "id") <- new_id
-          new <- reset_board_name(new, id_to_sentence_case(new_id))
-
-          restore_result(new)
+          updateQueryString("?", mode = "replace", session = session)
+          session$reload()
         }
       )
 
@@ -786,50 +779,33 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      restore_result
+      # core's preserve_board validator requires a reactive return; this plugin
+      # resolves boards at the request phase, so nothing flows back through it.
+      reactiveVal()
     }
   )
 }
 
-new_board_param <- "__blockr_new__"
-
-#' `manage_project_loader()` returns a [blockr.core::board_loader()] to pass to
-#' [blockr.core::serve()]: its `resolve()` returns a freshly created board
-#' staged for a reload (referenced by a token in the URL), else resolves the
-#' board from the rack backend (the `blockr.session_mgmt_backend` option) by the
-#' URL handle, else `NULL`; its `stage()` parks a new board and returns the URL
-#' token referencing it (core writes the URL and drives the reload).
+#' `manage_project_loader()` returns a [blockr.core::board_loader()] for
+#' [blockr.core::serve()], alongside `manage_project()`. Its `resolve()` reads
+#' the board named by the URL handle (`board_name`/`user`/`version`) from the
+#' configured rack backend (`blockr.session_mgmt_backend`), and serves a
+#' cleared copy of the initial board for any request without such a handle
+#' (a cold load, or a "New" board). It has no `stage()`: "New" clears the URL
+#' and resolves back to that cleared default.
 #'
 #' @rdname manage_project
 #' @export
-manage_project_loader <- function() {
+manage_project_loader <- function(board = new_board()) {
 
-  store <- new.env(parent = emptyenv())
+  default <- clear_board(board)
 
   resolve <- function(query, session) {
-
-    token <- query[[new_board_param]]
-
-    if (not_null(token)) {
-
-      new <- get0(token, envir = store, inherits = FALSE)
-
-      if (not_null(session)) {
-
-        if (not_null(new)) {
-          rm(list = token, envir = store)
-        }
-
-        updateQueryString("?", mode = "replace", session = session)
-      }
-
-      return(new)
-    }
 
     name <- query$board_name
 
     if (is.null(name) || !nzchar(name)) {
-      return(NULL)
+      return(default)
     }
 
     backend <- get_session_backend()
@@ -847,19 +823,13 @@ manage_project_loader <- function() {
     board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
 
     if (is.null(board_ser)) {
-      return(NULL)
+      return(default)
     }
 
-    tryCatch(blockr_deser(board_ser), error = function(e) NULL)
+    coal(tryCatch(blockr_deser(board_ser), error = function(e) NULL), default)
   }
 
-  stage <- function(board, session) {
-    token <- rand_names(ls(store))
-    assign(token, board, envir = store)
-    set_names(list(token), new_board_param)
-  }
-
-  board_loader(resolve, stage)
+  board_loader(resolve)
 }
 
 navigate_to_board <- function(id, backend, session) {
