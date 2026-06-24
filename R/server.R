@@ -569,7 +569,9 @@ manage_project_server <- function(id, board, ...) {
       # Title edit
       observeEvent(
         input$title_edit,
-        set_board_option_value("board_name", input$title_edit, session)
+        set_board_option_value(
+          "board_name", input$title_edit, board$board, session
+        )
       )
 
       # Initialize title
