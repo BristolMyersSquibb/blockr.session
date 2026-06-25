@@ -11,7 +11,7 @@ manage_project_server <- function(id, board, ...) {
     id,
     function(input, output, session) {
 
-      backend <- get_session_backend()
+      backend <- get_session_backend(session)
 
       refresh_trigger <- reactiveVal(0)
       save_status <- reactiveVal("Not saved")
@@ -790,10 +790,15 @@ manage_project_server <- function(id, board, ...) {
 #'
 #' A [blockr.core::board_loader()] for [blockr.core::serve()] that picks the
 #' board to build from the request URL. The board named by the URL handle
-#' (`board_name` / `user` / `version`) loads from the rack backend (the
-#' `blockr.session_mgmt_backend` option); a request without such a handle (a
-#' cold load, or a "New" board) gets a cleared copy of the served board. Pair
-#' it with [manage_project()] when calling [blockr.core::serve()]:
+#' (`board_name` / `user` / `version`) loads from the `session_mgmt_backend`
+#' backend; a request without such a handle (a cold load, or a "New" board)
+#' gets a cleared copy of the served board. The backend is resolved with the
+#' loader's own request (at the GET, before any session) or session (at the WS
+#' connect), so a user-scoped backend such as [user_pins_board()] resolves
+#' under the *visitor's* own Posit Connect credentials at both phases; a board
+#' the visitor may not read does not resolve, whatever the `user` / `board_name`
+#' in the URL. Pair it with [manage_project()] when calling
+#' [blockr.core::serve()]:
 #' `serve(board, plugins = c(.., manage_project()), loader = rack_loader())`.
 #'
 #' @return A [blockr.core::board_loader()] object.
@@ -818,7 +823,9 @@ rack_loader <- function() {
       return(clear_board(default))
     }
 
-    backend <- get_session_backend()
+    backend <- get_session_backend(
+      if (is.null(session)) list(request = request) else session
+    )
 
     id <- rack_id_from_input(
       list(name = name, user = query$user, version = query$version),
@@ -828,7 +835,7 @@ rack_loader <- function() {
     # resolve runs at both the GET (UI) and the WS connect (server), so a
     # rack-backed board is fetched and deserialized twice per page load. The
     # double fetch is deliberate: a shared cache keyed by the URL handle would
-    # leak across sessions once backend credentials become visitor-scoped, and a
+    # leak across sessions when backend credentials are visitor-scoped, and a
     # session-scoped cache cannot span the GET -> WS boundary.
     board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
 

@@ -11,6 +11,10 @@ test_that("manage_project plugin", {
 
 test_that("manage_project server", {
 
+  withr::local_options(
+    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
+  )
+
   test_board <- new_board(
     blocks = c(
       a = new_dataset_block("iris"),
@@ -48,6 +52,10 @@ test_that("manage_project server", {
 })
 
 test_that("title edit forwards a board to set_board_option_value (#60)", {
+
+  withr::local_options(
+    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
+  )
 
   captured <- new.env()
 
@@ -245,6 +253,100 @@ test_that("loader resolve serves the cleared default for an unknown board", {
   )
   expect_s3_class(res, "board")
   expect_length(board_block_ids(res), 0)
+})
+
+test_that("loader GET user-scopes via the configured user_pins_board (#70)", {
+  visitor_backend <- pins::board_temp(versioned = TRUE)
+
+  seed <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  withr::with_options(
+    list(blockr.session_mgmt_backend = visitor_backend),
+    testServer(
+      manage_project_server,
+      session$setInputs(save_btn = 1),
+      args = list(
+        board = reactiveValues(board = seed, board_id = "scoped")
+      )
+    )
+  )
+
+  withr::local_options(blockr.session_mgmt_backend = user_pins_board)
+  local_mocked_bindings(connect_board = function(token) visitor_backend)
+
+  loaded <- rack_loader()$resolve(
+    list(
+      QUERY_STRING = "board_name=scoped",
+      HTTP_POSIT_CONNECT_USER_SESSION_TOKEN = "viewer-token"
+    ),
+    NULL,
+    new_board()
+  )
+
+  expect_s3_class(loaded, "board")
+  expect_setequal(board_block_ids(loaded), "a")
+})
+
+test_that("loader leaves a non-Connect backend untouched under a token (#70)", {
+  shared_backend <- pins::board_temp(versioned = TRUE)
+
+  seed <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  withr::local_options(blockr.session_mgmt_backend = shared_backend)
+
+  testServer(
+    manage_project_server,
+    session$setInputs(save_btn = 1),
+    args = list(
+      board = reactiveValues(board = seed, board_id = "shared")
+    )
+  )
+
+  local_mocked_bindings(
+    connect_board = function(token) stop("must not user-scope a plain backend")
+  )
+
+  loaded <- rack_loader()$resolve(
+    list(
+      QUERY_STRING = "board_name=shared",
+      HTTP_POSIT_CONNECT_USER_SESSION_TOKEN = "viewer-token"
+    ),
+    NULL,
+    new_board()
+  )
+
+  expect_s3_class(loaded, "board")
+  expect_setequal(board_block_ids(loaded), "a")
+})
+
+test_that("loader WS user-scopes via the configured user_pins_board (#70)", {
+  visitor_backend <- pins::board_temp(versioned = TRUE)
+
+  seed <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  withr::with_options(
+    list(blockr.session_mgmt_backend = visitor_backend),
+    testServer(
+      manage_project_server,
+      session$setInputs(save_btn = 1),
+      args = list(
+        board = reactiveValues(board = seed, board_id = "ws-scoped")
+      )
+    )
+  )
+
+  withr::local_options(blockr.session_mgmt_backend = user_pins_board)
+  local_mocked_bindings(connect_board = function(token) visitor_backend)
+
+  fake_session <- list(
+    request = list(HTTP_POSIT_CONNECT_USER_SESSION_TOKEN = "viewer-token"),
+    clientData = list(url_search = "?board_name=ws-scoped")
+  )
+
+  loaded <- rack_loader()$resolve(NULL, fake_session, new_board())
+
+  expect_s3_class(loaded, "board")
+  expect_setequal(board_block_ids(loaded), "a")
 })
 
 test_that("version history marks the URL version as current (#19)", {
