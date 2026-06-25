@@ -21,7 +21,7 @@
 #'   `board_local` when no Connect credentials are available.
 #'
 #' @export
-user_pins_board <- function(session = shiny::getDefaultReactiveDomain()) {
+user_pins_board <- function(session = get_session()) {
 
   token <- connect_session_token(session$request)
 
