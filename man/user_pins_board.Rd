@@ -2,7 +2,7 @@
 % Please edit documentation in R/backend.R
 \name{user_pins_board}
 \alias{user_pins_board}
-\title{User-scoped Posit Connect storage backend}
+\title{Posit Connect storage backend with graceful fallback}
 \usage{
 user_pins_board(session = shiny::getDefaultReactiveDomain())
 }
@@ -11,20 +11,24 @@ user_pins_board(session = shiny::getDefaultReactiveDomain())
 token; defaults to the current reactive domain.}
 }
 \value{
-A \code{pins_board}: a viewer-scoped \code{board_connect}, or \code{board_local}
-when no Connect session token is available.
+A \code{pins_board}: a viewer- or application-scoped \code{board_connect}, or
+\code{board_local} when no Connect credentials are available.
 }
 \description{
-Constructs a \code{\link[pins:board_connect]{pins::board_connect()}} scoped to the \emph{viewer's} own Posit
-Connect account, for use as the \code{session_mgmt_backend}
-\code{\link[blockr.core:blockr_option]{blockr.core::blockr_option()}}. When the content has the Connect API
-Integration enabled, Connect injects a per-viewer session token into the
-request, which this exchanges for a viewer-scoped API key via
-\code{connectapi::connect()} so each user reads and writes pins under their own
-namespace. With no token present (e.g. local development), it falls back to
-\code{\link[pins:board_folder]{pins::board_local()}}.
+Resolves the storage backend for the \code{session_mgmt_backend}
+\code{\link[blockr.core:blockr_option]{blockr.core::blockr_option()}} -- of which it is the default -- in three
+tiers, degrading instead of erroring on a missing credential:
 }
 \details{
-Requires the \pkg{connectapi} package and the \code{CONNECT_SERVER} environment
-variable.
+\enumerate{
+\item When the visitor carries a Posit Connect user session token (the Connect
+API Integration is enabled), it is exchanged via \code{connectapi::connect()}
+for a viewer-scoped API key, so each user reads and writes pins under
+their own namespace (\code{\link[pins:board_connect]{pins::board_connect()}}). Requires the
+\pkg{connectapi} package.
+\item With no visitor token but application Connect credentials in the
+environment (\code{CONNECT_SERVER} and \code{CONNECT_API_KEY}), a board on the
+application's own account.
+\item Otherwise (e.g. local development, off Connect), \code{\link[pins:board_folder]{pins::board_local()}}.
+}
 }

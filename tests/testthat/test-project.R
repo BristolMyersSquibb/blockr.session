@@ -11,6 +11,10 @@ test_that("manage_project plugin", {
 
 test_that("manage_project server", {
 
+  withr::local_options(
+    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
+  )
+
   test_board <- new_board(
     blocks = c(
       a = new_dataset_block("iris"),
@@ -48,6 +52,10 @@ test_that("manage_project server", {
 })
 
 test_that("title edit forwards a board to set_board_option_value (#60)", {
+
+  withr::local_options(
+    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
+  )
 
   captured <- new.env()
 

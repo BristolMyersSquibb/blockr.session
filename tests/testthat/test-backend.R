@@ -1,4 +1,6 @@
-test_that("user_pins_board falls back to a local board without a token", {
+test_that("user_pins_board uses a local board with no Connect creds", {
+
+  withr::local_envvar(CONNECT_SERVER = "", CONNECT_API_KEY = "")
 
   board <- user_pins_board(NULL)
 
@@ -20,6 +22,23 @@ test_that("user_pins_board scopes the board to the viewer's account", {
 
   expect_s3_class(board, "pins_board_connect")
   expect_equal(board$account, "viewer")
+})
+
+test_that("user_pins_board uses the app board with app creds, no token", {
+
+  withr::local_envvar(
+    CONNECT_SERVER = "https://connect.example.com",
+    CONNECT_API_KEY = "app-key"
+  )
+
+  local_mocked_bindings(
+    app_pins_board = function() mock_board_connect(account = "publisher")
+  )
+
+  board <- user_pins_board(NULL)
+
+  expect_s3_class(board, "pins_board_connect")
+  expect_equal(board$account, "publisher")
 })
 
 test_that("connect_board errors when connectapi is unavailable", {
