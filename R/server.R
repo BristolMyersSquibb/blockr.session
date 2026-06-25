@@ -126,8 +126,7 @@ manage_project_server <- function(id, board, ...) {
               )
               rack_save(
                 backend, data,
-                name = board_name(),
-                id = current_id()
+                name = board_name()
               )
             },
             error = cnd_to_notif(type = "error")
