@@ -1,15 +1,24 @@
+# new_rack_id --------------------------------------------------------------
+
 test_that("new_rack_id rejects empty string", {
   expect_error(
     new_rack_id(""),
-    class = "rack_id_invalid_name"
+    class = "rack_id_invalid_id"
   )
 })
 
 test_that("new_rack_id rejects non-string", {
   expect_error(
     new_rack_id(42),
-    class = "rack_id_invalid_name"
+    class = "rack_id_invalid_id"
   )
+})
+
+test_that("new_rack_id stores id, version and user", {
+  id <- new_rack_id("board", version = "v1", user = "alice")
+  expect_equal(id$id, "board")
+  expect_equal(id$version, "v1")
+  expect_equal(id$user, "alice")
 })
 
 test_that("format.rack_id", {
@@ -22,7 +31,37 @@ test_that("print.rack_id", {
   expect_output(print(id), "<rack_id: my_board>")
 })
 
-test_that("display_name.rack_id returns name", {
-  id <- new_rack_id("my_board")
-  expect_equal(display_name(id), "my_board")
+# new_rack_record ----------------------------------------------------------
+
+test_that("new_rack_record stores id, name and display attrs", {
+  rec <- new_rack_record("egoistic_lowchen", "My Board", n_versions = 3L)
+  expect_s3_class(rec, "rack_record")
+  expect_equal(rec$id, "egoistic_lowchen")
+  expect_equal(rec$name, "My Board")
+  expect_equal(rec$n_versions, 3L)
+  expect_null(rec$created)
+})
+
+test_that("new_rack_record rejects empty id", {
+  expect_error(
+    new_rack_record("", "name"),
+    class = "rack_record_invalid_id"
+  )
+})
+
+test_that("new_rack_record rejects non-string name", {
+  expect_error(
+    new_rack_record("id", 42),
+    class = "rack_record_invalid_name"
+  )
+})
+
+test_that("format.rack_record", {
+  rec <- new_rack_record("slug", "Display Name")
+  expect_equal(format(rec), "<rack_record: slug (Display Name)>")
+})
+
+test_that("print.rack_record", {
+  rec <- new_rack_record("slug", "Display Name")
+  expect_output(print(rec), "rack_record: slug")
 })

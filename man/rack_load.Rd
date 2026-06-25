@@ -23,6 +23,6 @@ Downloads and parses a stored session identified by \code{id} from the given
 additionally deserialises the JSON payload into an R object.
 }
 \seealso{
-\code{\link[=rack_save]{rack_save()}} for the complementary save function,
-\code{\link[=rack_download]{rack_download()}} for the underlying download generic.
+\code{\link[=rack_create]{rack_create()}} and \code{\link[=rack_update]{rack_update()}} for the complementary save
+functions, \code{\link[=rack_download]{rack_download()}} for the underlying download generic.
 }

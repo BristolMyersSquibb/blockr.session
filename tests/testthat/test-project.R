@@ -100,7 +100,7 @@ test_that("save persists board to backend", {
   expect_true("save-test" %in% saved$name)
 })
 
-test_that("recent_workflows lists by pin name, not the board name", {
+test_that("recent_workflows renders the saved record keyed on its id (#61)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -114,11 +114,44 @@ test_that("recent_workflows lists by pin name, not the board name", {
       session$setInputs(save_btn = 1)
       html <- as.character(output$recent_workflows)
 
-      expect_true(any(grepl("Rebel_eyas", html, fixed = TRUE)))
-      expect_false(any(grepl("Rebel eyas", html, fixed = TRUE)))
+      expect_true(any(grepl("rebel_eyas", html, fixed = TRUE)))
     },
     args = list(
-      board = reactiveValues(board = test_board, board_id = "Rebel eyas")
+      board = reactiveValues(board = test_board, board_id = "rebel_eyas")
+    )
+  )
+})
+
+test_that("save renames the stored record when the name changed (#61)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  renamed_to <- NULL
+
+  local_mocked_bindings(
+    rack_name = function(id, backend, ...) "a stale stored name",
+    rack_rename = function(id, backend, name, ...) {
+      renamed_to <<- name
+      id
+    }
+  )
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      # seed current_id() so the save hits the update (not create) path
+      prev_query("?id=renamed-on-save")
+      session$setInputs(save_btn = 1)
+      session$flushReact()
+
+      expect_equal(renamed_to, "renamed-on-save")
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "renamed-on-save")
     )
   )
 })
@@ -160,14 +193,14 @@ test_that("load_workflow navigates to the selected board", {
 
   testServer(
     manage_project_server,
-    session$setInputs(load_workflow = list(name = "load-test", user = "")),
+    session$setInputs(load_workflow = list(id = "load-test", user = "")),
     args = list(
       board = reactiveValues(board = test_board, board_id = "load-test")
     )
   )
 
   expect_s3_class(navigated, "rack_id")
-  expect_identical(navigated$name, "load-test")
+  expect_identical(navigated$id, "load-test")
 })
 
 test_that("load_version navigates to the selected version", {
@@ -184,7 +217,7 @@ test_that("load_version navigates to the selected version", {
   testServer(
     manage_project_server,
     session$setInputs(
-      load_version = list(name = "ver-test", version = "20240101", user = "")
+      load_version = list(id = "ver-test", version = "20240101", user = "")
     ),
     args = list(
       board = reactiveValues(board = test_board, board_id = "ver-test")
@@ -192,7 +225,7 @@ test_that("load_version navigates to the selected version", {
   )
 
   expect_s3_class(navigated, "rack_id")
-  expect_identical(navigated$name, "ver-test")
+  expect_identical(navigated$id, "ver-test")
   expect_identical(navigated$version, "20240101")
 })
 
@@ -207,11 +240,11 @@ test_that("loader resolve serves the cleared default without a board ref", {
   expect_s3_class(res, "board")
   expect_length(board_block_ids(res), 0)
 
-  empty_name <- rack_loader()$resolve(
-    list(QUERY_STRING = "board_name="), NULL, initial
+  empty_id <- rack_loader()$resolve(
+    list(QUERY_STRING = "id="), NULL, initial
   )
-  expect_s3_class(empty_name, "board")
-  expect_length(board_block_ids(empty_name), 0)
+  expect_s3_class(empty_id, "board")
+  expect_length(board_block_ids(empty_id), 0)
 })
 
 test_that("loader resolve loads a saved board from the backend", {
@@ -229,7 +262,29 @@ test_that("loader resolve loads a saved board from the backend", {
   )
 
   loaded <- rack_loader()$resolve(
-    list(QUERY_STRING = "board_name=loader-test"), NULL, new_board()
+    list(QUERY_STRING = "id=loader-test"), NULL, new_board()
+  )
+
+  expect_s3_class(loaded, "board")
+  expect_setequal(board_block_ids(loaded), "a")
+})
+
+test_that("loader resolve still reads a legacy board_name handle", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    session$setInputs(save_btn = 1),
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "legacy-test")
+    )
+  )
+
+  loaded <- rack_loader()$resolve(
+    list(QUERY_STRING = "board_name=legacy-test"), NULL, new_board()
   )
 
   expect_s3_class(loaded, "board")
@@ -241,7 +296,7 @@ test_that("loader resolve serves the cleared default for an unknown board", {
   withr::local_options(blockr.session_mgmt_backend = backend)
 
   res <- rack_loader()$resolve(
-    list(QUERY_STRING = "board_name=does-not-exist"), NULL, new_board()
+    list(QUERY_STRING = "id=does-not-exist"), NULL, new_board()
   )
   expect_s3_class(res, "board")
   expect_length(board_block_ids(res), 0)
@@ -274,7 +329,7 @@ test_that("version history marks the URL version as current (#19)", {
   testServer(
     manage_project_server,
     {
-      prev_query(paste0("?board_name=hist-current&version=", older_version))
+      prev_query(paste0("?id=hist-current&version=", older_version))
 
       html <- output$version_history
 
@@ -311,7 +366,7 @@ test_that("delete_workflows removes pin from backend", {
     manage_project_server,
     {
       session$setInputs(
-        delete_workflows = list(list(name = "del-test", user = ""))
+        delete_workflows = list(list(id = "del-test", user = ""))
       )
     },
     args = list(

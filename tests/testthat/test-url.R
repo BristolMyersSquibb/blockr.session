@@ -1,7 +1,7 @@
 test_that("board_query_string local board, no version", {
   id <- new_rack_id_pins("my_board")
   backend <- pins::board_temp()
-  expect_equal(board_query_string(id, backend), "?board_name=my_board")
+  expect_equal(board_query_string(id, backend), "?id=my_board")
 })
 
 test_that("board_query_string local board with version", {
@@ -9,14 +9,14 @@ test_that("board_query_string local board with version", {
   backend <- pins::board_temp()
   expect_equal(
     board_query_string(id, backend),
-    "?board_name=my_board&version=v1"
+    "?id=my_board&version=v1"
   )
 })
 
 test_that("board_query_string omits user when same as backend", {
   id <- new_rack_id_pins_connect("alice", "my_board")
   backend <- mock_board_connect(account = "alice")
-  expect_equal(board_query_string(id, backend), "?board_name=my_board")
+  expect_equal(board_query_string(id, backend), "?id=my_board")
 })
 
 test_that("board_query_string includes user when different from backend", {
@@ -24,7 +24,7 @@ test_that("board_query_string includes user when different from backend", {
   backend <- mock_board_connect(account = "bob")
   expect_equal(
     board_query_string(id, backend),
-    "?board_name=my_board&user=alice"
+    "?id=my_board&user=alice"
   )
 })
 
@@ -33,7 +33,7 @@ test_that("board_query_string different user with version", {
   backend <- mock_board_connect(account = "bob")
   expect_equal(
     board_query_string(id, backend),
-    "?board_name=my_board&user=alice&version=v1"
+    "?id=my_board&user=alice&version=v1"
   )
 })
 
@@ -42,6 +42,12 @@ test_that("board_query_string same user with version omits user", {
   backend <- mock_board_connect(account = "alice")
   expect_equal(
     board_query_string(id, backend),
-    "?board_name=my_board&version=v1"
+    "?id=my_board&version=v1"
   )
+})
+
+test_that("board_query_string accepts a rack_record", {
+  rec <- new_rack_record("slug", "Display Name")
+  backend <- pins::board_temp()
+  expect_equal(board_query_string(rec, backend), "?id=slug")
 })

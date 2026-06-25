@@ -38,3 +38,27 @@ connect_content_find <- function(board, name) {
 
   results[[1L]]
 }
+
+connect_content_titles <- function(board) {
+
+  results <- connect_api(board, "GET /content")
+
+  out <- list()
+
+  for (item in results) {
+
+    slug <- item$name
+
+    if (is.null(slug) || !nzchar(slug)) {
+      next
+    }
+
+    out[[slug]] <- if (not_null(item$title) && nzchar(item$title)) {
+      item$title
+    } else {
+      slug
+    }
+  }
+
+  out
+}

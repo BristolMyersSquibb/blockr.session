@@ -56,7 +56,10 @@ upload_workflows <- function(file_info, backend) {
 
     tryCatch(
       {
-        rack_upload(backend, fpath, name = wf_name)
+        rid <- rack_id_from_input(
+          list(id = sanitize_pin_name(wf_name)), backend
+        )
+        rack_upload(backend, fpath, rid, name = wf_name)
         uploaded <- uploaded + 1L
       },
       error = function(e) {

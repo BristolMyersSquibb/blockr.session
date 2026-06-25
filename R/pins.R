@@ -1,6 +1,6 @@
 # Constructors --------------------------------------------------------------
 
-new_rack_id_pins <- function(name, version = NULL) {
+new_rack_id_pins <- function(id, version = NULL) {
 
   if (not_null(version) && (!is_string(version) || !nzchar(version))) {
     blockr_abort(
@@ -9,10 +9,10 @@ new_rack_id_pins <- function(name, version = NULL) {
     )
   }
 
-  new_rack_id(name, version = version, class = "rack_id_pins")
+  new_rack_id(id, version = version, class = "rack_id_pins")
 }
 
-new_rack_id_pins_connect <- function(user, name, version = NULL) {
+new_rack_id_pins_connect <- function(user, id, version = NULL) {
 
   if (!is_string(user) || !nzchar(user)) {
     blockr_abort(
@@ -29,14 +29,16 @@ new_rack_id_pins_connect <- function(user, name, version = NULL) {
   }
 
   new_rack_id(
-    name,
-    user = user,
+    id,
     version = version,
+    user = user,
     class = c("rack_id_pins_connect", "rack_id_pins")
   )
 }
 
 rack_id_from_input <- function(x, backend = NULL) {
+
+  id <- coal(x$id, x$name, fail_all = FALSE)
 
   version <- x$version
 
@@ -45,41 +47,36 @@ rack_id_from_input <- function(x, backend = NULL) {
   }
 
   if (not_null(x$user) && nzchar(x$user)) {
-    new_rack_id_pins_connect(x$user, x$name, version)
+    new_rack_id_pins_connect(x$user, id, version)
   } else if (inherits(backend, "pins_board_connect")) {
-    new_rack_id_pins_connect(backend$account, x$name, version)
+    new_rack_id_pins_connect(backend$account, id, version)
   } else {
-    new_rack_id_pins(x$name, version)
+    new_rack_id_pins(id, version)
   }
 }
 
 # pin_name ------------------------------------------------------------------
 
 #' @export
-pin_name.rack_id_pins <- function(id, ...) id$name
+pin_name.rack_id_pins <- function(id, ...) id$id
 
 #' @export
 pin_name.rack_id_pins_connect <- function(id, ...) {
-  paste0(id$user, "/", id$name)
+  paste0(id$user, "/", id$id)
 }
-
-# display_name --------------------------------------------------------------
-
-#' @export
-display_name.rack_id_pins_connect <- function(id, ...) id$name
 
 # format --------------------------------------------------------------------
 
 #' @export
 format.rack_id_pins <- function(x, ...) {
   v <- if (not_null(x$version)) paste0("@", x$version) else ""
-  paste0("<rack_id_pins: ", x$name, v, ">")
+  paste0("<rack_id_pins: ", x$id, v, ">")
 }
 
 #' @export
 format.rack_id_pins_connect <- function(x, ...) {
   v <- if (not_null(x$version)) paste0("@", x$version) else ""
-  paste0("<rack_id_pins_connect: ", x$user, "/", x$name, v, ">")
+  paste0("<rack_id_pins_connect: ", x$user, "/", x$id, v, ">")
 }
 
 # last_saved ----------------------------------------------------------------
@@ -91,43 +88,168 @@ last_saved.rack_id_pins <- function(id, backend, ...) {
   info$created[1L]
 }
 
+# rack_name / rack_rename ---------------------------------------------------
+
+pin_stored_name <- function(backend, id) {
+
+  info <- rack_info(id, backend)
+
+  if (nrow(info) == 0L) {
+    return(NULL)
+  }
+
+  meta <- pins::pin_meta(backend, pin_name(id), info$version[1L])
+  meta$user$name
+}
+
+#' @export
+rack_name.rack_id_pins <- function(id, backend, ...) {
+  coal(pin_stored_name(backend, id), id$id, fail_all = FALSE)
+}
+
+#' @export
+rack_name.rack_id_pins_connect <- function(id, backend, ...) {
+
+  content <- tryCatch(
+    connect_content_find(backend, id$id),
+    error = function(e) NULL
+  )
+
+  if (is.null(content) || is.null(content$title) || !nzchar(content$title)) {
+    return(id$id)
+  }
+
+  content$title
+}
+
+#' @export
+rack_rename.rack_id_pins <- function(id, backend, name, ...) {
+
+  info <- rack_info(id, backend)
+
+  if (nrow(info) == 0L) {
+    blockr_abort(
+      "No versions found for pin {pin_name(id)}.",
+      class = "rack_rename_no_versions"
+    )
+  }
+
+  version <- info$version[1L]
+  meta <- pins::pin_meta(backend, pin_name(id), version)
+  path <- pins::pin_download(backend, pin_name(id), version, meta$pin_hash)
+
+  user_meta <- coal(meta$user, list(), fail_all = FALSE)
+  user_meta$name <- name
+
+  pins::pin_upload(
+    backend, path, pin_name(id),
+    versioned = TRUE,
+    metadata = user_meta,
+    tags = unique(c(meta$tags, blockr_session_tags()))
+  )
+
+  new_rack_id_pins(id$id, version = rack_info(id, backend)$version[1L])
+}
+
+#' @export
+rack_rename.rack_id_pins_connect <- function(id, backend, name, ...) {
+
+  content <- connect_content_find(backend, id$id) # nolint: object_usage.
+
+  connect_api(
+    backend, "PATCH /content/{content$guid}",
+    body = list(title = name)
+  )
+
+  new_rack_id_pins_connect(
+    coal(id$user, backend$account, fail_all = FALSE),
+    id$id,
+    version = id$version
+  )
+}
+
+# rack_exists ---------------------------------------------------------------
+
+#' @export
+rack_exists.rack_id_pins <- function(id, backend, ...) {
+  pins::pin_exists(backend, pin_name(id))
+}
+
+# rack_record ---------------------------------------------------------------
+
+#' @export
+rack_record.rack_id_pins <- function(id, backend, ...) {
+
+  info <- rack_info(id, backend)
+  created <- if (nrow(info) > 0L) info$created[1L] else NULL
+
+  new_rack_record(
+    id = id$id,
+    name = rack_name(id, backend),
+    created = created,
+    n_versions = nrow(info),
+    user = id$user
+  )
+}
+
 # rack_list -----------------------------------------------------------------
 
 #' @export
 rack_list.pins_board <- function(backend, tags = NULL, ...) {
 
-  df <- pins::pin_search(backend)
+  df <- pins_session_search(backend, tags)
 
   if (nrow(df) == 0L) {
     return(list())
   }
 
-  keep <- lgl_ply(df$meta, has_tags)
-  df <- df[keep, , drop = FALSE]
-
-  if (not_null(tags)) {
-    keep <- lgl_ply(df$meta, has_tags, tags = tags)
-    df <- df[keep, , drop = FALSE]
-  }
-
-  if (nrow(df) == 0L) {
-    return(list())
-  }
-
-  df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
-
-  log_debug("rack_list matched {nrow(df)} pin(s)")
-
-  lapply(df$name, new_rack_id_pins)
+  lapply(
+    seq_len(nrow(df)),
+    function(i) {
+      new_rack_record(
+        id = df$name[i],
+        name = coal(df$meta[[i]]$user$name, df$name[i], fail_all = FALSE),
+        created = df$created[i]
+      )
+    }
+  )
 }
 
 #' @export
 rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
 
-  df <- pins::pin_search(backend)
+  df <- pins_session_search(backend, tags)
 
   if (nrow(df) == 0L) {
     return(list())
+  }
+
+  titles <- tryCatch(
+    connect_content_titles(backend),
+    error = function(e) list()
+  )
+
+  lapply(
+    seq_len(nrow(df)),
+    function(i) {
+      parts <- strsplit(df$name[i], "/", fixed = TRUE)[[1L]]
+      slug <- parts[2L]
+      new_rack_record(
+        id = slug,
+        name = coal(titles[[slug]], slug, fail_all = FALSE),
+        created = df$created[i],
+        user = parts[1L]
+      )
+    }
+  )
+}
+
+pins_session_search <- function(backend, tags) {
+
+  df <- pins::pin_search(backend)
+
+  if (nrow(df) == 0L) {
+    return(df)
   }
 
   keep <- lgl_ply(df$meta, has_tags)
@@ -139,17 +261,14 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
   }
 
   if (nrow(df) == 0L) {
-    return(list())
+    return(df)
   }
 
   df <- df[order(df$created, decreasing = TRUE, na.last = TRUE), ]
 
   log_debug("rack_list matched {nrow(df)} pin(s)")
 
-  lapply(df$name, function(qualified) {
-    parts <- strsplit(qualified, "/", fixed = TRUE)[[1L]]
-    new_rack_id_pins_connect(user = parts[1L], name = parts[2L])
-  })
+  df
 }
 
 # rack_info -----------------------------------------------------------------
@@ -240,35 +359,38 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
 # rack_upload ---------------------------------------------------------------
 
 #' @export
-rack_upload.pins_board <- function(backend, path, name, id = NULL, ...) {
+rack_upload.pins_board <- function(backend, path, id, name = NULL, ...) {
 
-  # Minting the storage handle is backend-specific: pins slugs the board name
-  # into a readable pin name, whereas e.g. a database backend keys on its own
-  # generated id. An existing `id` reuses its handle (a new version).
-  name <- if (is.null(id)) sanitize_pin_name(name) else id$name
+  slug <- pin_name(id)
 
-  log_debug("Pin upload target {name}")
+  display <- coal(name, pin_stored_name(backend, id), fail_all = FALSE)
+
+  metadata <- list(format = "v1")
+
+  if (not_null(display)) {
+    metadata[["name"]] <- display
+  }
+
+  log_debug("Pin upload target {slug}")
 
   pins::pin_upload(
     backend,
     path,
-    name,
+    slug,
     versioned = TRUE,
-    metadata = list(format = "v1"),
+    metadata = metadata,
     tags = blockr_session_tags()
   )
 
-  info <- rack_info(new_rack_id_pins(name), backend)
-
-  new_rack_id_pins(name = name, version = info$version[1L])
+  new_rack_id_pins(id$id, version = rack_info(id, backend)$version[1L])
 }
 
 #' @export
-rack_upload.pins_board_connect <- function(backend, path, name, id = NULL,
+rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
                                            ...) {
 
-  name <- if (is.null(id)) sanitize_pin_name(name) else id$name
-  qualified <- paste0(backend$account, "/", name)
+  slug <- id$id
+  qualified <- paste0(backend$account, "/", slug)
 
   log_debug("Connect pin upload target {qualified}")
 
@@ -281,13 +403,19 @@ rack_upload.pins_board_connect <- function(backend, path, name, id = NULL,
     tags = blockr_session_tags()
   )
 
-  info <- rack_info(new_rack_id_pins_connect(backend$account, name), backend)
+  base <- new_rack_id_pins_connect(backend$account, slug)
 
-  new_rack_id_pins_connect(
+  rid <- new_rack_id_pins_connect(
     user = backend$account,
-    name = name,
-    version = info$version[1L]
+    id = slug,
+    version = rack_info(base, backend)$version[1L]
   )
+
+  if (not_null(name)) {
+    rack_rename(rid, backend, name)
+  }
+
+  rid
 }
 
 # rack_delete ---------------------------------------------------------------
@@ -404,7 +532,7 @@ rack_acl.rack_id_pins <- function(id, backend, ...) {
 
 #' @export
 rack_acl.rack_id_pins_connect <- function(id, backend, ...) {
-  content <- connect_content_find(backend, id$name)
+  content <- connect_content_find(backend, id$id)
   content$access_type
 }
 
@@ -418,7 +546,7 @@ rack_set_acl.rack_id_pins <- function(id, backend, acl_type, ...) {
 
 #' @export
 rack_set_acl.rack_id_pins_connect <- function(id, backend, acl_type, ...) {
-  content <- connect_content_find(backend, id$name) # nolint: object_usage.
+  content <- connect_content_find(backend, id$id) # nolint: object_usage.
   connect_api(
     backend, "PATCH /content/{content$guid}",
     body = list(access_type = acl_type)
@@ -438,7 +566,7 @@ rack_share.rack_id_pins <- function(id, backend, with_sub, ...) {
 
 #' @export
 rack_share.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
-  content <- connect_content_find(backend, id$name) # nolint: object_usage.
+  content <- connect_content_find(backend, id$id) # nolint: object_usage.
   connect_api(
     backend, "POST /content/{content$guid}/permissions",
     body = list(
@@ -460,7 +588,7 @@ rack_unshare.rack_id_pins <- function(id, backend, with_sub, ...) {
 
 #' @export
 rack_unshare.rack_id_pins_connect <- function(id, backend, with_sub, ...) {
-  content <- connect_content_find(backend, id$name) # nolint: object_usage.
+  content <- connect_content_find(backend, id$id) # nolint: object_usage.
   perms <- connect_api(backend, "GET /content/{content$guid}/permissions")
 
   match <- Filter(function(p) p$principal_guid == with_sub, perms)
@@ -490,7 +618,7 @@ rack_shares.rack_id_pins <- function(id, backend, ...) {
 #' @export
 rack_shares.rack_id_pins_connect <- function(id, backend, ...) {
 
-  content <- connect_content_find(backend, id$name) # nolint: object_usage.
+  content <- connect_content_find(backend, id$id) # nolint: object_usage.
   perms <- connect_api(backend, "GET /content/{content$guid}/permissions")
 
   lapply(perms, function(p) {
