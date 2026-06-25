@@ -1,6 +1,4 @@
-#' @param board For `manage_project_server`, the reactive values holding board
-#' state; for `manage_project_loader()`, the initial board whose `clear_board()`
-#' copy is served for requests that carry no rack handle.
+#' @param board Reactive values object containing board state
 #' @param ... Extra arguments (may include dock object)
 #'
 #' @rdname manage_project
@@ -786,26 +784,36 @@ manage_project_server <- function(id, board, ...) {
   )
 }
 
-#' `manage_project_loader()` returns a [blockr.core::board_loader()] for
-#' [blockr.core::serve()], alongside `manage_project()`. Its `resolve()` reads
-#' the board named by the URL handle (`board_name`/`user`/`version`) from the
-#' configured rack backend (`blockr.session_mgmt_backend`), and serves a
-#' cleared copy of the initial board for any request without such a handle
-#' (a cold load, or a "New" board). It has no `stage()`: "New" clears the URL
-#' and resolves back to that cleared default.
+#' Rack-backed board loader
 #'
-#' @rdname manage_project
+#' A [blockr.core::board_loader()] for [blockr.core::serve()] that picks the
+#' board to build from the request URL. The board named by the URL handle
+#' (`board_name` / `user` / `version`) loads from the rack backend (the
+#' `blockr.session_mgmt_backend` option); a request without such a handle (a
+#' cold load, or a "New" board) gets a cleared copy of the served board. Pair
+#' it with [manage_project()] when calling [blockr.core::serve()]:
+#' `serve(board, plugins = c(.., manage_project()), loader = rack_loader())`.
+#'
+#' @return A [blockr.core::board_loader()] object.
+#'
 #' @export
-manage_project_loader <- function(board = new_board()) {
+rack_loader <- function() {
 
-  default <- clear_board(board)
+  resolve <- function(request, session, default) {
 
-  resolve <- function(query, session) {
+    # the page query is on the request at the GET (no session yet) but in the
+    # session's client data at the WS connect
+    search <- if (is.null(session)) {
+      request[["QUERY_STRING"]]
+    } else {
+      isolate(session$clientData$url_search)
+    }
 
+    query <- parseQueryString(coal(search, ""))
     name <- query$board_name
 
     if (is.null(name) || !nzchar(name)) {
-      return(default)
+      return(clear_board(default))
     }
 
     backend <- get_session_backend()
@@ -815,18 +823,24 @@ manage_project_loader <- function(board = new_board()) {
       backend
     )
 
-    # serve() calls resolve at both the GET (UI) and the WS connect (server),
-    # so a rack-backed board is fetched and deserialized twice per page load.
-    # The double fetch is deliberate: a shared cache keyed by the URL handle
-    # would leak across sessions once backend credentials become visitor-scoped,
-    # and a session-scoped cache cannot span the GET -> WS boundary.
+    # resolve runs at both the GET (UI) and the WS connect (server), so a
+    # rack-backed board is fetched and deserialized twice per page load. The
+    # double fetch is deliberate: a shared cache keyed by the URL handle would
+    # leak across sessions once backend credentials become visitor-scoped, and a
+    # session-scoped cache cannot span the GET -> WS boundary.
     board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
 
     if (is.null(board_ser)) {
-      return(default)
+      return(clear_board(default))
     }
 
-    coal(tryCatch(blockr_deser(board_ser), error = function(e) NULL), default)
+    loaded <- tryCatch(blockr_deser(board_ser), error = function(e) NULL)
+
+    if (is.null(loaded)) {
+      return(clear_board(default))
+    }
+
+    loaded
   }
 
   board_loader(resolve)

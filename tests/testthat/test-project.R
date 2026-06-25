@@ -170,19 +170,22 @@ test_that("load_version navigates to the selected version", {
   expect_identical(navigated$version, "20240101")
 })
 
-test_that("manage_project_loader returns a board_loader", {
-  expect_true(is_board_loader(manage_project_loader()))
+test_that("rack_loader returns a board_loader", {
+  expect_true(is_board_loader(rack_loader()))
 })
 
 test_that("loader resolve serves the cleared default without a board ref", {
   initial <- new_board(blocks = c(a = new_dataset_block("iris")))
-  loader <- manage_project_loader(initial)
 
-  res <- loader$resolve(list(), NULL)
+  res <- rack_loader()$resolve(list(QUERY_STRING = ""), NULL, initial)
   expect_s3_class(res, "board")
   expect_length(board_block_ids(res), 0)
 
-  expect_s3_class(loader$resolve(list(board_name = ""), NULL), "board")
+  empty_name <- rack_loader()$resolve(
+    list(QUERY_STRING = "board_name="), NULL, initial
+  )
+  expect_s3_class(empty_name, "board")
+  expect_length(board_block_ids(empty_name), 0)
 })
 
 test_that("loader resolve loads a saved board from the backend", {
@@ -199,8 +202,8 @@ test_that("loader resolve loads a saved board from the backend", {
     )
   )
 
-  loaded <- manage_project_loader()$resolve(
-    list(board_name = "loader-test"), NULL
+  loaded <- rack_loader()$resolve(
+    list(QUERY_STRING = "board_name=loader-test"), NULL, new_board()
   )
 
   expect_s3_class(loaded, "board")
@@ -211,8 +214,8 @@ test_that("loader resolve serves the cleared default for an unknown board", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
-  res <- manage_project_loader()$resolve(
-    list(board_name = "does-not-exist"), NULL
+  res <- rack_loader()$resolve(
+    list(QUERY_STRING = "board_name=does-not-exist"), NULL, new_board()
   )
   expect_s3_class(res, "board")
   expect_length(board_block_ids(res), 0)
