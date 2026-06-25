@@ -82,39 +82,30 @@
 <span>  <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.html" class="external-link">new_dock_board</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  plugins <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">custom_plugins</a></span><span class="op">(</span><span class="fu"><a href="reference/manage_project.html">manage_project</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The default storage backend is [pins::board_local()] which can be configured by setting the <code>session_mgmt_backend</code> [blockr_option()].</p>
+<p>The default storage backend is [user_pins_board()]: on Posit Connect it resolves per-visitor pin storage from the visitor’s own session token (falling back to the application’s Connect credentials), and off Connect it falls back to [pins::board_local()]. Override it by setting the <code>session_mgmt_backend</code> [blockr_option()].</p>
 </div>
 <div class="section level2">
-<h2 id="using-a-connect-backend">Using a Connect backend<a class="anchor" aria-label="anchor" href="#using-a-connect-backend"></a>
+<h2 id="connect-storage">Connect storage<a class="anchor" aria-label="anchor" href="#connect-storage"></a>
 </h2>
-<p>To use Posit Connect as the storage backend, pass <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">pins::board_connect</a></code> (the function itself, not its result) as the backend option. This enables sharing, visibility controls, and per-user pin storage:</p>
+<p>On Posit Connect with the Connect API Integration enabled, each user reads and writes pins under their own account out of the box, with no backend option to set. The navbar dropdown gains a <strong>Sharing</strong> tab (next to Workflows and History) that lets you set visibility and share with other Connect users.</p>
+<p>To override the default, set the option to a <code>pins</code> board or to a function returning one, which <code>get_session_backend()</code> calls once per session so credentials are picked up at runtime. For example, to use a single shared namespace on the publisher’s account instead of per-visitor storage:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bristolmyerssquibb.github.io/blockr.core/" class="external-link">blockr.core</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://bristolmyerssquibb.github.io/blockr.dock/" class="external-link">blockr.dock</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">blockr.session</span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>blockr.session_mgmt_backend <span class="op">=</span> <span class="fu">pins</span><span class="fu">::</span><span class="va"><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect</a></span><span class="op">)</span></span>
-<span></span>
-<span><span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">serve</a></span><span class="op">(</span></span>
-<span>  <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.html" class="external-link">new_dock_board</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  plugins <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">custom_plugins</a></span><span class="op">(</span><span class="fu"><a href="reference/manage_project.html">manage_project</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-<p><code>get_session_backend()</code> calls the function once per session, picking up credentials at runtime. The navbar dropdown gains a <strong>Sharing</strong> tab (next to Workflows and History) that lets you set visibility and share with other Connect users.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>blockr.session_mgmt_backend <span class="op">=</span> <span class="fu">pins</span><span class="fu">::</span><span class="va"><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="deploying-to-posit-connect">Deploying to Posit Connect<a class="anchor" aria-label="anchor" href="#deploying-to-posit-connect"></a>
 </h3>
-<p>When deploying to Connect, the above is all that is needed — <code>board_connect</code> picks up the server URL and API key from the environment automatically.</p>
+<p>When deploying to Connect no backend option is needed: the default [user_pins_board()] picks up Connect credentials from the environment automatically.</p>
 </div>
 <div class="section level3">
 <h3 id="per-user-pins-with-the-connect-api-integration">Per-user pins with the Connect API Integration<a class="anchor" aria-label="anchor" href="#per-user-pins-with-the-connect-api-integration"></a>
 </h3>
-<p>By default, pins are stored under the deploying user’s namespace. To have each viewer’s pins saved under their own account, enable the <strong>Connect API Integration</strong> for the content:</p>
+<p>Without the integration, every viewer’s pins are stored under the application’s own Connect account, a single shared namespace. To have each viewer’s pins saved under their <em>own</em> account instead, enable the <strong>Connect API Integration</strong> for the content:</p>
 <ol style="list-style-type: decimal">
 <li>In Connect, open the content’s <strong>Settings → Access</strong> tab.</li>
 <li>Under <em>API Integrations</em>, enable the <strong>Posit Connect</strong> integration.</li>
 <li>Set the maximum role to <strong>Viewer</strong> (sufficient for reading and writing pins).</li>
 </ol>
-<p>With the integration enabled, Connect injects an ephemeral <code>CONNECT_API_KEY</code> into each user’s session. Because <code><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">pins::board_connect</a></code> is called fresh per session, it automatically picks up that key via its default <code>auth = "auto"</code>. No additional packages or configuration are needed — in particular, the <a href="https://github.com/posit-dev/connectcreds" class="external-link"><code>connectcreds</code></a> package is <strong>not</strong> required here; that package is for exchanging session credentials for third-party OAuth tokens (e.g. GitHub, Salesforce), which is a separate use case.</p>
+<p>With the integration enabled, Connect attaches a per-visitor session token to each request, which [user_pins_board()] exchanges (via <code><a href="https://posit-dev.github.io/connectapi/reference/connect.html" class="external-link">connectapi::connect()</a></code>) for a viewer-scoped API key, so the <a href="https://github.com/posit-dev/connectapi" class="external-link"><code>connectapi</code></a> package is required for this path.</p>
 </div>
 </div>
 </div>
