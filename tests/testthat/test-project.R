@@ -85,6 +85,30 @@ test_that("manage_project ui", {
   expect_s3_class(manage_project_ui("project", new_board()), "shiny.tag.list")
 })
 
+test_that("manage_project ui puts Save As in a split-button dropdown (#67)", {
+  doc <- xml2::read_html(
+    as.character(manage_project_ui("project", new_board()))
+  )
+
+  save_btn <- xml2::xml_find_all(doc, "//button[@id='project-save_btn']")
+  expect_length(save_btn, 1)
+  expect_match(xml2::xml_attr(save_btn, "onclick"), "save_btn", fixed = TRUE)
+
+  toggle <- xml2::xml_find_all(
+    doc,
+    paste0(
+      "//button[@data-bs-toggle='dropdown' and contains(",
+      "concat(' ', normalize-space(@class), ' '), ' dropdown-toggle ')]"
+    )
+  )
+  expect_length(toggle, 1)
+
+  save_as <- xml2::xml_find_all(doc, "//button[@id='project-save_as_btn']")
+  expect_length(save_as, 1)
+  expect_match(xml2::xml_attr(save_as, "class"), "dropdown-item")
+  expect_match(xml2::xml_attr(save_as, "onclick"), "save_as_btn", fixed = TRUE)
+})
+
 test_that("save persists board to backend", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
@@ -362,6 +386,41 @@ test_that("load_version navigates to the selected version", {
   expect_s3_class(navigated, "rack_id")
   expect_identical(navigated$id, "ver-test")
   expect_identical(navigated$version, "20240101")
+})
+
+test_that("save_as forks the loaded board into a fresh record (#67)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  navigated <- NULL
+  local_mocked_bindings(
+    navigate_to_board = function(id, backend, session) navigated <<- id
+  )
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      session$flushReact()
+
+      prev_query("?id=fork-origin")
+      session$setInputs(save_as_btn = 1)
+      session$flushReact()
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "fork-origin")
+    )
+  )
+
+  forked <- setdiff(pins::pin_list(backend), "fork-origin")
+
+  expect_length(forked, 1)
+  expect_equal(nrow(pins::pin_versions(backend, "fork-origin")), 1)
+
+  expect_s3_class(navigated, "rack_id")
+  expect_identical(navigated$id, forked)
 })
 
 test_that("rack_loader returns a board_loader", {
