@@ -48,52 +48,28 @@ serve(
 )
 ```
 
-The default storage backend is [pins::board_local()] which can be configured by setting the `session_mgmt_backend` [blockr_option()].
+The default storage backend is [user_pins_board()]: on Posit Connect it resolves per-visitor pin storage from the visitor's own session token (falling back to the application's Connect credentials), and off Connect it falls back to [pins::board_local()]. Override it by setting the `session_mgmt_backend` [blockr_option()].
 
-## Using a Connect backend
+## Connect storage
 
-To use Posit Connect as the storage backend, pass `pins::board_connect` (the
-function itself, not its result) as the backend option. This enables sharing,
-visibility controls, and per-user pin storage:
+On Posit Connect with the Connect API Integration enabled, each user reads and writes pins under their own account out of the box, with no backend option to set. The navbar dropdown gains a **Sharing** tab (next to Workflows and History) that lets you set visibility and share with other Connect users.
+
+To override the default, set the option to a `pins` board or to a function returning one, which `get_session_backend()` calls once per session so credentials are picked up at runtime. For example, to use a single shared namespace on the publisher's account instead of per-visitor storage:
 
 ```r
-library(blockr.core)
-library(blockr.dock)
-library(blockr.session)
-
 options(blockr.session_mgmt_backend = pins::board_connect)
-
-serve(
-  new_dock_board(),
-  plugins = custom_plugins(manage_project())
-)
 ```
-
-`get_session_backend()` calls the function once per session, picking up
-credentials at runtime. The navbar dropdown gains a **Sharing** tab (next to
-Workflows and History) that lets you set visibility and share with other
-Connect users.
 
 ### Deploying to Posit Connect
 
-When deploying to Connect, the above is all that is needed — `board_connect`
-picks up the server URL and API key from the environment automatically.
+When deploying to Connect no backend option is needed: the default [user_pins_board()] picks up Connect credentials from the environment automatically.
 
 ### Per-user pins with the Connect API Integration
 
-By default, pins are stored under the deploying user's namespace. To have each
-viewer's pins saved under their own account, enable the **Connect API
-Integration** for the content:
+Without the integration, every viewer's pins are stored under the application's own Connect account, a single shared namespace. To have each viewer's pins saved under their *own* account instead, enable the **Connect API Integration** for the content:
 
 1. In Connect, open the content's **Settings → Access** tab.
 2. Under *API Integrations*, enable the **Posit Connect** integration.
 3. Set the maximum role to **Viewer** (sufficient for reading and writing pins).
 
-With the integration enabled, Connect injects an ephemeral `CONNECT_API_KEY`
-into each user's session. Because `pins::board_connect` is called fresh per
-session, it automatically picks up that key via its default `auth = "auto"`.
-No additional packages or configuration are needed — in particular, the
-[`connectcreds`](https://github.com/posit-dev/connectcreds) package is **not**
-required here; that package is for exchanging session credentials for
-third-party OAuth tokens (e.g. GitHub, Salesforce), which is a separate use
-case.
+With the integration enabled, Connect attaches a per-visitor session token to each request, which [user_pins_board()] exchanges (via `connectapi::connect()`) for a viewer-scoped API key, so the [`connectapi`](https://github.com/posit-dev/connectapi) package is required for this path.
