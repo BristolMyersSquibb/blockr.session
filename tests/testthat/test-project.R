@@ -247,6 +247,101 @@ test_that("loader resolve serves the cleared default for an unknown board", {
   expect_length(board_block_ids(res), 0)
 })
 
+test_that("loader GET resolves under the visitor token backend (#70)", {
+  token_backend <- pins::board_temp(versioned = TRUE)
+  app_backend <- pins::board_temp(versioned = TRUE)
+
+  seed <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  withr::with_options(
+    list(blockr.session_mgmt_backend = token_backend),
+    testServer(
+      manage_project_server,
+      session$setInputs(save_btn = 1),
+      args = list(
+        board = reactiveValues(board = seed, board_id = "scoped")
+      )
+    )
+  )
+
+  withr::local_options(blockr.session_mgmt_backend = app_backend)
+  local_mocked_bindings(connect_board = function(token) token_backend)
+
+  loaded <- rack_loader()$resolve(
+    list(
+      QUERY_STRING = "board_name=scoped",
+      HTTP_POSIT_CONNECT_USER_SESSION_TOKEN = "viewer-token"
+    ),
+    NULL,
+    new_board()
+  )
+
+  expect_s3_class(loaded, "board")
+  expect_setequal(board_block_ids(loaded), "a")
+})
+
+test_that("loader GET ignores the app backend when a token is present (#70)", {
+  token_backend <- pins::board_temp(versioned = TRUE)
+  app_backend <- pins::board_temp(versioned = TRUE)
+
+  seed <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  withr::local_options(blockr.session_mgmt_backend = app_backend)
+
+  testServer(
+    manage_project_server,
+    session$setInputs(save_btn = 1),
+    args = list(
+      board = reactiveValues(board = seed, board_id = "app-only")
+    )
+  )
+
+  local_mocked_bindings(connect_board = function(token) token_backend)
+
+  loaded <- rack_loader()$resolve(
+    list(
+      QUERY_STRING = "board_name=app-only",
+      HTTP_POSIT_CONNECT_USER_SESSION_TOKEN = "viewer-token"
+    ),
+    NULL,
+    new_board()
+  )
+
+  expect_s3_class(loaded, "board")
+  expect_length(board_block_ids(loaded), 0)
+})
+
+test_that("loader WS resolves under the session token backend (#70)", {
+  token_backend <- pins::board_temp(versioned = TRUE)
+  app_backend <- pins::board_temp(versioned = TRUE)
+
+  seed <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  withr::with_options(
+    list(blockr.session_mgmt_backend = token_backend),
+    testServer(
+      manage_project_server,
+      session$setInputs(save_btn = 1),
+      args = list(
+        board = reactiveValues(board = seed, board_id = "ws-scoped")
+      )
+    )
+  )
+
+  withr::local_options(blockr.session_mgmt_backend = app_backend)
+  local_mocked_bindings(connect_board = function(token) token_backend)
+
+  fake_session <- list(
+    request = list(HTTP_POSIT_CONNECT_USER_SESSION_TOKEN = "viewer-token"),
+    clientData = list(url_search = "?board_name=ws-scoped")
+  )
+
+  loaded <- rack_loader()$resolve(NULL, fake_session, new_board())
+
+  expect_s3_class(loaded, "board")
+  expect_setequal(board_block_ids(loaded), "a")
+})
+
 test_that("version history marks the URL version as current (#19)", {
 
   backend <- pins::board_temp(versioned = TRUE)

@@ -21,7 +21,7 @@
 #' @export
 user_pins_board <- function(session = shiny::getDefaultReactiveDomain()) {
 
-  token <- connect_session_token(session)
+  token <- connect_session_token(session$request)
 
   if (is.null(token)) {
     log_info("No Connect user session token found; using a local pins board.")
@@ -35,9 +35,9 @@ user_pins_board <- function(session = shiny::getDefaultReactiveDomain()) {
   board
 }
 
-connect_session_token <- function(session) {
+connect_session_token <- function(request) {
 
-  token <- session$request$HTTP_POSIT_CONNECT_USER_SESSION_TOKEN
+  token <- request[["HTTP_POSIT_CONNECT_USER_SESSION_TOKEN"]]
 
   if (is.null(token) || !nzchar(token)) {
     return(NULL)
@@ -62,4 +62,17 @@ connect_board <- function(token) {
     server = Sys.getenv("CONNECT_SERVER"),
     key = con$api_key
   )
+}
+
+loader_backend <- function(request, session) {
+
+  req <- if (is.null(session)) request else session$request
+
+  token <- connect_session_token(req)
+
+  if (is.null(token)) {
+    return(get_session_backend())
+  }
+
+  connect_board(token)
 }

@@ -12,9 +12,14 @@ A \code{\link[blockr.core:board_loader]{blockr.core::board_loader()}} object.
 \description{
 A \code{\link[blockr.core:board_loader]{blockr.core::board_loader()}} for \code{\link[blockr.core:serve]{blockr.core::serve()}} that picks the
 board to build from the request URL. The board named by the URL handle
-(\code{board_name} / \code{user} / \code{version}) loads from the rack backend (the
-\code{blockr.session_mgmt_backend} option); a request without such a handle (a
-cold load, or a "New" board) gets a cleared copy of the served board. Pair
-it with \code{\link[=manage_project]{manage_project()}} when calling \code{\link[blockr.core:serve]{blockr.core::serve()}}:
+(\code{board_name} / \code{user} / \code{version}) loads from the rack backend; a request
+without such a handle (a cold load, or a "New" board) gets a cleared copy of
+the served board. When the visitor carries a Posit Connect user session
+token (the Connect API Integration is enabled), the board resolves under a
+backend scoped to \emph{that visitor} (\code{\link[=user_pins_board]{user_pins_board()}}'s \code{connect_board()}),
+so access is enforced by the visitor's own credentials and a board they may
+not read simply does not resolve, whatever the \code{user} / \code{board_name} in the
+URL. Without a token it falls back to the \code{blockr.session_mgmt_backend}
+option. Pair it with \code{\link[=manage_project]{manage_project()}} when calling \code{\link[blockr.core:serve]{blockr.core::serve()}}:
 \code{serve(board, plugins = c(.., manage_project()), loader = rack_loader())}.
 }

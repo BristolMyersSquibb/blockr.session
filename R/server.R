@@ -790,10 +790,15 @@ manage_project_server <- function(id, board, ...) {
 #'
 #' A [blockr.core::board_loader()] for [blockr.core::serve()] that picks the
 #' board to build from the request URL. The board named by the URL handle
-#' (`board_name` / `user` / `version`) loads from the rack backend (the
-#' `blockr.session_mgmt_backend` option); a request without such a handle (a
-#' cold load, or a "New" board) gets a cleared copy of the served board. Pair
-#' it with [manage_project()] when calling [blockr.core::serve()]:
+#' (`board_name` / `user` / `version`) loads from the rack backend; a request
+#' without such a handle (a cold load, or a "New" board) gets a cleared copy of
+#' the served board. When the visitor carries a Posit Connect user session
+#' token (the Connect API Integration is enabled), the board resolves under a
+#' backend scoped to *that visitor* ([user_pins_board()]'s `connect_board()`),
+#' so access is enforced by the visitor's own credentials and a board they may
+#' not read simply does not resolve, whatever the `user` / `board_name` in the
+#' URL. Without a token it falls back to the `blockr.session_mgmt_backend`
+#' option. Pair it with [manage_project()] when calling [blockr.core::serve()]:
 #' `serve(board, plugins = c(.., manage_project()), loader = rack_loader())`.
 #'
 #' @return A [blockr.core::board_loader()] object.
@@ -818,7 +823,7 @@ rack_loader <- function() {
       return(clear_board(default))
     }
 
-    backend <- get_session_backend()
+    backend <- loader_backend(request, session)
 
     id <- rack_id_from_input(
       list(name = name, user = query$user, version = query$version),
@@ -828,8 +833,8 @@ rack_loader <- function() {
     # resolve runs at both the GET (UI) and the WS connect (server), so a
     # rack-backed board is fetched and deserialized twice per page load. The
     # double fetch is deliberate: a shared cache keyed by the URL handle would
-    # leak across sessions once backend credentials become visitor-scoped, and a
-    # session-scoped cache cannot span the GET -> WS boundary.
+    # leak across sessions now that backend credentials are visitor-scoped, and
+    # a session-scoped cache cannot span the GET -> WS boundary.
     board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
 
     if (is.null(board_ser)) {
