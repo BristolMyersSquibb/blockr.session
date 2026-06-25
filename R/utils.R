@@ -136,20 +136,6 @@ normalize_js_input <- function(x) {
   list(as.list(x))
 }
 
-safe_restore_board <- function(board, board_ser, restore_result,
-                               meta = NULL, session) {
-  tryCatch(
-    {
-      restore_board(
-        board, board_ser, restore_result,
-        meta = meta, session = session
-      )
-      TRUE
-    },
-    error = cnd_to_notif(return_val = FALSE, type = "error", session = session)
-  )
-}
-
 reset_board_name <- function(board, name) {
   if ("board_name" %in% board_option_ids(board)) {
     board_options(board) <- combine_board_options(

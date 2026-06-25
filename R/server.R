@@ -12,7 +12,6 @@ manage_project_server <- function(id, board, ...) {
     function(input, output, session) {
 
       backend <- get_session_backend()
-      restore_result <- reactiveVal()
 
       refresh_trigger <- reactiveVal(0)
       save_status <- reactiveVal("Not saved")
@@ -24,11 +23,15 @@ manage_project_server <- function(id, board, ...) {
         )
       )
 
-      prev_query <- reactiveVal(isolate(board$reload_meta$url))
+      prev_query <- reactiveVal(NULL)
+
+      current_query <- reactive(
+        coal(prev_query(), session$clientData$url_search, "")
+      )
 
       current_id <- reactive({
 
-        query <- parseQueryString(coal(prev_query(), ""))
+        query <- parseQueryString(current_query())
 
         if (is.null(query$board_name) || !nzchar(query$board_name)) {
           return(NULL)
@@ -59,56 +62,6 @@ manage_project_server <- function(id, board, ...) {
           }
         },
         ignoreNULL = FALSE
-      )
-
-      observeEvent(
-        session$clientData$url_search,
-        {
-          query <- getQueryString(session)
-
-          if (is.null(query$board_name)) {
-            return()
-          }
-
-          id <- rack_id_from_input(
-            list(
-              name = query$board_name,
-              user = query$user,
-              version = query$version
-            ),
-            backend
-          )
-
-          new_url <- board_query_string(id, backend)
-
-          # Skip if the URL matches what we last set ourselves. This prevents
-          # re-triggering after our own updateQueryString calls and also handles
-          # the post-session$reload() case (prev_query is initialized from the
-          # pkg-level reload state that persists across session reloads). The
-          # board name is carried by the restored board, so we must not
-          # overwrite it with the (sanitized) pin name from the URL.
-          if (identical(new_url, prev_query())) {
-            return()
-          }
-
-          board_ser <- tryCatch(
-            rack_load(id, backend),
-            error = cnd_to_notif(type = "error")
-          )
-
-          if (is.null(board_ser)) return()
-
-          prev_query(new_url)
-
-          ok <- safe_restore_board(
-            board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
-          )
-
-          if (ok) {
-            updateQueryString(new_url, mode = "replace", session = session)
-          }
-        }
       )
 
       observeEvent(
@@ -155,14 +108,8 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$new_btn,
         {
-          new <- clear_board(board$board)
-          new_id <- rand_names()
-          attr(new, "id") <- new_id
-          new <- reset_board_name(new, id_to_sentence_case(new_id))
-          restore_result(new)
-
-          prev_query(NULL)
           updateQueryString("?", mode = "replace", session = session)
+          session$reload()
         }
       )
 
@@ -221,33 +168,13 @@ manage_project_server <- function(id, board, ...) {
         save_status()
       )
 
-      # LOAD workflow
       observeEvent(
         input$load_workflow,
-        {
-          id <- rack_id_from_input(input$load_workflow)
-
-          board_ser <- tryCatch(
-            rack_load(id, backend),
-            error = cnd_to_notif(type = "error")
-          )
-
-          if (is.null(board_ser)) {
-            return()
-          }
-
-          new_url <- board_query_string(id, backend)
-          prev_query(new_url)
-
-          ok <- safe_restore_board(
-            board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
-          )
-
-          if (ok) {
-            updateQueryString(new_url, mode = "replace", session = session)
-          }
-        }
+        navigate_to_board(
+          rack_id_from_input(input$load_workflow, backend),
+          backend,
+          session
+        )
       )
 
       # VIEW ALL WORKFLOWS modal
@@ -433,7 +360,7 @@ manage_project_server <- function(id, board, ...) {
             )
           }
 
-          active_version <- parseQueryString(coal(prev_query(), ""))$version
+          active_version <- parseQueryString(current_query())$version
 
           items <- lapply(
             seq_len(min(nrow(versions), 4)),
@@ -471,34 +398,16 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      # Load specific version
       observeEvent(
         input$load_version,
         {
           req(input$load_version$name, input$load_version$version)
 
-          id <- rack_id_from_input(input$load_version)
-
-          board_ser <- tryCatch(
-            rack_load(id, backend),
-            error = cnd_to_notif(type = "error")
+          navigate_to_board(
+            rack_id_from_input(input$load_version, backend),
+            backend,
+            session
           )
-
-          if (is.null(board_ser)) {
-            return()
-          }
-
-          new_url <- board_query_string(id, backend)
-          prev_query(new_url)
-
-          ok <- safe_restore_board(
-            board$board, board_ser, restore_result,
-            meta = list(url = new_url), session = session
-          )
-
-          if (ok) {
-            updateQueryString(new_url, mode = "replace", session = session)
-          }
         }
       )
 
@@ -870,10 +779,84 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      # Return the reactiveVal for preserve_board
-      restore_result
+      # core's preserve_board validator requires a reactive return; this plugin
+      # resolves boards at the request phase, so nothing flows back through it.
+      reactiveVal()
     }
   )
+}
+
+#' Rack-backed board loader
+#'
+#' A [blockr.core::board_loader()] for [blockr.core::serve()] that picks the
+#' board to build from the request URL. The board named by the URL handle
+#' (`board_name` / `user` / `version`) loads from the rack backend (the
+#' `blockr.session_mgmt_backend` option); a request without such a handle (a
+#' cold load, or a "New" board) gets a cleared copy of the served board. Pair
+#' it with [manage_project()] when calling [blockr.core::serve()]:
+#' `serve(board, plugins = c(.., manage_project()), loader = rack_loader())`.
+#'
+#' @return A [blockr.core::board_loader()] object.
+#'
+#' @export
+rack_loader <- function() {
+
+  resolve <- function(request, session, default) {
+
+    # the page query is on the request at the GET (no session yet) but in the
+    # session's client data at the WS connect
+    search <- if (is.null(session)) {
+      request[["QUERY_STRING"]]
+    } else {
+      isolate(session$clientData$url_search)
+    }
+
+    query <- parseQueryString(coal(search, ""))
+    name <- query$board_name
+
+    if (is.null(name) || !nzchar(name)) {
+      return(clear_board(default))
+    }
+
+    backend <- get_session_backend()
+
+    id <- rack_id_from_input(
+      list(name = name, user = query$user, version = query$version),
+      backend
+    )
+
+    # resolve runs at both the GET (UI) and the WS connect (server), so a
+    # rack-backed board is fetched and deserialized twice per page load. The
+    # double fetch is deliberate: a shared cache keyed by the URL handle would
+    # leak across sessions once backend credentials become visitor-scoped, and a
+    # session-scoped cache cannot span the GET -> WS boundary.
+    board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
+
+    if (is.null(board_ser)) {
+      return(clear_board(default))
+    }
+
+    loaded <- tryCatch(blockr_deser(board_ser), error = function(e) NULL)
+
+    if (is.null(loaded)) {
+      return(clear_board(default))
+    }
+
+    loaded
+  }
+
+  board_loader(resolve)
+}
+
+navigate_to_board <- function(id, backend, session) {
+
+  updateQueryString(
+    board_query_string(id, backend),
+    mode = "replace",
+    session = session
+  )
+
+  session$reload()
 }
 
 shiny_input_js <- function(ns_id, value) {
