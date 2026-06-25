@@ -63,16 +63,3 @@ connect_board <- function(token) {
     key = con$api_key
   )
 }
-
-loader_backend <- function(request, session) {
-
-  req <- if (is.null(session)) request else session$request
-
-  token <- connect_session_token(req)
-
-  if (is.null(token)) {
-    return(get_session_backend())
-  }
-
-  connect_board(token)
-}

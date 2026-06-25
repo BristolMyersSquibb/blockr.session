@@ -247,14 +247,13 @@ test_that("loader resolve serves the cleared default for an unknown board", {
   expect_length(board_block_ids(res), 0)
 })
 
-test_that("loader GET resolves under the visitor token backend (#70)", {
-  token_backend <- pins::board_temp(versioned = TRUE)
-  app_backend <- pins::board_temp(versioned = TRUE)
+test_that("loader GET user-scopes via the configured user_pins_board (#70)", {
+  visitor_backend <- pins::board_temp(versioned = TRUE)
 
   seed <- new_board(blocks = c(a = new_dataset_block("iris")))
 
   withr::with_options(
-    list(blockr.session_mgmt_backend = token_backend),
+    list(blockr.session_mgmt_backend = visitor_backend),
     testServer(
       manage_project_server,
       session$setInputs(save_btn = 1),
@@ -264,8 +263,8 @@ test_that("loader GET resolves under the visitor token backend (#70)", {
     )
   )
 
-  withr::local_options(blockr.session_mgmt_backend = app_backend)
-  local_mocked_bindings(connect_board = function(token) token_backend)
+  withr::local_options(blockr.session_mgmt_backend = user_pins_board)
+  local_mocked_bindings(connect_board = function(token) visitor_backend)
 
   loaded <- rack_loader()$resolve(
     list(
@@ -280,27 +279,28 @@ test_that("loader GET resolves under the visitor token backend (#70)", {
   expect_setequal(board_block_ids(loaded), "a")
 })
 
-test_that("loader GET ignores the app backend when a token is present (#70)", {
-  token_backend <- pins::board_temp(versioned = TRUE)
-  app_backend <- pins::board_temp(versioned = TRUE)
+test_that("loader leaves a non-Connect backend untouched under a token (#70)", {
+  shared_backend <- pins::board_temp(versioned = TRUE)
 
   seed <- new_board(blocks = c(a = new_dataset_block("iris")))
 
-  withr::local_options(blockr.session_mgmt_backend = app_backend)
+  withr::local_options(blockr.session_mgmt_backend = shared_backend)
 
   testServer(
     manage_project_server,
     session$setInputs(save_btn = 1),
     args = list(
-      board = reactiveValues(board = seed, board_id = "app-only")
+      board = reactiveValues(board = seed, board_id = "shared")
     )
   )
 
-  local_mocked_bindings(connect_board = function(token) token_backend)
+  local_mocked_bindings(
+    connect_board = function(token) stop("must not user-scope a plain backend")
+  )
 
   loaded <- rack_loader()$resolve(
     list(
-      QUERY_STRING = "board_name=app-only",
+      QUERY_STRING = "board_name=shared",
       HTTP_POSIT_CONNECT_USER_SESSION_TOKEN = "viewer-token"
     ),
     NULL,
@@ -308,17 +308,16 @@ test_that("loader GET ignores the app backend when a token is present (#70)", {
   )
 
   expect_s3_class(loaded, "board")
-  expect_length(board_block_ids(loaded), 0)
+  expect_setequal(board_block_ids(loaded), "a")
 })
 
-test_that("loader WS resolves under the session token backend (#70)", {
-  token_backend <- pins::board_temp(versioned = TRUE)
-  app_backend <- pins::board_temp(versioned = TRUE)
+test_that("loader WS user-scopes via the configured user_pins_board (#70)", {
+  visitor_backend <- pins::board_temp(versioned = TRUE)
 
   seed <- new_board(blocks = c(a = new_dataset_block("iris")))
 
   withr::with_options(
-    list(blockr.session_mgmt_backend = token_backend),
+    list(blockr.session_mgmt_backend = visitor_backend),
     testServer(
       manage_project_server,
       session$setInputs(save_btn = 1),
@@ -328,8 +327,8 @@ test_that("loader WS resolves under the session token backend (#70)", {
     )
   )
 
-  withr::local_options(blockr.session_mgmt_backend = app_backend)
-  local_mocked_bindings(connect_board = function(token) token_backend)
+  withr::local_options(blockr.session_mgmt_backend = user_pins_board)
+  local_mocked_bindings(connect_board = function(token) visitor_backend)
 
   fake_session <- list(
     request = list(HTTP_POSIT_CONNECT_USER_SESSION_TOKEN = "viewer-token"),

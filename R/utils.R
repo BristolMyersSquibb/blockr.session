@@ -1,9 +1,13 @@
-get_session_backend <- function() {
+get_session_backend <- function(session = NULL) {
 
   val <- blockr_option("session_mgmt_backend", pins::board_local)
 
   if (is.function(val)) {
-    val <- val()
+    val <- if (not_null(session) && "session" %in% names(formals(val))) {
+      val(session)
+    } else {
+      val()
+    }
   }
 
   if (!inherits(val, "pins_board")) {
