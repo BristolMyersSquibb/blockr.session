@@ -81,6 +81,10 @@ print.rack_record <- function(x, ...) {
 
 rack_list <- function(backend, tags = NULL, ...) UseMethod("rack_list")
 
+# rack_id_from_input --------------------------------------------------------
+
+rack_id_from_input <- function(backend, x, ...) UseMethod("rack_id_from_input")
+
 # rack_info -----------------------------------------------------------------
 
 rack_info <- function(id, backend, ...) UseMethod("rack_info")
@@ -187,7 +191,7 @@ rack_load <- function(id, backend, ...) {
 #' @export
 rack_create <- function(backend, data, id, name, ...) {
 
-  rid <- rack_id_from_input(list(id = id), backend)
+  rid <- rack_id_from_input(backend, list(id = id))
 
   if (rack_exists(rid, backend)) {
     blockr_abort(

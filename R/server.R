@@ -51,8 +51,8 @@ manage_project_server <- function(id, board, ...) {
         }
 
         rack_id_from_input(
-          list(id = qid, user = query$user),
-          backend
+          backend,
+          list(id = qid, user = query$user)
         )
       })
 
@@ -102,7 +102,7 @@ manage_project_server <- function(id, board, ...) {
           # match. Only Save As mints a fresh board id to fork.
           target <- coal(
             current_id(),
-            rack_id_from_input(list(id = board$board_id), backend)
+            rack_id_from_input(backend, list(id = board$board_id))
           )
 
           exists <- isTRUE(
@@ -148,8 +148,8 @@ manage_project_server <- function(id, board, ...) {
           refresh_trigger(refresh_trigger() + 1)
 
           saved <- rack_id_from_input(
-            list(id = res$id, user = res$user),
-            backend
+            backend,
+            list(id = res$id, user = res$user)
           )
           new_url <- board_query_string(saved, backend)
           prev_query(new_url)
@@ -223,7 +223,7 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$load_workflow,
         navigate_to_board(
-          rack_id_from_input(input$load_workflow, backend),
+          rack_id_from_input(backend, input$load_workflow),
           backend,
           session
         )
@@ -254,7 +254,7 @@ manage_project_server <- function(id, board, ...) {
           sel <- normalize_js_input(input$delete_workflows)
           deleted <- 0
           for (wf in sel) {
-            id <- rack_id_from_input(wf, backend)
+            id <- rack_id_from_input(backend, wf)
             res <- tryCatch(
               {
                 rack_purge(id, backend)
@@ -459,7 +459,7 @@ manage_project_server <- function(id, board, ...) {
           req(coal(ver$id, ver$name, fail_all = FALSE), ver$version)
 
           navigate_to_board(
-            rack_id_from_input(ver, backend),
+            rack_id_from_input(backend, ver),
             backend,
             session
           )
@@ -503,8 +503,8 @@ manage_project_server <- function(id, board, ...) {
           deleted <- 0
           for (version in input$delete_versions) {
             ver_id <- rack_id_from_input(
-              list(id = id$id, user = id$user, version = version),
-              backend
+              backend,
+              list(id = id$id, user = id$user, version = version)
             )
             res <- tryCatch(
               {
@@ -899,8 +899,8 @@ rack_loader <- function() {
     backend <- get_session_backend()
 
     id <- rack_id_from_input(
-      list(id = handle, user = query$user, version = query$version),
-      backend
+      backend,
+      list(id = handle, user = query$user, version = query$version)
     )
 
     # resolve runs at both the GET (UI) and the WS connect (server), so a

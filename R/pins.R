@@ -12,23 +12,22 @@ new_rack_id_pins <- function(id, version = NULL) {
   new_rack_id(id, version = version, class = "rack_id_pins")
 }
 
-rack_id_from_input <- function(x, backend = NULL) {
+#' @export
+rack_id_from_input.pins_board <- function(backend, x, ...) {
+  new_rack_id_pins(input_id(x), input_version(x))
+}
 
-  id <- coal(x$id, x$name, fail_all = FALSE)
+input_id <- function(x) coal(x$id, x$name, fail_all = FALSE)
+
+input_version <- function(x) {
 
   version <- x$version
 
   if (not_null(version) && (!nzchar(version) || version == "null")) {
-    version <- NULL
+    return(NULL)
   }
 
-  if (not_null(x$user) && nzchar(x$user)) {
-    new_rack_id_pins_connect(x$user, id, version)
-  } else if (inherits(backend, "pins_board_connect")) {
-    new_rack_id_pins_connect(backend$account, id, version)
-  } else {
-    new_rack_id_pins(id, version)
-  }
+  version
 }
 
 blockr_session_tags <- function() "blockr-session"

@@ -24,6 +24,14 @@ new_rack_id_pins_connect <- function(user, id, version = NULL) {
   )
 }
 
+#' @export
+rack_id_from_input.pins_board_connect <- function(backend, x, ...) {
+
+  user <- if (not_null(x$user) && nzchar(x$user)) x$user else backend$account
+
+  new_rack_id_pins_connect(user, input_id(x), input_version(x))
+}
+
 # pin_name / format ---------------------------------------------------------
 
 #' @export
