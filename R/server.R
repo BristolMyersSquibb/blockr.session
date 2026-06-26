@@ -16,6 +16,21 @@ manage_project_server <- function(id, board, ...) {
       refresh_trigger <- reactiveVal(0)
       save_status <- reactiveVal("Not saved")
 
+      # the serialized payload last written to (or read from) the store, used to
+      # skip a version-minting update when a save changes nothing
+      last_saved_content <- reactiveVal(NULL)
+
+      serialize_now <- function() {
+        do.call(
+          serialize_board,
+          c(
+            list(board$board, board$blocks, board$board_id),
+            dot_args,
+            list(session = session)
+          )
+        )
+      }
+
       board_name <- reactive(
         coal(
           get_board_option_or_null("board_name", session),
@@ -68,6 +83,10 @@ manage_project_server <- function(id, board, ...) {
             )
           }
 
+          # baseline for the content-change check, so a save right after a load
+          # doesn't mint a redundant version
+          last_saved_content(serialize_now())
+
           info <- tryCatch(rack_info(id, backend), error = function(e) NULL)
 
           if (not_null(info) && nrow(info) > 0L) {
@@ -95,26 +114,29 @@ manage_project_server <- function(id, board, ...) {
             tryCatch(rack_exists(target, backend), error = function(e) FALSE)
           )
 
-          res <- tryCatch(
-            {
-              data <- do.call(
-                serialize_board,
-                c(
-                  list(board$board, board$blocks, board$board_id),
-                  dot_args,
-                  list(session = session)
-                )
-              )
+          data <- tryCatch(
+            serialize_now(),
+            error = cnd_to_notif(type = "error")
+          )
 
-              if (exists) {
-                rack_update(target, backend, data)
-              } else {
-                rack_create(
-                  backend, data,
-                  id = board$board_id,
-                  name = board_name()
-                )
-              }
+          if (is.null(data)) {
+            return()
+          }
+
+          # don't mint a version when the content is unchanged
+          if (exists && identical(data, last_saved_content())) {
+            notify("No changes to save", type = "message", session = session)
+            return()
+          }
+
+          res <- tryCatch(
+            if (exists) {
+              rack_update(target, backend, data)
+            } else {
+              rack_create(
+                backend, data,
+                id = board$board_id, name = board_name()
+              )
             },
             error = cnd_to_notif(type = "error")
           )
@@ -122,6 +144,8 @@ manage_project_server <- function(id, board, ...) {
           if (is.null(res)) {
             return()
           }
+
+          last_saved_content(data)
 
           notify(
             paste("Successfully saved", board_name()),

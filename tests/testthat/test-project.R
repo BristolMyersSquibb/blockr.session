@@ -255,7 +255,7 @@ test_that("a cold re-save appends to the existing board_id record (#61)", {
   expect_equal(nrow(pins::pin_versions(backend, "cold-board")), 2L)
 })
 
-test_that("saving multiple times creates versions", {
+test_that("saving after a content change creates a new version", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -268,6 +268,10 @@ test_that("saving multiple times creates versions", {
     {
       session$setInputs(save_btn = 1)
       Sys.sleep(1)
+      # a real content change between saves
+      board$board <- new_board(
+        blocks = c(a = new_dataset_block("iris"), b = new_subset_block())
+      )
       session$setInputs(save_btn = 2)
     },
     args = list(
@@ -277,6 +281,30 @@ test_that("saving multiple times creates versions", {
 
   versions <- pins::pin_versions(backend, "version-test")
   expect_equal(nrow(versions), 2)
+})
+
+test_that("a no-op save does not create a new version (#61)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      Sys.sleep(1)
+      session$setInputs(save_btn = 2)   # nothing changed since the first save
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "noop-test")
+    )
+  )
+
+  versions <- pins::pin_versions(backend, "noop-test")
+  expect_equal(nrow(versions), 1)
 })
 
 test_that("load_workflow navigates to the selected board", {
@@ -413,6 +441,9 @@ test_that("version history marks the URL version as current (#19)", {
     {
       session$setInputs(save_btn = 1)
       Sys.sleep(1)
+      board$board <- new_board(
+        blocks = c(a = new_dataset_block("iris"), b = new_subset_block())
+      )
       session$setInputs(save_btn = 2)
     },
     args = list(
@@ -489,6 +520,9 @@ test_that("delete_versions removes specific version", {
     {
       session$setInputs(save_btn = 1)
       Sys.sleep(1)
+      board$board <- new_board(
+        blocks = c(a = new_dataset_block("iris"), b = new_subset_block())
+      )
       session$setInputs(save_btn = 2)
 
       versions <- pins::pin_versions(backend, "ver-del-test")
