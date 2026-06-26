@@ -18,7 +18,7 @@ new_rack_id <- function(id, version = NULL, user = NULL, ...,
 
 # new_rack_record -----------------------------------------------------------
 
-new_rack_record <- function(id, name, created = NULL, n_versions = NULL, ...,
+new_rack_record <- function(id, name, created = NULL, ...,
                             class = character()) {
 
   if (!is_string(id) || !nzchar(id)) {
@@ -36,7 +36,7 @@ new_rack_record <- function(id, name, created = NULL, n_versions = NULL, ...,
   }
 
   structure(
-    list(id = id, name = name, created = created, n_versions = n_versions, ...),
+    list(id = id, name = name, created = created, ...),
     class = c(class, "rack_record")
   )
 }
@@ -54,8 +54,6 @@ rack_stored_name <- function(id, backend, ...) UseMethod("rack_stored_name")
 rack_rename <- function(id, backend, name, ...) UseMethod("rack_rename")
 
 rack_exists <- function(id, backend, ...) UseMethod("rack_exists")
-
-rack_record <- function(id, backend, ...) UseMethod("rack_record")
 
 # Format / print ------------------------------------------------------------
 

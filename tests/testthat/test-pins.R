@@ -341,21 +341,6 @@ test_that("rack_exists reflects whether the record is stored", {
 
 # rack_record ---------------------------------------------------------------
 
-test_that("rack_record returns id, name and version count", {
-
-  backend <- pins::board_temp(versioned = TRUE)
-  rack_create(backend, list(blocks = list()), id = "rec-id", name = "Rec Name")
-  Sys.sleep(1.1)
-  rack_append(new_rack_id_pins("rec-id"), backend, list(blocks = list(a = 1)))
-
-  rec <- rack_record(new_rack_id_pins("rec-id"), backend)
-
-  expect_s3_class(rec, "rack_record")
-  expect_equal(rec$id, "rec-id")
-  expect_equal(rec$name, "Rec Name")
-  expect_equal(rec$n_versions, 2L)
-})
-
 # rack_info / rack_load -----------------------------------------------------
 
 test_that("rack_info returns version data.frame", {

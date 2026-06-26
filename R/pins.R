@@ -135,23 +135,6 @@ rack_exists.rack_id_pins <- function(id, backend, ...) {
   pins::pin_exists(backend, pin_name(id))
 }
 
-# rack_record ---------------------------------------------------------------
-
-#' @export
-rack_record.rack_id_pins <- function(id, backend, ...) {
-
-  info <- rack_info(id, backend)
-  created <- if (nrow(info) > 0L) info$created[1L] else NULL
-
-  new_rack_record(
-    id = id$id,
-    name = rack_name(id, backend),
-    created = created,
-    n_versions = nrow(info),
-    user = id$user
-  )
-}
-
 # rack_list -----------------------------------------------------------------
 
 #' @export
