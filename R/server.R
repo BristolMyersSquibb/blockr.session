@@ -132,7 +132,7 @@ manage_project_server <- function(id, board, ...) {
 
           res <- tryCatch(
             if (exists) {
-              rack_update(target, backend, data)
+              rack_append(target, backend, data)
             } else {
               rack_create(
                 backend, data,

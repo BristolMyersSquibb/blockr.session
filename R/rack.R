@@ -118,7 +118,7 @@ rack_download <- function(id, backend, ...) UseMethod("rack_download")
 #' independent slug); the display `name`, when supplied, is written to the
 #' backend's native name field (Connect content title, or pin metadata for file
 #' boards) and never affects the storage key. This is a low-level generic; most
-#' callers should use [rack_create()] or [rack_update()].
+#' callers should use [rack_create()] or [rack_append()].
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param path Character scalar. Path to the local file to upload.
@@ -128,7 +128,7 @@ rack_download <- function(id, backend, ...) UseMethod("rack_download")
 #'
 #' @return A `rack_id` object identifying the newly created version.
 #'
-#' @seealso [rack_create()] and [rack_update()] for the high-level wrappers that
+#' @seealso [rack_create()] and [rack_append()] for the high-level wrappers that
 #'   serialise R data before uploading, [rack_download()] for the complementary
 #'   download generic.
 #'
@@ -150,7 +150,7 @@ rack_upload <- function(backend, path, ...) UseMethod("rack_upload")
 #' @return The deserialised session data as an R object (typically a named
 #'   list).
 #'
-#' @seealso [rack_create()] and [rack_update()] for the complementary save
+#' @seealso [rack_create()] and [rack_append()] for the complementary save
 #'   functions, [rack_download()] for the underlying download generic.
 #'
 #' @export
@@ -160,17 +160,17 @@ rack_load <- function(id, backend, ...) {
                      simplifyMatrix = FALSE)
 }
 
-# rack_create / rack_update -------------------------------------------------
+# rack_create / rack_append -------------------------------------------------
 
-#' Create or update a session record on a rack backend
+#' Create or append to a session record on a rack backend
 #'
 #' `rack_create()` serialises `data` to JSON and stores it as a **new** record
 #' keyed on `id` -- the board's own stable id, so the record id and the board id
 #' match. It is a strict insert: it errors (class `rack_create_exists`) if `id`
 #' already names a record rather than appending a version. `name` is written to
-#' the backend's native display field. `rack_update()` adds a **new version** to
+#' the backend's native display field. `rack_append()` adds a **new version** to
 #' the existing record identified by `id`, erroring (class
-#' `rack_update_missing`) if there is none, and never touches the name. Together
+#' `rack_append_missing`) if there is none, and never touches the name. Together
 #' they replace the former `rack_save()`, separating insert from append. To
 #' change a record's name, use `rack_rename()`.
 #'
@@ -179,7 +179,7 @@ rack_load <- function(id, backend, ...) {
 #'   returned by the blockr session machinery).
 #' @param id For `rack_create()`, the storage id to key the new record on
 #'   (typically the board id); errors if it already names a record. For
-#'   `rack_update()`, the `rack_id` of the record to add a version to.
+#'   `rack_append()`, the `rack_id` of the record to add a version to.
 #' @param name Character scalar. The display name for the new record.
 #' @param ... Additional arguments forwarded to [rack_upload()].
 #'
@@ -195,7 +195,7 @@ rack_create <- function(backend, data, id, name, ...) {
 
   if (rack_exists(rid, backend)) {
     blockr_abort(
-      "A rack record with id {id} already exists; use rack_update().",
+      "A rack record with id {id} already exists; use rack_append().",
       class = "rack_create_exists"
     )
   }
@@ -205,12 +205,12 @@ rack_create <- function(backend, data, id, name, ...) {
 
 #' @rdname rack_create
 #' @export
-rack_update <- function(id, backend, data, ...) {
+rack_append <- function(id, backend, data, ...) {
 
   if (!rack_exists(id, backend)) {
     blockr_abort(
       "No rack record with id {id$id}; use rack_create().",
-      class = "rack_update_missing"
+      class = "rack_append_missing"
     )
   }
 

@@ -140,7 +140,7 @@ test_that("sanitize_pin_name replaces spaces and invalid chars", {
   )
 })
 
-# rack_create / rack_update -------------------------------------------------
+# rack_create / rack_append -------------------------------------------------
 
 test_that("rack_create keys on the supplied id; name is a separate attribute", {
 
@@ -158,7 +158,7 @@ test_that("rack_create keys on the supplied id; name is a separate attribute", {
 
 test_that("rack_create errors on a colliding explicit id (no overwrite)", {
 
-  # A create never overwrites: appending to an existing record is rack_update's
+  # A create never overwrites: appending to an existing record is rack_append's
   # job. The save observer upserts (update when the id exists), so it only
   # reaches rack_create for a genuinely new id.
   backend <- pins::board_temp(versioned = TRUE)
@@ -214,14 +214,14 @@ test_that("titles that sanitize alike stay distinct (no collapse)", {
                   c("My Workflow!", "My Workflow?"))
 })
 
-test_that("rack_update adds a version and preserves the name", {
+test_that("rack_append adds a version and preserves the name", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
   rack_create(backend, list(blocks = list(a = 1)), id = "board-x",
               name = "Original")
   Sys.sleep(1.1)
-  res <- rack_update(new_rack_id_pins("board-x"), backend,
+  res <- rack_append(new_rack_id_pins("board-x"), backend,
                      list(blocks = list(a = 2)))
 
   expect_equal(res$id, "board-x")
@@ -230,14 +230,14 @@ test_that("rack_update adds a version and preserves the name", {
   expect_equal(rack_name(new_rack_id_pins("board-x"), backend), "Original")
 })
 
-test_that("rack_update errors when the record does not exist", {
+test_that("rack_append errors when the record does not exist", {
 
-  # rack_update only appends; creating a missing record is rack_create's job.
+  # rack_append only appends; creating a missing record is rack_create's job.
   backend <- pins::board_temp(versioned = TRUE)
 
   expect_error(
-    rack_update(new_rack_id_pins("absent"), backend, list(blocks = list())),
-    class = "rack_update_missing"
+    rack_append(new_rack_id_pins("absent"), backend, list(blocks = list())),
+    class = "rack_append_missing"
   )
 
   expect_length(pins::pin_list(backend), 0L)
@@ -346,7 +346,7 @@ test_that("rack_record returns id, name and version count", {
   backend <- pins::board_temp(versioned = TRUE)
   rack_create(backend, list(blocks = list()), id = "rec-id", name = "Rec Name")
   Sys.sleep(1.1)
-  rack_update(new_rack_id_pins("rec-id"), backend, list(blocks = list(a = 1)))
+  rack_append(new_rack_id_pins("rec-id"), backend, list(blocks = list(a = 1)))
 
   rec <- rack_record(new_rack_id_pins("rec-id"), backend)
 
@@ -363,7 +363,7 @@ test_that("rack_info returns version data.frame", {
   backend <- pins::board_temp(versioned = TRUE)
 
   rack_create(backend, list(blocks = list()), id = "info-test", name = "Info")
-  rack_update(new_rack_id_pins("info-test"), backend,
+  rack_append(new_rack_id_pins("info-test"), backend,
               list(blocks = list(v = 2)))
 
   info <- rack_info(new_rack_id_pins("info-test"), backend)
@@ -404,7 +404,7 @@ test_that("rack_load with specific version", {
   backend <- pins::board_temp(versioned = TRUE)
 
   rack_create(backend, list(blocks = list(v = 1)), id = "ver-load", name = "VL")
-  rack_update(new_rack_id_pins("ver-load"), backend, list(blocks = list(v = 2)))
+  rack_append(new_rack_id_pins("ver-load"), backend, list(blocks = list(v = 2)))
 
   info <- rack_info(new_rack_id_pins("ver-load"), backend)
   older <- info$version[2L]
@@ -465,7 +465,7 @@ test_that("rack_delete removes specific version", {
   backend <- pins::board_temp(versioned = TRUE)
 
   rack_create(backend, list(blocks = list()), id = "del-ver", name = "Del")
-  rack_update(new_rack_id_pins("del-ver"), backend, list(blocks = list(v = 2)))
+  rack_append(new_rack_id_pins("del-ver"), backend, list(blocks = list(v = 2)))
 
   info <- rack_info(new_rack_id_pins("del-ver"), backend)
   expect_equal(nrow(info), 2L)
@@ -651,7 +651,7 @@ test_that("rack_info on Connect returns version data.frame", {
     )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    rack_update(
+    rack_append(
       new_rack_id_pins_connect(board_a$account, "blockr-fixture-board"),
       board_a, modified
     )
@@ -692,7 +692,7 @@ test_that("rack_load on Connect uses qualified pin name", {
     )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    rack_update(
+    rack_append(
       new_rack_id_pins_connect(board_a$account, "blockr-fixture-board"),
       board_a, modified
     )
@@ -826,7 +826,7 @@ test_that("rack_load on Connect loads specific version directly", {
     )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    rack_update(
+    rack_append(
       new_rack_id_pins_connect(board_a$account, "blockr-fixture-board"),
       board_a, modified
     )
@@ -893,7 +893,7 @@ test_that("rack_load on Connect from another user uses qualified name", {
     )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    rack_update(
+    rack_append(
       new_rack_id_pins_connect(board_a$account, "blockr-fixture-board"),
       board_a, modified
     )
@@ -1162,7 +1162,7 @@ test_that("rack_delete on Connect deletes latest version when none specified", {
     )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
-    rack_update(
+    rack_append(
       new_rack_id_pins_connect(board_a$account, "blockr-fixture-board"),
       board_a, modified
     )

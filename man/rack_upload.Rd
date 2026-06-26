@@ -24,10 +24,10 @@ version. The storage handle is taken purely from \code{id} (its stable, name-
 independent slug); the display \code{name}, when supplied, is written to the
 backend's native name field (Connect content title, or pin metadata for file
 boards) and never affects the storage key. This is a low-level generic; most
-callers should use \code{\link[=rack_create]{rack_create()}} or \code{\link[=rack_update]{rack_update()}}.
+callers should use \code{\link[=rack_create]{rack_create()}} or \code{\link[=rack_append]{rack_append()}}.
 }
 \seealso{
-\code{\link[=rack_create]{rack_create()}} and \code{\link[=rack_update]{rack_update()}} for the high-level wrappers that
+\code{\link[=rack_create]{rack_create()}} and \code{\link[=rack_append]{rack_append()}} for the high-level wrappers that
 serialise R data before uploading, \code{\link[=rack_download]{rack_download()}} for the complementary
 download generic.
 }

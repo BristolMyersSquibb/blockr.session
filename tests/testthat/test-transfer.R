@@ -72,7 +72,7 @@ test_that("rack_download with specific version", {
   backend <- pins::board_temp(versioned = TRUE)
 
   id1 <- rack_create(backend, list(v = 1), id = "ver-dl", name = "Ver DL")
-  rack_update(new_rack_id_pins("ver-dl"), backend, list(v = 2))
+  rack_append(new_rack_id_pins("ver-dl"), backend, list(v = 2))
 
   path <- rack_download(id1, backend)
   data <- jsonlite::fromJSON(path, simplifyDataFrame = FALSE)
