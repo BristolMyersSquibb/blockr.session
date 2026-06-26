@@ -19,7 +19,7 @@
 #'   when no Connect session token is available.
 #'
 #' @export
-user_pins_board <- function(session = shiny::getDefaultReactiveDomain()) {
+user_pins_board <- function(session = get_session()) {
 
   token <- connect_session_token(session)
 

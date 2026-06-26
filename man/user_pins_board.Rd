@@ -4,7 +4,7 @@
 \alias{user_pins_board}
 \title{User-scoped Posit Connect storage backend}
 \usage{
-user_pins_board(session = shiny::getDefaultReactiveDomain())
+user_pins_board(session = get_session())
 }
 \arguments{
 \item{session}{Shiny session whose request carries the Connect user session
