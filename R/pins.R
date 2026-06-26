@@ -114,13 +114,17 @@ rack_content_hash <- function(id, backend) {
   meta$user$content_hash
 }
 
+# the explicitly stored display name, or NULL when none has been written --
+# distinct from rack_name(), which falls back to the slug. Callers reconciling
+# the in-session name on load use this so a legacy record (no native name yet)
+# keeps its payload name instead of being overwritten by the slug.
 #' @export
-rack_name.rack_id_pins <- function(id, backend, ...) {
-  coal(pin_stored_name(backend, id), id$id, fail_all = FALSE)
+rack_stored_name.rack_id_pins <- function(id, backend, ...) {
+  pin_stored_name(backend, id)
 }
 
 #' @export
-rack_name.rack_id_pins_connect <- function(id, backend, ...) {
+rack_stored_name.rack_id_pins_connect <- function(id, backend, ...) {
 
   content <- tryCatch(
     connect_content_find(backend, id$id),
@@ -128,10 +132,15 @@ rack_name.rack_id_pins_connect <- function(id, backend, ...) {
   )
 
   if (is.null(content) || is.null(content$title) || !nzchar(content$title)) {
-    return(id$id)
+    return(NULL)
   }
 
   content$title
+}
+
+#' @export
+rack_name.rack_id_pins <- function(id, backend, ...) {
+  coal(rack_stored_name(id, backend), id$id, fail_all = FALSE)
 }
 
 #' @export

@@ -228,6 +228,46 @@ test_that("loading a record seeds the board name from the stored name (#61)", {
   )
 })
 
+test_that("loading a legacy record does not clobber the board name (#61)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  # a legacy pin: tagged, but with no native name written to its metadata
+  tmp <- withr::local_tempfile(fileext = ".json")
+  jsonlite::write_json(list(blocks = list()), tmp, null = "null")
+  pins::pin_upload(backend, tmp, "legacy-rec", versioned = TRUE,
+                   metadata = list(format = "v1"), tags = "blockr-session")
+
+  seeded <- FALSE
+  local_mocked_bindings(
+    set_board_option_value = function(opt, val, board, ...) {
+      if (identical(opt, "board_name")) {
+        seeded <<- TRUE
+      }
+      invisible(val)
+    },
+    .package = "blockr.session"
+  )
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      prev_query("?id=legacy-rec")
+      session$flushReact()
+
+      # no native name -> the payload's board name is left untouched
+      expect_false(seeded)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "legacy-rec")
+    )
+  )
+})
+
 test_that("a cold re-save appends to the existing board_id record (#61)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)

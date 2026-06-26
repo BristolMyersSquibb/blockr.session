@@ -146,10 +146,6 @@ reset_board_name <- function(board, name) {
   board
 }
 
-rack_stored_name <- function(id, backend) {
-  tryCatch(rack_name(id, backend), error = function(e) NULL)
-}
-
 board_query_string <- function(id, backend) {
 
   params <- list(id = coal(id$id, id[["name"]], fail_all = FALSE))
