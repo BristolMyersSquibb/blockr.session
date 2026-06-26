@@ -69,7 +69,17 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$save_btn,
         {
-          id <- current_id()
+          # Save upserts on the board's stable id: a loaded record (current_id)
+          # or the board id otherwise. Plain Save appends a version to that
+          # record; only Save As mints a new id. Errors fall back to a create.
+          target <- coal(
+            current_id(),
+            rack_id_from_input(list(id = board$board_id), backend)
+          )
+
+          exists <- isTRUE(
+            tryCatch(rack_exists(target, backend), error = function(e) FALSE)
+          )
 
           res <- tryCatch(
             {
@@ -82,14 +92,14 @@ manage_project_server <- function(id, board, ...) {
                 )
               )
 
-              if (is.null(id)) {
+              if (exists) {
+                rack_update(target, backend, data)
+              } else {
                 rack_create(
                   backend, data,
-                  id = board$board_id,
+                  id = target$id,
                   name = board_name()
                 )
-              } else {
-                rack_update(id, backend, data)
               }
             },
             error = cnd_to_notif(type = "error")
@@ -99,10 +109,10 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          if (not_null(id) && !identical(rack_stored_name(id, backend),
-                                         board_name())) {
+          if (exists && !identical(rack_stored_name(target, backend),
+                                   board_name())) {
             tryCatch(
-              rack_rename(id, backend, board_name()),
+              rack_rename(target, backend, board_name()),
               error = cnd_to_notif(type = "warning")
             )
           }

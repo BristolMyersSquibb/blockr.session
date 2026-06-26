@@ -15,30 +15,28 @@ rack_update(id, backend, data, ...)
 \item{data}{An R object to serialise and store (typically the session list
 returned by the blockr session machinery).}
 
-\item{id}{For \code{rack_create()}, the storage id to mint the record under; a
-fresh id is minted when \code{NULL} or when \code{id} collides with an existing
-record. For \code{rack_update()}, the \code{rack_id} of the record to add a version
-to.}
+\item{id}{For \code{rack_create()}, the storage id to mint the record under (a
+fresh id is minted when \code{NULL}); errors if a non-\code{NULL} \code{id} already names
+a record. For \code{rack_update()}, the \code{rack_id} of the record to add a
+version to.}
 
 \item{name}{Character scalar. The display name for the new record.}
 
 \item{...}{Additional arguments forwarded to \code{\link[=rack_upload]{rack_upload()}}.}
 }
 \value{
-A \code{rack_id} object identifying the newly created version; for
-\code{rack_create()} its \code{id} is the one actually stored under, which may differ
-from a colliding requested \code{id}.
+A \code{rack_id} object identifying the newly created version.
 }
 \description{
 \code{rack_create()} serialises \code{data} to JSON and stores it as a \strong{new} record
 under a stable, name-independent id. \code{id} is the storage handle to mint the
-record under (typically the board id); when \code{NULL} a fresh id is minted. The
-create path is collision-safe: if \code{id} already names a record a fresh id is
-minted instead, so a create never silently appends a version to an existing
-record (and never derives the key from \code{name}). \code{name} is written to the
-backend's native display field. \code{rack_update()} adds a \strong{new version} to the
-existing record identified by \code{id} and never touches its name. Together they
-replace the former \code{rack_save()}, separating the create and update roles. To
+record under (typically the board id); when \code{NULL} a fresh id is minted. A
+create never overwrites: if a non-\code{NULL} \code{id} already names a record it
+errors (class \code{rack_create_exists}) rather than appending a version -- use
+\code{rack_update()} to add a version to an existing record. \code{name} is written to
+the backend's native display field. \code{rack_update()} adds a \strong{new version} to
+the existing record identified by \code{id} and never touches its name. Together
+they replace the former \code{rack_save()}, separating create from update. To
 change a record's name, use \code{rack_rename()}.
 }
 \seealso{

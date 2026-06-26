@@ -169,21 +169,22 @@ test_that("rack_create keys on the supplied id; name is a separate attribute", {
   expect_equal(rack_name(id, backend), "My Cool Board!")
 })
 
-test_that("rack_create re-mints a colliding id (no silent version merge)", {
+test_that("rack_create errors on a colliding explicit id (no overwrite)", {
 
-  # #61: a create must never append a version to an existing record. The save
-  # path always passes the (deploy-fixed) board id, so without this guard two
-  # distinct first-saves would silently merge into one versioned pin.
+  # A create never overwrites: appending to an existing record is rack_update's
+  # job. The save observer upserts (update when the id exists), so it only
+  # reaches rack_create for a genuinely new id.
   backend <- pins::board_temp(versioned = TRUE)
 
-  first <- rack_create(backend, list(blocks = list(a = 1)), id = "dup",
-                       name = "First")
-  second <- rack_create(backend, list(blocks = list(b = 2)), id = "dup",
-                        name = "Second")
+  rack_create(backend, list(blocks = list(a = 1)), id = "dup", name = "First")
 
-  expect_equal(first$id, "dup")
-  expect_false(identical(second$id, "dup"))
-  expect_length(pins::pin_list(backend), 2L)
+  expect_error(
+    rack_create(backend, list(blocks = list(b = 2)), id = "dup",
+                name = "Second"),
+    class = "rack_create_exists"
+  )
+
+  expect_length(pins::pin_list(backend), 1L)
   expect_equal(nrow(rack_info(new_rack_id_pins("dup"), backend)), 1L)
 })
 

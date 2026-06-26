@@ -126,10 +126,12 @@ test_that("save renames the stored record when the name changed (#61)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
-  renamed_to <- NULL
+  # an existing record we're editing; stored name differs from board_name()
+  rack_create(backend, list(blocks = list()), id = "renamed-on-save",
+              name = "Old name")
 
+  renamed_to <- NULL
   local_mocked_bindings(
-    rack_name = function(id, backend, ...) "a stale stored name",
     rack_rename = function(id, backend, name, ...) {
       renamed_to <<- name
       id
@@ -154,6 +156,33 @@ test_that("save renames the stored record when the name changed (#61)", {
       board = reactiveValues(board = test_board, board_id = "renamed-on-save")
     )
   )
+})
+
+test_that("a cold re-save appends to the existing board_id record (#61)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  # a prior session already saved this board id
+  rack_create(backend, list(blocks = list()), id = "cold-board", name = "Cold")
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      # cold load (no current_id) but the board_id record exists -> append
+      session$setInputs(save_btn = 1)
+      session$flushReact()
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "cold-board")
+    )
+  )
+
+  expect_length(pins::pin_list(backend), 1L)
+  expect_equal(nrow(pins::pin_versions(backend, "cold-board")), 2L)
 })
 
 test_that("saving multiple times creates versions", {
