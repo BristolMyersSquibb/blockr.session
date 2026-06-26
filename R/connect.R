@@ -156,7 +156,7 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
 #' @export
 rack_capabilities.pins_board_connect <- function(backend, ...) {
 
-  session <- shiny::getDefaultReactiveDomain()
+  session <- get_session()
   has_api <- is.null(session) ||
     !is.null(session$request$HTTP_POSIT_CONNECT_USER_SESSION_TOKEN)
 
