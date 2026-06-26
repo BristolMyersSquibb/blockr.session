@@ -50,6 +50,16 @@ format_time_ago <- function(time) {
   }
 }
 
+record_time_ago <- function(record, backend) {
+
+  saved <- tryCatch(
+    last_saved(rack_id_from_input(backend, record), backend),
+    error = function(e) NULL
+  )
+
+  if (is.null(saved)) "" else format_time_ago(saved)
+}
+
 get_initials <- function(username) {
 
   if (is.null(username) || username == "") {
@@ -69,10 +79,6 @@ get_initials <- function(username) {
   }
 }
 
-has_tags <- function(x, tags = blockr_session_tags()) {
-  all(tags %in% x[["tags"]])
-}
-
 cnd_to_notif <- function(return_val = NULL, type = "warning",
                          session = get_session()) {
 
@@ -87,21 +93,6 @@ cnd_to_notif <- function(return_val = NULL, type = "warning",
     return_val
   }
 }
-
-sanitize_pin_name <- function(name) {
-  name <- gsub("[^[:alnum:]._-]", "_", name)
-  name <- gsub("_+", "_", name)
-  name <- gsub("^[_.-]+|[_.-]+$", "", name)
-  if (nchar(name) < 3L) {
-    name <- paste0(name, strrep("x", 3L - nchar(name)))
-  }
-  if (nchar(name) > 64L) {
-    name <- substr(name, 1L, 64L)
-  }
-  name
-}
-
-blockr_session_tags <- function() "blockr-session"
 
 # Normalize JS array-of-objects input from Shiny.setInputValue.
 # Shiny may deliver as:
@@ -152,7 +143,7 @@ reset_board_name <- function(board, name) {
 
 board_query_string <- function(id, backend) {
 
-  params <- list(board_name = id$name)
+  params <- list(id = coal(id$id, id[["name"]], fail_all = FALSE))
 
   if (not_null(id$user) && !identical(id$user, backend$account)) {
     params$user <- id$user

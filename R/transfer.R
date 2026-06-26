@@ -1,6 +1,6 @@
 prepare_download <- function(sel, backend) {
   if (length(sel) == 1L) {
-    id <- rack_id_from_input(sel[[1]], backend)
+    id <- rack_id_from_input(backend, sel[[1]])
     return(rack_download(id, backend))
   }
 
@@ -9,7 +9,7 @@ prepare_download <- function(sel, backend) {
 
   for (s in sel) {
     id <- tryCatch(
-      rack_id_from_input(s, backend),
+      rack_id_from_input(backend, s),
       error = function(e) NULL
     )
     if (is.null(id)) next
@@ -54,9 +54,15 @@ upload_workflows <- function(file_info, backend) {
       next
     }
 
+    if (!is_string(data$id) || !nzchar(data$id)) {
+      errors <- c(errors, paste("Skipped", fname, "- no board id in payload"))
+      next
+    }
+
     tryCatch(
       {
-        rack_upload(backend, fpath, name = wf_name)
+        rid <- rack_id_from_input(backend, list(id = data$id))
+        rack_upload(backend, fpath, rid, name = wf_name)
         uploaded <- uploaded + 1L
       },
       error = function(e) {

@@ -1,33 +1,62 @@
 # new_rack_id ---------------------------------------------------------------
 
-new_rack_id <- function(name, ..., class = character()) {
+new_rack_id <- function(id, version = NULL, user = NULL, ...,
+                        class = character()) {
 
-  if (!is_string(name) || !nzchar(name)) {
+  if (!is_string(id) || !nzchar(id)) {
     blockr_abort(
-      "rack id name must be a non-empty string, got {class(name)[[1L]]}.",
-      class = "rack_id_invalid_name"
+      "rack id must be a non-empty string, got {class(id)[[1L]]}.",
+      class = "rack_id_invalid_id"
     )
   }
 
-  structure(list(name = name, ...), class = c(class, "rack_id"))
+  structure(
+    list(id = id, version = version, user = user, ...),
+    class = c(class, "rack_id")
+  )
+}
+
+# new_rack_record -----------------------------------------------------------
+
+new_rack_record <- function(id, name, ..., class = character()) {
+
+  if (!is_string(id) || !nzchar(id)) {
+    blockr_abort(
+      "rack record id must be a non-empty string, got {class(id)[[1L]]}.",
+      class = "rack_record_invalid_id"
+    )
+  }
+
+  if (!is_string(name)) {
+    blockr_abort(
+      "rack record name must be a string, got {class(name)[[1L]]}.",
+      class = "rack_record_invalid_name"
+    )
+  }
+
+  structure(
+    list(id = id, name = name, ...),
+    class = c(class, "rack_record")
+  )
 }
 
 # Accessor generics ---------------------------------------------------------
 
-display_name <- function(id, ...) UseMethod("display_name")
-
-#' @export
-display_name.rack_id <- function(id, ...) id$name
-
 last_saved <- function(id, ...) UseMethod("last_saved")
 
-pin_name <- function(id, ...) UseMethod("pin_name")
+rack_content_hash <- function(id, backend, ...) UseMethod("rack_content_hash")
+
+rack_name <- function(id, backend, ...) UseMethod("rack_name")
+
+rack_rename <- function(id, backend, name, ...) UseMethod("rack_rename")
+
+rack_exists <- function(id, backend, ...) UseMethod("rack_exists")
 
 # Format / print ------------------------------------------------------------
 
 #' @export
 format.rack_id <- function(x, ...) {
-  paste0("<rack_id: ", x$name, ">")
+  paste0("<rack_id: ", x$id, ">")
 }
 
 #' @export
@@ -36,9 +65,24 @@ print.rack_id <- function(x, ...) {
   invisible(x)
 }
 
+#' @export
+format.rack_record <- function(x, ...) {
+  paste0("<rack_record: ", x$id, " (", x$name, ")>")
+}
+
+#' @export
+print.rack_record <- function(x, ...) {
+  cat(format(x), "\n")
+  invisible(x)
+}
+
 # rack_list -----------------------------------------------------------------
 
 rack_list <- function(backend, tags = NULL, ...) UseMethod("rack_list")
+
+# rack_id_from_input --------------------------------------------------------
+
+rack_id_from_input <- function(backend, x, ...) UseMethod("rack_id_from_input")
 
 # rack_info -----------------------------------------------------------------
 
@@ -68,21 +112,24 @@ rack_download <- function(id, backend, ...) UseMethod("rack_download")
 
 #' Upload a session file to a rack backend
 #'
-#' Stores the file at `path` under the given `backend`. With `id = NULL` a new
-#' record is created and the backend mints its storage handle; otherwise a new
-#' version is added to the existing record identified by `id`. This is a
-#' low-level generic; most callers should use [rack_save()] instead.
+#' Stores the file at `path` under the record identified by `id`, adding a new
+#' version. The storage handle is taken purely from `id` (its stable, name-
+#' independent slug); the display `name`, when supplied, is written to the
+#' backend's native name field (Connect content title, or pin metadata for file
+#' boards) and never affects the storage key. This is a low-level generic; most
+#' callers should use [rack_create()] or [rack_append()].
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param path Character scalar. Path to the local file to upload.
-#' @param ... Additional arguments passed to the method, including `name` (the
-#'   board name, used to mint a handle when creating) and `id` (an existing
-#'   `rack_id` to add a version to, or `NULL` to create a record).
+#' @param ... Additional arguments passed to the method, including `id` (the
+#'   `rack_id` whose slug keys the record) and `name` (the display name to set;
+#'   `NULL` preserves the existing name).
 #'
 #' @return A `rack_id` object identifying the newly created version.
 #'
-#' @seealso [rack_save()] for the high-level wrapper that serialises R data
-#'   before uploading, [rack_download()] for the complementary download generic.
+#' @seealso [rack_create()] and [rack_append()] for the high-level wrappers that
+#'   serialise R data before uploading, [rack_download()] for the complementary
+#'   download generic.
 #'
 #' @export
 rack_upload <- function(backend, path, ...) UseMethod("rack_upload")
@@ -102,8 +149,8 @@ rack_upload <- function(backend, path, ...) UseMethod("rack_upload")
 #' @return The deserialised session data as an R object (typically a named
 #'   list).
 #'
-#' @seealso [rack_save()] for the complementary save function,
-#'   [rack_download()] for the underlying download generic.
+#' @seealso [rack_create()] and [rack_append()] for the complementary save
+#'   functions, [rack_download()] for the underlying download generic.
 #'
 #' @export
 rack_load <- function(id, backend, ...) {
@@ -112,35 +159,81 @@ rack_load <- function(id, backend, ...) {
                      simplifyMatrix = FALSE)
 }
 
-# rack_save -----------------------------------------------------------------
+# rack_create / rack_append -------------------------------------------------
 
-#' Save a session to a rack backend
+#' Create or append to a session record on a rack backend
 #'
-#' Serialises `data` to a temporary JSON file and uploads it to `backend`. This
-#' is a convenience wrapper around [rack_upload()] that handles JSON
-#' serialisation automatically.
+#' `rack_create()` serialises `data` to JSON and stores it as a **new** record
+#' keyed on `id` -- the board's own stable id, so the record id and the board id
+#' match. It is a strict insert: it errors (class `rack_create_exists`) if `id`
+#' already names a record rather than appending a version. `name` is written to
+#' the backend's native display field. `rack_append()` adds a **new version** to
+#' the existing record identified by `id`, erroring (class
+#' `rack_append_missing`) if there is none, and never touches the name. Together
+#' they replace the former `rack_save()`, separating insert from append. To
+#' change a record's name, use `rack_rename()`.
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param data An R object to serialise and store (typically the session list
 #'   returned by the blockr session machinery).
-#' @param name Character scalar. The board name. Backends that derive a storage
-#'   handle from it (e.g. pins) use it only when creating a new record
-#'   (`id = NULL`); for an update it is ignored in favour of `id`.
-#' @param id A `rack_id` identifying an existing record to add a new version to,
-#'   or `NULL` to create a new record (the backend mints the storage handle).
+#' @param id For `rack_create()`, the storage id to key the new record on
+#'   (typically the board id); errors if it already names a record. For
+#'   `rack_append()`, the `rack_id` of the record to add a version to.
+#' @param name Character scalar. The display name for the new record.
 #' @param ... Additional arguments forwarded to [rack_upload()].
 #'
 #' @return A `rack_id` object identifying the newly created version.
 #'
-#' @seealso [rack_load()] for the complementary load function,
-#'   [rack_upload()] for the underlying upload generic.
+#' @seealso [rack_load()] for the complementary load function, `rack_rename()`
+#'   to change a record's name, [rack_upload()] for the underlying generic.
 #'
 #' @export
-rack_save <- function(backend, data, name, id = NULL, ...) {
+rack_create <- function(backend, data, id, name, ...) {
+
+  rid <- rack_id_from_input(backend, list(id = id))
+
+  if (rack_exists(rid, backend)) {
+    blockr_abort(
+      "A rack record with id {id} already exists; use rack_append().",
+      class = "rack_create_exists"
+    )
+  }
+
+  upload_serialized(backend, rid, data, name = name, ...)
+}
+
+#' @rdname rack_create
+#' @export
+rack_append <- function(id, backend, data, ...) {
+
+  if (!rack_exists(id, backend)) {
+    blockr_abort(
+      "No rack record with id {id$id}; use rack_create().",
+      class = "rack_append_missing"
+    )
+  }
+
+  upload_serialized(backend, id, data, ...)
+}
+
+upload_serialized <- function(backend, id, data, ...) {
+
   tmp <- tempfile(fileext = ".json")
   on.exit(unlink(tmp))
+
   jsonlite::write_json(data, tmp, null = "null")
-  rack_upload(backend, tmp, name, id = id, ...)
+
+  rack_upload(backend, tmp, id, content_hash = content_hash(data), ...)
+}
+
+# a stable digest of the serialized payload, stored per version (via
+# rack_content_hash) so a save can tell whether anything actually changed
+content_hash <- function(data) {
+  rlang::hash(data)
+}
+
+rack_content_changed <- function(id, backend, data) {
+  !identical(content_hash(data), rack_content_hash(id, backend))
 }
 
 # rack_delete ---------------------------------------------------------------

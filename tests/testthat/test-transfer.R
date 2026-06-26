@@ -7,10 +7,10 @@ test_that("rack_upload stores file and rack_download retrieves it", {
   tmp <- withr::local_tempfile(fileext = ".json")
   jsonlite::write_json(list(blocks = list(a = 1)), tmp, null = "null")
 
-  id <- rack_upload(backend, tmp, name = "upload-test")
+  id <- rack_upload(backend, tmp, new_rack_id_pins("upload-test"))
 
   expect_s3_class(id, "rack_id_pins")
-  expect_equal(id$name, "upload-test")
+  expect_equal(id$id, "upload-test")
   expect_true(not_null(id$version))
 
   path <- rack_download(id, backend)
@@ -20,15 +20,21 @@ test_that("rack_upload stores file and rack_download retrieves it", {
   expect_equal(data$blocks$a, 1L)
 })
 
-test_that("rack_upload sanitizes name", {
+test_that("rack_upload keys on the id, never the display name", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
   tmp <- withr::local_tempfile(fileext = ".json")
   jsonlite::write_json(list(x = 1), tmp, null = "null")
 
-  id <- rack_upload(backend, tmp, name = "Rebel eyas")
-  expect_equal(id$name, "Rebel_eyas")
+  id <- rack_upload(
+    backend, tmp, new_rack_id_pins("stable-slug"),
+    name = "Rebel eyas"
+  )
+
+  expect_equal(id$id, "stable-slug")
+  expect_true("stable-slug" %in% pins::pin_list(backend))
+  expect_equal(rack_name(id, backend), "Rebel eyas")
 })
 
 test_that("rack_download errors on missing pin", {
@@ -65,20 +71,20 @@ test_that("rack_download with specific version", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
-  id1 <- rack_save(backend, list(v = 1), name = "ver-dl")
-  rack_save(backend, list(v = 2), name = "ver-dl")
+  id1 <- rack_create(backend, list(v = 1), id = "ver-dl", name = "Ver DL")
+  rack_append(new_rack_id_pins("ver-dl"), backend, list(v = 2))
 
   path <- rack_download(id1, backend)
   data <- jsonlite::fromJSON(path, simplifyDataFrame = FALSE)
   expect_equal(data$v, 1L)
 })
 
-test_that("rack_load and rack_save compose download/upload correctly", {
+test_that("rack_load and rack_create compose download/upload correctly", {
 
   backend <- pins::board_temp(versioned = TRUE)
   data <- list(blocks = list(x = "hello"), links = list())
 
-  id <- rack_save(backend, data, name = "roundtrip")
+  id <- rack_create(backend, data, id = "roundtrip", name = "Round Trip")
   result <- rack_load(id, backend)
 
   expect_equal(result$blocks$x, "hello")
@@ -90,9 +96,10 @@ test_that("rack_load and rack_save compose download/upload correctly", {
 test_that("prepare_download returns JSON path for single workflow", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  rack_save(backend, list(blocks = list(a = 1)), name = "single-dl")
+  rack_create(backend, list(blocks = list(a = 1)), id = "single-dl",
+              name = "Single DL")
 
-  sel <- list(list(name = "single-dl", user = ""))
+  sel <- list(list(id = "single-dl", name = "single-dl", user = ""))
   path <- prepare_download(sel, backend)
 
   expect_true(file.exists(path))
@@ -105,12 +112,12 @@ test_that("prepare_download returns JSON path for single workflow", {
 test_that("prepare_download returns ZIP for multiple workflows", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  rack_save(backend, list(v = 1), name = "multi-a")
-  rack_save(backend, list(v = 2), name = "multi-b")
+  rack_create(backend, list(v = 1), id = "multi-a", name = "Multi A")
+  rack_create(backend, list(v = 2), id = "multi-b", name = "Multi B")
 
   sel <- list(
-    list(name = "multi-a", user = ""),
-    list(name = "multi-b", user = "")
+    list(id = "multi-a", name = "multi-a", user = ""),
+    list(id = "multi-b", name = "multi-b", user = "")
   )
   path <- prepare_download(sel, backend)
 
@@ -130,11 +137,11 @@ test_that("prepare_download returns ZIP for multiple workflows", {
 test_that("prepare_download skips missing workflows in multi", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  rack_save(backend, list(v = 1), name = "exists")
+  rack_create(backend, list(v = 1), id = "exists", name = "Exists")
 
   sel <- list(
-    list(name = "exists", user = ""),
-    list(name = "does-not-exist", user = "")
+    list(id = "exists", name = "exists", user = ""),
+    list(id = "does-not-exist", name = "does-not-exist", user = "")
   )
 
   # Should not error — skips the missing one
@@ -151,18 +158,20 @@ test_that("prepare_download skips missing workflows in multi", {
 
 # upload_workflows ---------------------------------------------------------
 
-write_board_json <- function(path) {
+write_board_json <- function(path, id) {
   board <- blockr.core::new_board()
-  ser <- blockr.core::blockr_ser(board)
+  ser <- blockr.core::serialize_board(
+    board, blockr.core::board_blocks(board), id = id
+  )
   jsonlite::write_json(ser, path, auto_unbox = TRUE, null = "null")
 }
 
-test_that("upload_workflows pins a single JSON file", {
+test_that("upload_workflows keys a single file on its own board id", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
   tmp <- withr::local_tempfile(fileext = ".json")
-  write_board_json(tmp)
+  write_board_json(tmp, "single-board-id")
 
   file_info <- data.frame(
     name = "my_workflow.json",
@@ -180,7 +189,8 @@ test_that("upload_workflows pins a single JSON file", {
 
   boards <- rack_list(backend)
   expect_length(boards, 1L)
-  expect_equal(display_name(boards[[1L]]), "my_workflow")
+  expect_equal(boards[[1L]]$id, "single-board-id")
+  expect_equal(boards[[1L]]$name, "my_workflow")
 })
 
 test_that("upload_workflows handles multiple files", {
@@ -189,8 +199,8 @@ test_that("upload_workflows handles multiple files", {
 
   tmp1 <- withr::local_tempfile(fileext = ".json")
   tmp2 <- withr::local_tempfile(fileext = ".json")
-  write_board_json(tmp1)
-  write_board_json(tmp2)
+  write_board_json(tmp1, "wf-one-id")
+  write_board_json(tmp2, "wf-two-id")
 
   file_info <- data.frame(
     name = c("wf_one.json", "wf_two.json"),
@@ -206,9 +216,32 @@ test_that("upload_workflows handles multiple files", {
   expect_equal(result$uploaded, 2L)
 
   boards <- rack_list(backend)
-  names <- chr_ply(boards, display_name)
+  names <- chr_xtr(boards, "name")
   expect_true("wf_one" %in% names)
   expect_true("wf_two" %in% names)
+})
+
+test_that("upload_workflows skips a board payload without an id", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  tmp <- withr::local_tempfile(fileext = ".json")
+  ser <- blockr.core::blockr_ser(blockr.core::new_board())
+  jsonlite::write_json(ser, tmp, auto_unbox = TRUE, null = "null")
+
+  file_info <- data.frame(
+    name = "no_id.json",
+    size = file.size(tmp),
+    type = "application/json",
+    datapath = tmp,
+    stringsAsFactors = FALSE
+  )
+
+  result <- upload_workflows(file_info, backend)
+
+  expect_false(result$ok)
+  expect_equal(result$uploaded, 0L)
+  expect_match(result$errors, "no board id")
 })
 
 test_that("upload_workflows skips non-JSON files", {

@@ -11,20 +11,23 @@ rack_upload(backend, path, ...)
 
 \item{path}{Character scalar. Path to the local file to upload.}
 
-\item{...}{Additional arguments passed to the method, including \code{name} (the
-board name, used to mint a handle when creating) and \code{id} (an existing
-\code{rack_id} to add a version to, or \code{NULL} to create a record).}
+\item{...}{Additional arguments passed to the method, including \code{id} (the
+\code{rack_id} whose slug keys the record) and \code{name} (the display name to set;
+\code{NULL} preserves the existing name).}
 }
 \value{
 A \code{rack_id} object identifying the newly created version.
 }
 \description{
-Stores the file at \code{path} under the given \code{backend}. With \code{id = NULL} a new
-record is created and the backend mints its storage handle; otherwise a new
-version is added to the existing record identified by \code{id}. This is a
-low-level generic; most callers should use \code{\link[=rack_save]{rack_save()}} instead.
+Stores the file at \code{path} under the record identified by \code{id}, adding a new
+version. The storage handle is taken purely from \code{id} (its stable, name-
+independent slug); the display \code{name}, when supplied, is written to the
+backend's native name field (Connect content title, or pin metadata for file
+boards) and never affects the storage key. This is a low-level generic; most
+callers should use \code{\link[=rack_create]{rack_create()}} or \code{\link[=rack_append]{rack_append()}}.
 }
 \seealso{
-\code{\link[=rack_save]{rack_save()}} for the high-level wrapper that serialises R data
-before uploading, \code{\link[=rack_download]{rack_download()}} for the complementary download generic.
+\code{\link[=rack_create]{rack_create()}} and \code{\link[=rack_append]{rack_append()}} for the high-level wrappers that
+serialise R data before uploading, \code{\link[=rack_download]{rack_download()}} for the complementary
+download generic.
 }
