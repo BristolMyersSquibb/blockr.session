@@ -141,6 +141,9 @@ rack_rename.rack_id_pins <- function(id, backend, name, ...) {
   user_meta <- coal(meta$user, list(), fail_all = FALSE)
   user_meta$name <- name
 
+  # pins has no in-place metadata edit, so renaming re-uploads the latest
+  # content and mints a version. This only hits file boards (local dev / the
+  # no-token fallback); Connect renames cleanly via a content title PATCH.
   pins::pin_upload(
     backend, path, pin_name(id),
     versioned = TRUE,

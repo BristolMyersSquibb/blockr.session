@@ -55,6 +55,19 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
+          # the backend's native name field is authoritative for a persisted
+          # record, so seed the in-session board name from it on load (a rename
+          # not followed by a content save would otherwise revert on reload).
+          stored <- rack_stored_name(id, backend)
+          if (not_null(stored)) {
+            tryCatch(
+              set_board_option_value(
+                "board_name", stored, board$board, session
+              ),
+              error = function(e) NULL
+            )
+          }
+
           info <- tryCatch(rack_info(id, backend), error = function(e) NULL)
 
           if (not_null(info) && nrow(info) > 0L) {
@@ -108,14 +121,6 @@ manage_project_server <- function(id, board, ...) {
 
           if (is.null(res)) {
             return()
-          }
-
-          if (exists && !identical(rack_stored_name(target, backend),
-                                   board_name())) {
-            tryCatch(
-              rack_rename(target, backend, board_name()),
-              error = cnd_to_notif(type = "warning")
-            )
           }
 
           notify(
@@ -511,12 +516,28 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      # Title edit
+      # Title edit drives the rename (it isn't coupled to a save): the
+      # in-session option updates, and for a loaded record the backend's native
+      # name field is written too. An unsaved board carries the name until
+      # rack_create persists it on first save. `title_edit` fires on blur, so
+      # it is already one event per edit (no per-keystroke debounce needed).
       observeEvent(
         input$title_edit,
-        set_board_option_value(
-          "board_name", input$title_edit, board$board, session
-        )
+        {
+          name <- input$title_edit
+
+          set_board_option_value("board_name", name, board$board, session)
+
+          id <- current_id()
+
+          if (not_null(id) && not_null(name) && nzchar(name) &&
+                !identical(rack_stored_name(id, backend), name)) {
+            tryCatch(
+              rack_rename(id, backend, name),
+              error = cnd_to_notif(type = "warning")
+            )
+          }
+        }
       )
 
       # Initialize title

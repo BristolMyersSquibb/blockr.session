@@ -122,20 +122,22 @@ test_that("recent_workflows renders the saved record keyed on its id (#61)", {
   )
 })
 
-test_that("save renames the stored record when the name changed (#61)", {
+test_that("editing the title renames the loaded record (#61)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
-  # an existing record we're editing; stored name differs from board_name()
-  rack_create(backend, list(blocks = list()), id = "renamed-on-save",
+  # an existing record we're editing; stored name differs from the edit
+  rack_create(backend, list(blocks = list()), id = "rename-edit",
               name = "Old name")
 
   renamed_to <- NULL
   local_mocked_bindings(
+    set_board_option_value = function(opt, val, board, ...) invisible(val),
     rack_rename = function(id, backend, name, ...) {
       renamed_to <<- name
       id
-    }
+    },
+    .package = "blockr.session"
   )
 
   test_board <- new_board(
@@ -145,15 +147,83 @@ test_that("save renames the stored record when the name changed (#61)", {
   testServer(
     manage_project_server,
     {
-      # seed current_id() so the save hits the update (not create) path
-      prev_query("?id=renamed-on-save")
-      session$setInputs(save_btn = 1)
+      prev_query("?id=rename-edit")     # a loaded record (current_id set)
+      session$setInputs(title_edit = "New name")
       session$flushReact()
 
-      expect_equal(renamed_to, "renamed-on-save")
+      expect_equal(renamed_to, "New name")
     },
     args = list(
-      board = reactiveValues(board = test_board, board_id = "renamed-on-save")
+      board = reactiveValues(board = test_board, board_id = "rename-edit")
+    )
+  )
+})
+
+test_that("editing the title of an unsaved board does not rename (#61)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  renamed <- FALSE
+  local_mocked_bindings(
+    set_board_option_value = function(opt, val, board, ...) invisible(val),
+    rack_rename = function(id, backend, name, ...) {
+      renamed <<- TRUE
+      id
+    },
+    .package = "blockr.session"
+  )
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      # no current_id (unsaved board): the name rides along until first save
+      session$setInputs(title_edit = "Fresh name")
+      session$flushReact()
+
+      expect_false(renamed)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "unsaved-board")
+    )
+  )
+})
+
+test_that("loading a record seeds the board name from the stored name (#61)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  rack_create(backend, list(blocks = list()), id = "seed-name",
+              name = "Stored Display Name")
+
+  captured <- NULL
+  local_mocked_bindings(
+    set_board_option_value = function(opt, val, board, ...) {
+      if (identical(opt, "board_name")) {
+        captured <<- val
+      }
+      invisible(val)
+    },
+    .package = "blockr.session"
+  )
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      prev_query("?id=seed-name")
+      session$flushReact()
+
+      expect_equal(captured, "Stored Display Name")
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "seed-name")
     )
   )
 })
