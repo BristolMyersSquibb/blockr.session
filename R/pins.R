@@ -33,6 +33,8 @@ rack_id_from_input <- function(x, backend = NULL) {
 
 # pin_name ------------------------------------------------------------------
 
+pin_name <- function(id, ...) UseMethod("pin_name")
+
 #' @export
 pin_name.rack_id_pins <- function(id, ...) id$id
 

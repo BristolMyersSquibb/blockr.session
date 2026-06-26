@@ -47,8 +47,6 @@ last_saved <- function(id, ...) UseMethod("last_saved")
 
 rack_content_hash <- function(id, backend, ...) UseMethod("rack_content_hash")
 
-pin_name <- function(id, ...) UseMethod("pin_name")
-
 rack_name <- function(id, backend, ...) UseMethod("rack_name")
 
 rack_stored_name <- function(id, backend, ...) UseMethod("rack_stored_name")
