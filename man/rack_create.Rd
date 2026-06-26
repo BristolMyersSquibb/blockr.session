@@ -15,26 +15,31 @@ rack_update(id, backend, data, ...)
 \item{data}{An R object to serialise and store (typically the session list
 returned by the blockr session machinery).}
 
-\item{id}{For \code{rack_create()}, the storage id to mint the record under; when
-\code{NULL}, a slug is derived from \code{name}. For \code{rack_update()}, the \code{rack_id}
-of the record to add a version to.}
+\item{id}{For \code{rack_create()}, the storage id to mint the record under; a
+fresh id is minted when \code{NULL} or when \code{id} collides with an existing
+record. For \code{rack_update()}, the \code{rack_id} of the record to add a version
+to.}
 
 \item{name}{Character scalar. The display name for the new record.}
 
 \item{...}{Additional arguments forwarded to \code{\link[=rack_upload]{rack_upload()}}.}
 }
 \value{
-A \code{rack_id} object identifying the newly created version.
+A \code{rack_id} object identifying the newly created version; for
+\code{rack_create()} its \code{id} is the one actually stored under, which may differ
+from a colliding requested \code{id}.
 }
 \description{
-\code{rack_create()} serialises \code{data} to JSON and stores it as a \strong{new} record:
-the record's storage handle is the supplied \code{id} (a stable, slug-safe
-identifier such as the board id), and \code{name} is written to the backend's
-native display field. \code{rack_update()} adds a \strong{new version} to an existing
-record identified by \code{id} and never touches its name. Together they replace
-the former \code{rack_save()}, separating the create and update roles so a save
-no longer silently re-keys on a changed name. To change a record's name, use
-\code{rack_rename()}.
+\code{rack_create()} serialises \code{data} to JSON and stores it as a \strong{new} record
+under a stable, name-independent id. \code{id} is the storage handle to mint the
+record under (typically the board id); when \code{NULL} a fresh id is minted. The
+create path is collision-safe: if \code{id} already names a record a fresh id is
+minted instead, so a create never silently appends a version to an existing
+record (and never derives the key from \code{name}). \code{name} is written to the
+backend's native display field. \code{rack_update()} adds a \strong{new version} to the
+existing record identified by \code{id} and never touches its name. Together they
+replace the former \code{rack_save()}, separating the create and update roles. To
+change a record's name, use \code{rack_rename()}.
 }
 \seealso{
 \code{\link[=rack_load]{rack_load()}} for the complementary load function, \code{rack_rename()}

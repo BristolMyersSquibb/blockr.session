@@ -142,15 +142,17 @@ test_that("sanitize_pin_name replaces spaces and invalid chars", {
 
 # rack_create / rack_update -------------------------------------------------
 
-test_that("rack_create mints a slug from the name when id is NULL", {
+test_that("rack_create mints a fresh id when id is NULL (not name-derived)", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
   id <- rack_create(backend, list(blocks = list()), name = "Rebel eyas")
 
   expect_s3_class(id, "rack_id_pins")
-  expect_equal(id$id, "Rebel_eyas")
-  expect_true("Rebel_eyas" %in% pins::pin_list(backend))
+  expect_true(nzchar(id$id))
+  expect_false(identical(id$id, sanitize_pin_name("Rebel eyas")))
+  expect_true(id$id %in% pins::pin_list(backend))
+  expect_equal(rack_name(id, backend), "Rebel eyas")
 })
 
 test_that("rack_create keys on the supplied id; name is a separate attribute", {
@@ -165,6 +167,24 @@ test_that("rack_create keys on the supplied id; name is a separate attribute", {
   expect_equal(id$id, "egoistic_lowchen")
   expect_equal(pins::pin_list(backend), "egoistic_lowchen")
   expect_equal(rack_name(id, backend), "My Cool Board!")
+})
+
+test_that("rack_create re-mints a colliding id (no silent version merge)", {
+
+  # #61: a create must never append a version to an existing record. The save
+  # path always passes the (deploy-fixed) board id, so without this guard two
+  # distinct first-saves would silently merge into one versioned pin.
+  backend <- pins::board_temp(versioned = TRUE)
+
+  first <- rack_create(backend, list(blocks = list(a = 1)), id = "dup",
+                       name = "First")
+  second <- rack_create(backend, list(blocks = list(b = 2)), id = "dup",
+                        name = "Second")
+
+  expect_equal(first$id, "dup")
+  expect_false(identical(second$id, "dup"))
+  expect_length(pins::pin_list(backend), 2L)
+  expect_equal(nrow(rack_info(new_rack_id_pins("dup"), backend)), 1L)
 })
 
 test_that("distinct boards with the same name stay distinct (no merge)", {
@@ -895,6 +915,7 @@ test_that("rack_create on Connect returns a connect rack_id", {
   local_mocked_bindings(
     pin_upload = function(...) invisible(),
     pin_versions = function(...) versions,
+    pin_exists = function(...) FALSE,
     .package = "pins"
   )
   local_mocked_bindings(
@@ -902,7 +923,8 @@ test_that("rack_create on Connect returns a connect rack_id", {
     connect_api = function(...) list()
   )
 
-  result <- rack_create(board, blockr_test_session, name = "my_board")
+  result <- rack_create(board, blockr_test_session, id = "my_board",
+                        name = "my_board")
 
   expect_s3_class(result, "rack_id_pins_connect")
   expect_equal(result$user, "user_a")
@@ -934,6 +956,7 @@ test_that("rack_create on Connect uploads to the owner-qualified slug", {
       invisible()
     },
     pin_versions = function(...) versions,
+    pin_exists = function(...) FALSE,
     .package = "pins"
   )
   local_mocked_bindings(
@@ -941,7 +964,8 @@ test_that("rack_create on Connect uploads to the owner-qualified slug", {
     connect_api = function(...) list()
   )
 
-  result <- rack_create(board, blockr_test_session, name = "my_new_board")
+  result <- rack_create(board, blockr_test_session, id = "my_new_board",
+                        name = "my_new_board")
 
   expect_s3_class(result, "rack_id_pins_connect")
   expect_equal(result$id, "my_new_board")
@@ -965,6 +989,7 @@ test_that("rack_create on Connect sets the content title to the name", {
   local_mocked_bindings(
     pin_upload = function(...) invisible(),
     pin_versions = function(...) versions,
+    pin_exists = function(...) FALSE,
     .package = "pins"
   )
   local_mocked_bindings(
@@ -1003,6 +1028,7 @@ test_that("rack_create on Connect scopes the write to the caller's account", {
         invisible()
       },
       pin_versions = function(...) versions,
+      pin_exists = function(...) FALSE,
       .package = "pins"
     )
     local_mocked_bindings(
@@ -1010,7 +1036,8 @@ test_that("rack_create on Connect scopes the write to the caller's account", {
       connect_api = function(...) list()
     )
 
-    rack_create(board, blockr_test_session, name = "shared_board")
+    rack_create(board, blockr_test_session, id = "shared_board",
+                name = "shared_board")
     uploaded_name
   }
 
