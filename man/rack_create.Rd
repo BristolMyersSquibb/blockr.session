@@ -5,7 +5,7 @@
 \alias{rack_update}
 \title{Create or update a session record on a rack backend}
 \usage{
-rack_create(backend, data, id = NULL, name, ...)
+rack_create(backend, data, id, name, ...)
 
 rack_update(id, backend, data, ...)
 }
@@ -15,10 +15,9 @@ rack_update(id, backend, data, ...)
 \item{data}{An R object to serialise and store (typically the session list
 returned by the blockr session machinery).}
 
-\item{id}{For \code{rack_create()}, the storage id to mint the record under (a
-fresh id is minted when \code{NULL}); errors if a non-\code{NULL} \code{id} already names
-a record. For \code{rack_update()}, the \code{rack_id} of the record to add a
-version to.}
+\item{id}{For \code{rack_create()}, the storage id to key the new record on
+(typically the board id); errors if it already names a record. For
+\code{rack_update()}, the \code{rack_id} of the record to add a version to.}
 
 \item{name}{Character scalar. The display name for the new record.}
 
@@ -29,14 +28,13 @@ A \code{rack_id} object identifying the newly created version.
 }
 \description{
 \code{rack_create()} serialises \code{data} to JSON and stores it as a \strong{new} record
-under a stable, name-independent id. \code{id} is the storage handle to mint the
-record under (typically the board id); when \code{NULL} a fresh id is minted. A
-create never overwrites: if a non-\code{NULL} \code{id} already names a record it
-errors (class \code{rack_create_exists}) rather than appending a version -- use
-\code{rack_update()} to add a version to an existing record. \code{name} is written to
+keyed on \code{id} -- the board's own stable id, so the record id and the board id
+match. It is a strict insert: it errors (class \code{rack_create_exists}) if \code{id}
+already names a record rather than appending a version. \code{name} is written to
 the backend's native display field. \code{rack_update()} adds a \strong{new version} to
-the existing record identified by \code{id} and never touches its name. Together
-they replace the former \code{rack_save()}, separating create from update. To
+the existing record identified by \code{id}, erroring (class
+\code{rack_update_missing}) if there is none, and never touches the name. Together
+they replace the former \code{rack_save()}, separating insert from append. To
 change a record's name, use \code{rack_rename()}.
 }
 \seealso{

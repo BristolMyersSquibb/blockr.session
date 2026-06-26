@@ -163,23 +163,21 @@ rack_load <- function(id, backend, ...) {
 #' Create or update a session record on a rack backend
 #'
 #' `rack_create()` serialises `data` to JSON and stores it as a **new** record
-#' under a stable, name-independent id. `id` is the storage handle to mint the
-#' record under (typically the board id); when `NULL` a fresh id is minted. A
-#' create never overwrites: if a non-`NULL` `id` already names a record it
-#' errors (class `rack_create_exists`) rather than appending a version -- use
-#' `rack_update()` to add a version to an existing record. `name` is written to
+#' keyed on `id` -- the board's own stable id, so the record id and the board id
+#' match. It is a strict insert: it errors (class `rack_create_exists`) if `id`
+#' already names a record rather than appending a version. `name` is written to
 #' the backend's native display field. `rack_update()` adds a **new version** to
-#' the existing record identified by `id` and never touches its name. Together
-#' they replace the former `rack_save()`, separating create from update. To
+#' the existing record identified by `id`, erroring (class
+#' `rack_update_missing`) if there is none, and never touches the name. Together
+#' they replace the former `rack_save()`, separating insert from append. To
 #' change a record's name, use `rack_rename()`.
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param data An R object to serialise and store (typically the session list
 #'   returned by the blockr session machinery).
-#' @param id For `rack_create()`, the storage id to mint the record under (a
-#'   fresh id is minted when `NULL`); errors if a non-`NULL` `id` already names
-#'   a record. For `rack_update()`, the `rack_id` of the record to add a
-#'   version to.
+#' @param id For `rack_create()`, the storage id to key the new record on
+#'   (typically the board id); errors if it already names a record. For
+#'   `rack_update()`, the `rack_id` of the record to add a version to.
 #' @param name Character scalar. The display name for the new record.
 #' @param ... Additional arguments forwarded to [rack_upload()].
 #'
@@ -189,23 +187,15 @@ rack_load <- function(id, backend, ...) {
 #'   to change a record's name, [rack_upload()] for the underlying generic.
 #'
 #' @export
-rack_create <- function(backend, data, id = NULL, name, ...) {
+rack_create <- function(backend, data, id, name, ...) {
 
-  if (is.null(id)) {
-    repeat {
-      rid <- rack_id_from_input(list(id = rand_names()), backend)
-      if (!rack_exists(rid, backend)) {
-        break
-      }
-    }
-  } else {
-    rid <- rack_id_from_input(list(id = id), backend)
-    if (rack_exists(rid, backend)) {
-      blockr_abort(
-        "A rack record with id {id} already exists; use rack_update().",
-        class = "rack_create_exists"
-      )
-    }
+  rid <- rack_id_from_input(list(id = id), backend)
+
+  if (rack_exists(rid, backend)) {
+    blockr_abort(
+      "A rack record with id {id} already exists; use rack_update().",
+      class = "rack_create_exists"
+    )
   }
 
   upload_serialized(backend, rid, data, name = name, ...)
@@ -214,6 +204,14 @@ rack_create <- function(backend, data, id = NULL, name, ...) {
 #' @rdname rack_create
 #' @export
 rack_update <- function(id, backend, data, ...) {
+
+  if (!rack_exists(id, backend)) {
+    blockr_abort(
+      "No rack record with id {id$id}; use rack_create().",
+      class = "rack_update_missing"
+    )
+  }
+
   upload_serialized(backend, id, data, ...)
 }
 

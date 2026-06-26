@@ -69,9 +69,10 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$save_btn,
         {
-          # Save upserts on the board's stable id: a loaded record (current_id)
-          # or the board id otherwise. Plain Save appends a version to that
-          # record; only Save As mints a new id. Errors fall back to a create.
+          # Save keys on the board's stable id: a loaded record (current_id),
+          # else the board id. It appends a version to that record if it exists,
+          # else creates it under the board id -- so the record id and board id
+          # match. Only Save As mints a fresh board id to fork.
           target <- coal(
             current_id(),
             rack_id_from_input(list(id = board$board_id), backend)
@@ -97,7 +98,7 @@ manage_project_server <- function(id, board, ...) {
               } else {
                 rack_create(
                   backend, data,
-                  id = target$id,
+                  id = board$board_id,
                   name = board_name()
                 )
               }

@@ -142,19 +142,6 @@ test_that("sanitize_pin_name replaces spaces and invalid chars", {
 
 # rack_create / rack_update -------------------------------------------------
 
-test_that("rack_create mints a fresh id when id is NULL (not name-derived)", {
-
-  backend <- pins::board_temp(versioned = TRUE)
-
-  id <- rack_create(backend, list(blocks = list()), name = "Rebel eyas")
-
-  expect_s3_class(id, "rack_id_pins")
-  expect_true(nzchar(id$id))
-  expect_false(identical(id$id, sanitize_pin_name("Rebel eyas")))
-  expect_true(id$id %in% pins::pin_list(backend))
-  expect_equal(rack_name(id, backend), "Rebel eyas")
-})
-
 test_that("rack_create keys on the supplied id; name is a separate attribute", {
 
   backend <- pins::board_temp(versioned = TRUE)
@@ -241,6 +228,19 @@ test_that("rack_update adds a version and preserves the name", {
   expect_length(pins::pin_list(backend), 1L)
   expect_equal(nrow(rack_info(new_rack_id_pins("board-x"), backend)), 2L)
   expect_equal(rack_name(new_rack_id_pins("board-x"), backend), "Original")
+})
+
+test_that("rack_update errors when the record does not exist", {
+
+  # rack_update only appends; creating a missing record is rack_create's job.
+  backend <- pins::board_temp(versioned = TRUE)
+
+  expect_error(
+    rack_update(new_rack_id_pins("absent"), backend, list(blocks = list())),
+    class = "rack_update_missing"
+  )
+
+  expect_length(pins::pin_list(backend), 0L)
 })
 
 test_that("rack_create persists and rack_list finds it as a record", {
@@ -490,7 +490,10 @@ test_that("rack_list on Connect returns records, filters by tags", {
   board <- mock_board_connect()
 
   record_search <- function() {
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-board")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-board", name = "blockr-fixture-board"
+    )
     upload_blockr_json(
       board_a, list(x = 1), "blockr-fixture-plain",
       versioned = TRUE,
@@ -527,7 +530,10 @@ test_that("rack_list on Connect splits user/id from qualified names", {
   board <- mock_board_connect()
 
   record_search <- function() {
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-board")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-board", name = "blockr-fixture-board"
+    )
     upload_blockr_json(
       board_a, list(x = 1), "blockr-fixture-plain",
       versioned = TRUE,
@@ -567,7 +573,10 @@ test_that("rack_list on Connect names records from the content title", {
   board <- mock_board_connect()
 
   record_search <- function() {
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-board")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-board", name = "blockr-fixture-board"
+    )
     upload_blockr_json(
       board_a, list(x = 1), "blockr-fixture-plain",
       versioned = TRUE,
@@ -609,7 +618,10 @@ test_that("rack_info on Connect returns version data.frame", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-board")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-board", name = "blockr-fixture-board"
+    )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
     rack_update(
@@ -647,7 +659,10 @@ test_that("rack_load on Connect uses qualified pin name", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-board")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-board", name = "blockr-fixture-board"
+    )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
     rack_update(
@@ -778,7 +793,10 @@ test_that("rack_load on Connect loads specific version directly", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-board")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-board", name = "blockr-fixture-board"
+    )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
     rack_update(
@@ -842,7 +860,10 @@ test_that("rack_load on Connect from another user uses qualified name", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-board")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-board", name = "blockr-fixture-board"
+    )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
     rack_update(
@@ -904,7 +925,10 @@ test_that("rack_create on Connect returns a connect rack_id", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-board")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-board", name = "blockr-fixture-board"
+    )
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
@@ -940,7 +964,10 @@ test_that("rack_create on Connect uploads to the owner-qualified slug", {
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-new")
     try(pins::pin_delete(board_a, qualified), silent = TRUE)
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-new")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-new", name = "blockr-fixture-new"
+    )
     pins::pin_versions(board_a, qualified)
   }
   versions <- connect_fixture(
@@ -1102,7 +1129,10 @@ test_that("rack_delete on Connect deletes latest version when none specified", {
 
   record_versions <- function() {
     qualified <- paste0(board_a$account, "/blockr-fixture-board")
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-board")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-board", name = "blockr-fixture-board"
+    )
     modified <- blockr_test_session
     modified$blocks$c <- list(type = "plot_block")
     rack_update(
@@ -1456,7 +1486,10 @@ test_that("rack_acl on Connect returns access_type from API", {
   board <- mock_board_connect()
 
   record_content <- function() {
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-acl")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-acl", name = "blockr-fixture-acl"
+    )
     qualified <- paste0(board_a$account, "/blockr-fixture-acl")
     content <- connect_api(
       board_a, "GET /content", query = list(name = "blockr-fixture-acl")
@@ -1484,7 +1517,10 @@ test_that("rack_set_acl on Connect calls API with access_type", {
   id <- new_rack_id_pins_connect("user_a", "my_board")
 
   record_content <- function() {
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-sharing", name = "blockr-fixture-sharing"
+    )
     connect_api(
       board_a, "GET /content",
       query = list(name = "blockr-fixture-sharing")
@@ -1518,7 +1554,10 @@ test_that("rack_shares on Connect returns permissions from API", {
   board <- mock_board_connect()
 
   record_content <- function() {
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-sharing", name = "blockr-fixture-sharing"
+    )
     content <- connect_api(
       board_a, "GET /content", query = list(name = "blockr-fixture-sharing")
     )
@@ -1563,7 +1602,10 @@ test_that("rack_share on Connect posts permission", {
   id <- new_rack_id_pins_connect("user_a", "my_board")
 
   record_content <- function() {
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-sharing", name = "blockr-fixture-sharing"
+    )
     connect_api(
       board_a, "GET /content",
       query = list(name = "blockr-fixture-sharing")
@@ -1598,7 +1640,10 @@ test_that("rack_unshare on Connect deletes permission", {
   id <- new_rack_id_pins_connect("user_a", "my_board")
 
   record_content <- function() {
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-sharing", name = "blockr-fixture-sharing"
+    )
     connect_api(
       board_a, "GET /content",
       query = list(name = "blockr-fixture-sharing")
@@ -1653,7 +1698,10 @@ test_that("rack_unshare on Connect errors for unknown principal", {
   id <- new_rack_id_pins_connect("user_a", "my_board")
 
   record_content <- function() {
-    rack_create(board_a, blockr_test_session, name = "blockr-fixture-sharing")
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-sharing", name = "blockr-fixture-sharing"
+    )
     connect_api(
       board_a, "GET /content",
       query = list(name = "blockr-fixture-sharing")
