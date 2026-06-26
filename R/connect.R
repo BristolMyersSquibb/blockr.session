@@ -37,10 +37,10 @@ format.rack_id_pins_connect <- function(x, ...) {
   paste0("<rack_id_pins_connect: ", x$user, "/", x$id, v, ">")
 }
 
-# rack_stored_name / rack_rename --------------------------------------------
+# rack_name / rack_rename ---------------------------------------------------
 
 #' @export
-rack_stored_name.rack_id_pins_connect <- function(id, backend, ...) {
+rack_name.rack_id_pins_connect <- function(id, backend, ...) {
 
   content <- tryCatch(
     connect_content_find(backend, id$id),
@@ -48,7 +48,7 @@ rack_stored_name.rack_id_pins_connect <- function(id, backend, ...) {
   )
 
   if (is.null(content) || is.null(content$title) || !nzchar(content$title)) {
-    return(NULL)
+    return(id$id)
   }
 
   content$title
@@ -115,7 +115,7 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
   # on every write, so an append with no title silently resets it. Pass the
   # intended title through -- the new name on create, the current stored title
   # on append -- so pins re-asserts the right one instead of the boilerplate.
-  title <- if (not_null(name)) name else rack_stored_name(id, backend)
+  title <- if (not_null(name)) name else rack_name(id, backend)
 
   metadata <- list(format = "v1")
 

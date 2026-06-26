@@ -276,19 +276,16 @@ test_that("rack_name falls back to the slug for legacy pins", {
 
   id <- new_rack_id_pins("legacy_slug")
 
-  # rack_name falls back to the slug, but rack_stored_name returns NULL so a
-  # caller can tell no name was written and avoid clobbering a payload name
-  expect_null(rack_stored_name(id, backend))
   expect_equal(rack_name(id, backend), "legacy_slug")
 })
 
-test_that("rack_stored_name returns the written name once one is set", {
+test_that("rack_name returns the written name once one is set", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
   rack_create(backend, list(blocks = list()), id = "named", name = "A Name")
 
-  expect_equal(rack_stored_name(new_rack_id_pins("named"), backend), "A Name")
+  expect_equal(rack_name(new_rack_id_pins("named"), backend), "A Name")
 })
 
 test_that("rack_rename writes the name without changing identity", {
@@ -1068,7 +1065,7 @@ test_that("a Connect append preserves the content title, not boilerplate", {
   )
 
   expect_equal(
-    rack_stored_name(new_rack_id_pins_connect("user_a", "board-x"), board),
+    rack_name(new_rack_id_pins_connect("user_a", "board-x"), board),
     "My Board"
   )
 })

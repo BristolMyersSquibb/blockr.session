@@ -49,8 +49,6 @@ rack_content_hash <- function(id, backend, ...) UseMethod("rack_content_hash")
 
 rack_name <- function(id, backend, ...) UseMethod("rack_name")
 
-rack_stored_name <- function(id, backend, ...) UseMethod("rack_stored_name")
-
 rack_rename <- function(id, backend, name, ...) UseMethod("rack_rename")
 
 rack_exists <- function(id, backend, ...) UseMethod("rack_exists")

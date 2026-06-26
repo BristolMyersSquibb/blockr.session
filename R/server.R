@@ -69,16 +69,14 @@ manage_project_server <- function(id, board, ...) {
           # the backend's native name field is authoritative for a persisted
           # record, so seed the in-session board name from it on load (a rename
           # not followed by a content save would otherwise revert on reload).
-          # Only an explicitly written name propagates -- a legacy record with
-          # no native name keeps the name carried in its payload.
-          stored <- tryCatch(
-            rack_stored_name(id, backend),
+          nm <- tryCatch(
+            rack_name(id, backend),
             error = function(e) NULL
           )
-          if (not_null(stored)) {
+          if (not_null(nm)) {
             tryCatch(
               set_board_option_value(
-                "board_name", stored, board$board, session
+                "board_name", nm, board$board, session
               ),
               error = function(e) NULL
             )
@@ -549,11 +547,11 @@ manage_project_server <- function(id, board, ...) {
           id <- current_id()
 
           if (not_null(id) && not_null(name) && nzchar(name)) {
-            stored <- tryCatch(
-              rack_stored_name(id, backend),
+            current <- tryCatch(
+              rack_name(id, backend),
               error = function(e) NULL
             )
-            if (!identical(stored, name)) {
+            if (!identical(current, name)) {
               tryCatch(
                 rack_rename(id, backend, name),
                 error = cnd_to_notif(type = "warning")
