@@ -111,6 +111,12 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
   slug <- id$id
   qualified <- paste0(backend$account, "/", slug)
 
+  # pins defaults a missing title to boilerplate and PATCHes the content title
+  # on every write, so an append with no title silently resets it. Pass the
+  # intended title through -- the new name on create, the current stored title
+  # on append -- so pins re-asserts the right one instead of the boilerplate.
+  title <- if (not_null(name)) name else rack_stored_name(id, backend)
+
   metadata <- list(format = "v1")
 
   if (not_null(content_hash)) {
@@ -123,6 +129,7 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
     backend,
     path,
     qualified,
+    title = title,
     versioned = TRUE,
     metadata = metadata,
     tags = blockr_session_tags()
@@ -130,17 +137,11 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
 
   base <- new_rack_id_pins_connect(backend$account, slug)
 
-  rid <- new_rack_id_pins_connect(
+  new_rack_id_pins_connect(
     user = backend$account,
     id = slug,
     version = rack_info(base, backend)$version[1L]
   )
-
-  if (not_null(name)) {
-    rack_rename(rid, backend, name)
-  }
-
-  rid
 }
 
 # rack_capabilities --------------------------------------------------------

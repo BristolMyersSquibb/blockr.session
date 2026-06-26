@@ -1039,28 +1039,65 @@ test_that("rack_create on Connect sets the content title to the name", {
     stringsAsFactors = FALSE
   )
 
-  patched <- NULL
+  uploaded_title <- NULL
 
   local_mocked_bindings(
-    pin_upload = function(...) invisible(),
+    pin_upload = function(board, paths, name, ..., title = NULL) {
+      uploaded_title <<- title
+      invisible()
+    },
     pin_versions = function(...) versions,
     pin_exists = function(...) FALSE,
     .package = "pins"
-  )
-  local_mocked_bindings(
-    connect_content_find = function(board, name) list(guid = "the-guid"),
-    connect_api = function(board, route, ..., body = NULL, query = NULL,
-                           env = parent.frame()) {
-      patched <<- list(route = glue::glue(route, .envir = env), body = body)
-      list()
-    }
   )
 
   rack_create(board, blockr_test_session, id = "fixed_slug",
               name = "A Human Title")
 
-  expect_match(patched$route, "^PATCH /content/the-guid$")
-  expect_equal(patched$body$title, "A Human Title")
+  expect_equal(uploaded_title, "A Human Title")
+})
+
+test_that("a Connect append preserves the content title, not boilerplate", {
+
+  board <- mock_board_connect(account = "user_a")
+
+  versions <- data.frame(
+    version = "20200101T000000Z-aaaaa",
+    created = as.POSIXct("2020-01-01", tz = "UTC"),
+    hash = "abc123",
+    stringsAsFactors = FALSE
+  )
+
+  # mirror pins: an upload with no title falls back to the boilerplate
+  # default_title, which is what the next read would then see
+  boilerplate <- "user_a/board-x: a pinned .json file"
+  stored_title <- "My Board"
+
+  local_mocked_bindings(
+    pin_upload = function(board, paths, name, ..., title = NULL) {
+      stored_title <<- if (is.null(title)) boilerplate else title
+      invisible()
+    },
+    pin_versions = function(...) versions,
+    pin_exists = function(...) TRUE,
+    .package = "pins"
+  )
+  local_mocked_bindings(
+    connect_content_find = function(board, name) {
+      list(guid = "g", title = stored_title)
+    }
+  )
+
+  rack_append(
+    new_rack_id_pins_connect("user_a", "board-x"),
+    board,
+    blockr_test_session
+  )
+
+  expect_equal(
+    rack_stored_name(new_rack_id_pins_connect("user_a", "board-x"), board),
+    "My Board"
+  )
 })
 
 test_that("rack_create on Connect scopes the write to the caller's account", {
