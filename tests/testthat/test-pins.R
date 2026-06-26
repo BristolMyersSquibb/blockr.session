@@ -261,6 +261,20 @@ test_that("rack_create persists and rack_list finds it as a record", {
   expect_equal(boards[[1L]]$name, "Test Board")
 })
 
+test_that("a content hash is stored per version, read via rack_content_hash", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  rack_create(backend, list(blocks = list(a = 1)), id = "hashed", name = "H")
+
+  meta <- pins::pin_meta(backend, "hashed")
+  expect_true(not_null(meta$user$content_hash))
+  expect_equal(
+    rack_content_hash(new_rack_id_pins("hashed"), backend),
+    meta$user$content_hash
+  )
+})
+
 # rack_name / rack_rename ---------------------------------------------------
 
 test_that("rack_name falls back to the slug for legacy pins", {

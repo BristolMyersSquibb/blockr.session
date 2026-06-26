@@ -222,7 +222,13 @@ upload_serialized <- function(backend, id, data, ...) {
 
   jsonlite::write_json(data, tmp, null = "null")
 
-  rack_upload(backend, tmp, id, ...)
+  rack_upload(backend, tmp, id, content_hash = content_hash(data), ...)
+}
+
+# a stable digest of the serialized payload, stored per version so a save can
+# tell whether anything actually changed since the last one
+content_hash <- function(data) {
+  rlang::hash(data)
 }
 
 # rack_delete ---------------------------------------------------------------

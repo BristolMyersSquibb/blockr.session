@@ -16,10 +16,6 @@ manage_project_server <- function(id, board, ...) {
       refresh_trigger <- reactiveVal(0)
       save_status <- reactiveVal("Not saved")
 
-      # the serialized payload last written to (or read from) the store, used to
-      # skip a version-minting update when a save changes nothing
-      last_saved_content <- reactiveVal(NULL)
-
       serialize_now <- function() {
         do.call(
           serialize_board,
@@ -83,10 +79,6 @@ manage_project_server <- function(id, board, ...) {
             )
           }
 
-          # baseline for the content-change check, so a save right after a load
-          # doesn't mint a redundant version
-          last_saved_content(serialize_now())
-
           info <- tryCatch(rack_info(id, backend), error = function(e) NULL)
 
           if (not_null(info) && nrow(info) > 0L) {
@@ -123,10 +115,14 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          # don't mint a version when the content is unchanged
-          if (exists && identical(data, last_saved_content())) {
-            notify("No changes to save", type = "message", session = session)
-            return()
+          # don't mint a version when the content is unchanged: compare the
+          # current payload digest against the most recent stored version's
+          if (exists) {
+            stored_hash <- rack_content_hash(target, backend)
+            if (identical(content_hash(data), stored_hash)) {
+              notify("No changes to save", type = "message", session = session)
+              return()
+            }
           }
 
           res <- tryCatch(
@@ -144,8 +140,6 @@ manage_project_server <- function(id, board, ...) {
           if (is.null(res)) {
             return()
           }
-
-          last_saved_content(data)
 
           notify(
             paste("Successfully saved", board_name()),

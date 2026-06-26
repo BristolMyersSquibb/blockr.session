@@ -102,6 +102,18 @@ pin_stored_name <- function(backend, id) {
   meta$user$name
 }
 
+rack_content_hash <- function(id, backend) {
+
+  info <- rack_info(id, backend)
+
+  if (nrow(info) == 0L) {
+    return(NULL)
+  }
+
+  meta <- pins::pin_meta(backend, pin_name(id), info$version[1L])
+  meta$user$content_hash
+}
+
 #' @export
 rack_name.rack_id_pins <- function(id, backend, ...) {
   coal(pin_stored_name(backend, id), id$id, fail_all = FALSE)
@@ -362,7 +374,8 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
 # rack_upload ---------------------------------------------------------------
 
 #' @export
-rack_upload.pins_board <- function(backend, path, id, name = NULL, ...) {
+rack_upload.pins_board <- function(backend, path, id, name = NULL,
+                                   content_hash = NULL, ...) {
 
   slug <- pin_name(id)
 
@@ -372,6 +385,10 @@ rack_upload.pins_board <- function(backend, path, id, name = NULL, ...) {
 
   if (not_null(display)) {
     metadata[["name"]] <- display
+  }
+
+  if (not_null(content_hash)) {
+    metadata[["content_hash"]] <- content_hash
   }
 
   log_debug("Pin upload target {slug}")
@@ -390,10 +407,16 @@ rack_upload.pins_board <- function(backend, path, id, name = NULL, ...) {
 
 #' @export
 rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
-                                           ...) {
+                                           content_hash = NULL, ...) {
 
   slug <- id$id
   qualified <- paste0(backend$account, "/", slug)
+
+  metadata <- list(format = "v1")
+
+  if (not_null(content_hash)) {
+    metadata[["content_hash"]] <- content_hash
+  }
 
   log_debug("Connect pin upload target {qualified}")
 
@@ -402,7 +425,7 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
     path,
     qualified,
     versioned = TRUE,
-    metadata = list(format = "v1"),
+    metadata = metadata,
     tags = blockr_session_tags()
   )
 
