@@ -33,17 +33,14 @@ test_that("print.rack_id", {
 
 # new_rack_record ----------------------------------------------------------
 
-test_that("new_rack_record stores id, name, created and extra fields", {
+test_that("new_rack_record stores id, name and extra fields", {
   rec <- new_rack_record("egoistic_lowchen", "My Board")
   expect_s3_class(rec, "rack_record")
   expect_equal(rec$id, "egoistic_lowchen")
   expect_equal(rec$name, "My Board")
-  expect_null(rec$created)
 
-  ts <- as.POSIXct("2020-01-01", tz = "UTC")
-  dated <- new_rack_record("slug", "Name", created = ts, user = "alice")
-  expect_equal(dated$created, ts)
-  expect_equal(dated$user, "alice")
+  with_user <- new_rack_record("slug", "Name", user = "alice")
+  expect_equal(with_user$user, "alice")
 })
 
 test_that("new_rack_record rejects empty id", {

@@ -147,8 +147,7 @@ rack_list.pins_board <- function(backend, tags = NULL, ...) {
     function(i) {
       new_rack_record(
         id = df$name[i],
-        name = coal(df$meta[[i]]$user$name, df$name[i], fail_all = FALSE),
-        created = df$created[i]
+        name = coal(df$meta[[i]]$user$name, df$name[i], fail_all = FALSE)
       )
     }
   )

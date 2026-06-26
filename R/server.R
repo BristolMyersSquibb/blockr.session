@@ -185,7 +185,7 @@ manage_project_server <- function(id, board, ...) {
               seq_len(min(length(workflows), 4L)),
               function(i) {
                 wf <- workflows[[i]]
-                wf_time <- format_time_ago(wf$created)
+                wf_time <- record_time_ago(wf, backend)
                 tags$div(
                   class = "blockr-workflow-item",
                   onclick = shiny_input_obj_js(
@@ -971,7 +971,7 @@ show_workflows_modal <- function(workflows, backend, session) {
     seq_along(workflows),
     function(i) {
       wf <- workflows[[i]]
-      wf_time <- format_time_ago(wf$created)
+      wf_time <- record_time_ago(wf, backend)
       tags$tr(
         class = "blockr-workflow-row",
         `data-name` = tolower(wf$name),

@@ -103,7 +103,6 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
       new_rack_record(
         id = slug,
         name = coal(titles[[slug]], slug, fail_all = FALSE),
-        created = df$created[i],
         user = parts[1L]
       )
     }

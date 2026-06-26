@@ -18,8 +18,7 @@ new_rack_id <- function(id, version = NULL, user = NULL, ...,
 
 # new_rack_record -----------------------------------------------------------
 
-new_rack_record <- function(id, name, created = NULL, ...,
-                            class = character()) {
+new_rack_record <- function(id, name, ..., class = character()) {
 
   if (!is_string(id) || !nzchar(id)) {
     blockr_abort(
@@ -36,7 +35,7 @@ new_rack_record <- function(id, name, created = NULL, ...,
   }
 
   structure(
-    list(id = id, name = name, created = created, ...),
+    list(id = id, name = name, ...),
     class = c(class, "rack_record")
   )
 }

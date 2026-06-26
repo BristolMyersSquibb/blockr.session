@@ -46,6 +46,16 @@ format_time_ago <- function(time) {
   }
 }
 
+record_time_ago <- function(record, backend) {
+
+  saved <- tryCatch(
+    last_saved(rack_id_from_input(backend, record), backend),
+    error = function(e) NULL
+  )
+
+  if (is.null(saved)) "" else format_time_ago(saved)
+}
+
 get_initials <- function(username) {
 
   if (is.null(username) || username == "") {
