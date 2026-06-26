@@ -31,6 +31,12 @@ rack_id_from_input <- function(x, backend = NULL) {
   }
 }
 
+blockr_session_tags <- function() "blockr-session"
+
+has_tags <- function(x, tags = blockr_session_tags()) {
+  all(tags %in% x[["tags"]])
+}
+
 # pin_name ------------------------------------------------------------------
 
 pin_name <- function(id, ...) UseMethod("pin_name")

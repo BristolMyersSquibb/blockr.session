@@ -158,18 +158,20 @@ test_that("prepare_download skips missing workflows in multi", {
 
 # upload_workflows ---------------------------------------------------------
 
-write_board_json <- function(path) {
+write_board_json <- function(path, id) {
   board <- blockr.core::new_board()
-  ser <- blockr.core::blockr_ser(board)
+  ser <- blockr.core::serialize_board(
+    board, blockr.core::board_blocks(board), id = id
+  )
   jsonlite::write_json(ser, path, auto_unbox = TRUE, null = "null")
 }
 
-test_that("upload_workflows pins a single JSON file", {
+test_that("upload_workflows keys a single file on its own board id", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
   tmp <- withr::local_tempfile(fileext = ".json")
-  write_board_json(tmp)
+  write_board_json(tmp, "single-board-id")
 
   file_info <- data.frame(
     name = "my_workflow.json",
@@ -187,6 +189,7 @@ test_that("upload_workflows pins a single JSON file", {
 
   boards <- rack_list(backend)
   expect_length(boards, 1L)
+  expect_equal(boards[[1L]]$id, "single-board-id")
   expect_equal(boards[[1L]]$name, "my_workflow")
 })
 
@@ -196,8 +199,8 @@ test_that("upload_workflows handles multiple files", {
 
   tmp1 <- withr::local_tempfile(fileext = ".json")
   tmp2 <- withr::local_tempfile(fileext = ".json")
-  write_board_json(tmp1)
-  write_board_json(tmp2)
+  write_board_json(tmp1, "wf-one-id")
+  write_board_json(tmp2, "wf-two-id")
 
   file_info <- data.frame(
     name = c("wf_one.json", "wf_two.json"),
@@ -216,6 +219,29 @@ test_that("upload_workflows handles multiple files", {
   names <- chr_xtr(boards, "name")
   expect_true("wf_one" %in% names)
   expect_true("wf_two" %in% names)
+})
+
+test_that("upload_workflows skips a board payload without an id", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  tmp <- withr::local_tempfile(fileext = ".json")
+  ser <- blockr.core::blockr_ser(blockr.core::new_board())
+  jsonlite::write_json(ser, tmp, auto_unbox = TRUE, null = "null")
+
+  file_info <- data.frame(
+    name = "no_id.json",
+    size = file.size(tmp),
+    type = "application/json",
+    datapath = tmp,
+    stringsAsFactors = FALSE
+  )
+
+  result <- upload_workflows(file_info, backend)
+
+  expect_false(result$ok)
+  expect_equal(result$uploaded, 0L)
+  expect_match(result$errors, "no board id")
 })
 
 test_that("upload_workflows skips non-JSON files", {

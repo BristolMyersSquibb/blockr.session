@@ -54,11 +54,14 @@ upload_workflows <- function(file_info, backend) {
       next
     }
 
+    if (!is_string(data$id) || !nzchar(data$id)) {
+      errors <- c(errors, paste("Skipped", fname, "- no board id in payload"))
+      next
+    }
+
     tryCatch(
       {
-        rid <- rack_id_from_input(
-          list(id = sanitize_pin_name(wf_name)), backend
-        )
+        rid <- rack_id_from_input(list(id = data$id), backend)
         rack_upload(backend, fpath, rid, name = wf_name)
         uploaded <- uploaded + 1L
       },

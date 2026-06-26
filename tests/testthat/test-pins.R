@@ -128,18 +128,6 @@ test_that("rack_id_from_input connect backend infers user", {
   expect_equal(pin_name(id), "nicolas/board")
 })
 
-test_that("sanitize_pin_name replaces spaces and invalid chars", {
-  expect_equal(sanitize_pin_name("Rebel eyas"), "Rebel_eyas")
-  expect_equal(sanitize_pin_name("hello world!"), "hello_world")
-  expect_equal(sanitize_pin_name("a.b-c_d"), "a.b-c_d")
-  expect_equal(sanitize_pin_name("  spaced  "), "spaced")
-  expect_equal(sanitize_pin_name("ab"), "abx")
-  expect_equal(
-    sanitize_pin_name(paste(rep("a", 100), collapse = "")),
-    paste(rep("a", 64), collapse = "")
-  )
-})
-
 # rack_create / rack_append -------------------------------------------------
 
 test_that("rack_create keys on the supplied id; name is a separate attribute", {

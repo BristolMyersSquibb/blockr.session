@@ -65,10 +65,6 @@ get_initials <- function(username) {
   }
 }
 
-has_tags <- function(x, tags = blockr_session_tags()) {
-  all(tags %in% x[["tags"]])
-}
-
 cnd_to_notif <- function(return_val = NULL, type = "warning",
                          session = get_session()) {
 
@@ -83,21 +79,6 @@ cnd_to_notif <- function(return_val = NULL, type = "warning",
     return_val
   }
 }
-
-sanitize_pin_name <- function(name) {
-  name <- gsub("[^[:alnum:]._-]", "_", name)
-  name <- gsub("_+", "_", name)
-  name <- gsub("^[_.-]+|[_.-]+$", "", name)
-  if (nchar(name) < 3L) {
-    name <- paste0(name, strrep("x", 3L - nchar(name)))
-  }
-  if (nchar(name) > 64L) {
-    name <- substr(name, 1L, 64L)
-  }
-  name
-}
-
-blockr_session_tags <- function() "blockr-session"
 
 # Normalize JS array-of-objects input from Shiny.setInputValue.
 # Shiny may deliver as:
