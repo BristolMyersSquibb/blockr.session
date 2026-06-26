@@ -120,14 +120,9 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          # don't mint a version when the content is unchanged: compare the
-          # current payload digest against the most recent stored version's
-          if (exists) {
-            stored_hash <- rack_content_hash(target, backend)
-            if (identical(content_hash(data), stored_hash)) {
-              notify("No changes to save", type = "message", session = session)
-              return()
-            }
+          if (exists && !rack_content_changed(target, backend, data)) {
+            notify("No changes to save", type = "message", session = session)
+            return()
           }
 
           res <- tryCatch(

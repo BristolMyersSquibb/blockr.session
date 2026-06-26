@@ -67,7 +67,8 @@ pin_stored_name <- function(backend, id) {
   meta$user$name
 }
 
-rack_content_hash <- function(id, backend) {
+#' @export
+rack_content_hash.rack_id_pins <- function(id, backend, ...) {
 
   info <- rack_info(id, backend)
 

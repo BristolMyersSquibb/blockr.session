@@ -45,6 +45,8 @@ new_rack_record <- function(id, name, created = NULL, n_versions = NULL, ...,
 
 last_saved <- function(id, ...) UseMethod("last_saved")
 
+rack_content_hash <- function(id, backend, ...) UseMethod("rack_content_hash")
+
 pin_name <- function(id, ...) UseMethod("pin_name")
 
 rack_name <- function(id, backend, ...) UseMethod("rack_name")
@@ -227,10 +229,14 @@ upload_serialized <- function(backend, id, data, ...) {
   rack_upload(backend, tmp, id, content_hash = content_hash(data), ...)
 }
 
-# a stable digest of the serialized payload, stored per version so a save can
-# tell whether anything actually changed since the last one
+# a stable digest of the serialized payload, stored per version (via
+# rack_content_hash) so a save can tell whether anything actually changed
 content_hash <- function(data) {
   rlang::hash(data)
+}
+
+rack_content_changed <- function(id, backend, data) {
+  !identical(content_hash(data), rack_content_hash(id, backend))
 }
 
 # rack_delete ---------------------------------------------------------------
