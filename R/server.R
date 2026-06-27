@@ -140,7 +140,7 @@ manage_project_server <- function(id, board, ...) {
           }
 
           notify(
-            paste("Successfully saved", board_name()),
+            sprintf("Successfully saved %s (%s)", board_name(), res$id),
             type = "message",
             session = session
           )
