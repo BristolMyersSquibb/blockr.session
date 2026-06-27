@@ -317,6 +317,58 @@
   height: 14px;
 }
 
+/* --- Save Split Button --- */
+.blockr-navbar-save-group {
+  display: inline-flex;
+}
+
+.blockr-navbar-save-group > .blockr-navbar-save-btn:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.blockr-navbar-save-toggle {
+  width: 18px;
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.blockr-navbar-save-toggle::after {
+  margin: 0;
+}
+
+.blockr-navbar-save-menu {
+  min-width: 200px;
+  margin-top: 6px;
+  padding: 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -8px rgb(0 0 0 / 0.2);
+}
+
+.blockr-navbar-save-menu .dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.blockr-navbar-save-menu .dropdown-item:hover,
+.blockr-navbar-save-menu .dropdown-item:focus {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.blockr-navbar-save-menu .dropdown-item svg {
+  width: 14px;
+  height: 14px;
+  color: #6b7280;
+}
+
 /* --- New Button --- */
 .blockr-navbar-btn-new {
   display: inline-flex;

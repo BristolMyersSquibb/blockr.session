@@ -16,11 +16,11 @@ manage_project_server <- function(id, board, ...) {
       refresh_trigger <- reactiveVal(0)
       save_status <- reactiveVal("Not saved")
 
-      serialize_now <- function() {
+      serialize_now <- function(id = board$board_id) {
         do.call(
           serialize_board,
           c(
-            list(board$board, board$blocks, board$board_id),
+            list(board$board, board$blocks, id),
             dot_args,
             list(session = session)
           )
@@ -140,7 +140,7 @@ manage_project_server <- function(id, board, ...) {
           }
 
           notify(
-            paste("Successfully saved", board_name()),
+            sprintf("Successfully saved %s (%s)", board_name(), res$id),
             type = "message",
             session = session
           )
@@ -154,6 +154,41 @@ manage_project_server <- function(id, board, ...) {
           new_url <- board_query_string(saved, backend)
           prev_query(new_url)
           updateQueryString(new_url, mode = "replace", session = session)
+        }
+      )
+
+      observeEvent(
+        input$save_as_btn,
+        {
+          new_id <- rand_names()
+
+          data <- tryCatch(
+            serialize_now(new_id),
+            error = cnd_to_notif(type = "error")
+          )
+
+          if (is.null(data)) {
+            return()
+          }
+
+          res <- tryCatch(
+            rack_create(
+              backend, data,
+              id = new_id, name = board_name()
+            ),
+            error = cnd_to_notif(type = "error")
+          )
+
+          if (is.null(res)) {
+            return()
+          }
+
+          forked <- rack_id_from_input(
+            backend,
+            list(id = res$id, user = res$user)
+          )
+
+          navigate_to_board(forked, backend, session)
         }
       )
 
