@@ -11,5 +11,10 @@ Provides a "preserve_board" module for blockr apps to save and manage projects a
 \author{
 \strong{Maintainer}: Nicolas Bennett \email{nicolas@cynkra.com}
 
+Authors:
+\itemize{
+  \item Nicolas Bennett \email{nicolas@cynkra.com}
+}
+
 }
 \keyword{internal}

@@ -29,6 +29,6 @@ their own namespace (\code{\link[pins:board_connect]{pins::board_connect()}}). R
 \item With no visitor token but application Connect credentials in the
 environment (\code{CONNECT_SERVER} and \code{CONNECT_API_KEY}), a board on the
 application's own account.
-\item Otherwise (e.g. local development, off Connect), \code{\link[pins:board_folder]{pins::board_local()}}.
+\item Otherwise (e.g. local development, off Connect), \code{\link[pins:board_local]{pins::board_local()}}.
 }
 }
