@@ -217,12 +217,13 @@ manage_project_server <- function(id, board, ...) {
 
           tagList(
             lapply(
-              seq_len(min(length(workflows), 4L)),
+              seq_along(workflows),
               function(i) {
                 wf <- workflows[[i]]
                 wf_time <- record_time_ago(wf)
                 tags$div(
                   class = "blockr-workflow-item",
+                  `data-name` = tolower(coal(wf$name, "")),
                   onclick = shiny_input_obj_js(
                     session$ns("load_workflow"),
                     id = wf$id,

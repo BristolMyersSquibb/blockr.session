@@ -61,10 +61,33 @@ manage_project_ui <- function(id, x) {
           tags$div(
             id = ns("panel_workflows"),
             class = "blockr-tab-panel",
-            tags$div(class = "blockr-workflows-section", "RECENT"),
+            # Sticky search on top of an always-scrollable list: every workflow
+            # is shown most-recent-first (no recent-4 cap), and typing filters
+            # the list in place, client-side.
+            tags$div(
+              class = "blockr-workflow-search-wrap",
+              tags$div(
+                class = "blockr-workflow-search",
+                bsicons::bs_icon("search", size = "0.9em"),
+                tags$input(
+                  id = ns("workflow_filter"),
+                  type = "text",
+                  class = "blockr-workflow-search-input",
+                  placeholder = "Search workflows...",
+                  autocomplete = "off",
+                  oninput = "blockrFilterWorkflows(this)",
+                  onkeydown = "blockrWorkflowSearchKey(event, this)"
+                ),
+                tags$span(class = "blockr-workflow-count")
+              )
+            ),
             tags$div(
               class = "blockr-workflows-list",
               uiOutput(ns("recent_workflows"))
+            ),
+            tags$div(
+              class = "blockr-workflow-noresults",
+              "No workflows match your search"
             ),
             tags$div(
               class = "blockr-tab-footer",
@@ -76,7 +99,7 @@ manage_project_ui <- function(id, x) {
                   return false;",
                   ns("view_all_workflows")
                 ),
-                "View all workflows ",
+                "Manage workflows ",
                 bsicons::bs_icon("arrow-right")
               )
             )
