@@ -15,9 +15,9 @@ on):
 - All of this reruns on every dropdown/modal render.
 
 Discussion also covered the loading-menu UX itself (only the last 4 workflows
-are one click; older ones need a modal). Mockups for that are in
-`dev/loading-menu-proposals.html` on this branch — **not implemented here**, this
-issue is the backend performance fix that the UI redesign depends on.
+are one click; older ones need a modal). That UI redesign is tracked separately
+and **not implemented here** — this issue is the backend performance fix the UI
+redesign depends on.
 
 ## What's on `feat/workflow-index-pin`
 
@@ -66,7 +66,7 @@ thousands. Saves stay cheap: patch one row in memory, rewrite one small file.
 - **Connect.** Left on its own `rack_list`. Whether Connect wants an equivalent
   index (and the Sharing tab, which surfaces *other* users' workflows and can't
   live in your per-user index) is an open question.
-- **The loading-menu UI redesign** (`dev/loading-menu-proposals.html`) —
+- **The loading-menu UI redesign** (tracked separately) —
   recommended pairing is search-first box + scrollable time-grouped list, which
   makes the "View all" modal optional and is client-side (free per keystroke).
 
