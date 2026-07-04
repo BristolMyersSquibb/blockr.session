@@ -134,7 +134,7 @@ test_that("rack_create keys on the supplied id; name is a separate attribute", {
   )
 
   expect_equal(id$id, "egoistic_lowchen")
-  expect_equal(pins::pin_list(backend), "egoistic_lowchen")
+  expect_equal(workflow_pins(backend), "egoistic_lowchen")
   expect_equal(rack_name(id, backend), "My Cool Board!")
 })
 
@@ -153,7 +153,7 @@ test_that("rack_create errors on a colliding explicit id (no overwrite)", {
     class = "rack_create_exists"
   )
 
-  expect_length(pins::pin_list(backend), 1L)
+  expect_length(workflow_pins(backend), 1L)
   expect_equal(nrow(rack_info(new_rack_id_pins("dup"), backend)), 1L)
 })
 
@@ -169,7 +169,7 @@ test_that("distinct boards with the same name stay distinct (no merge)", {
               name = "Quarterly report")
 
   expect_setequal(
-    pins::pin_list(backend),
+    workflow_pins(backend),
     c("egoistic_lowchen", "crass_gecko")
   )
 
@@ -207,7 +207,7 @@ test_that("rack_append adds a version and preserves the name", {
                      list(blocks = list(a = 2)))
 
   expect_equal(res$id, "board-x")
-  expect_length(pins::pin_list(backend), 1L)
+  expect_length(workflow_pins(backend), 1L)
   expect_equal(nrow(rack_info(new_rack_id_pins("board-x"), backend)), 2L)
   expect_equal(rack_name(new_rack_id_pins("board-x"), backend), "Original")
 })
@@ -291,7 +291,7 @@ test_that("rack_rename writes the name without changing identity", {
   res <- rack_rename(new_rack_id_pins("stable-id"), backend, "After")
 
   expect_equal(res$id, "stable-id")
-  expect_equal(pins::pin_list(backend), "stable-id")
+  expect_equal(workflow_pins(backend), "stable-id")
   expect_equal(rack_name(new_rack_id_pins("stable-id"), backend), "After")
 })
 

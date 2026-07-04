@@ -283,7 +283,7 @@ test_that("a cold re-save appends to the existing board_id record (#61)", {
     )
   )
 
-  expect_length(pins::pin_list(backend), 1L)
+  expect_length(workflow_pins(backend), 1L)
   expect_equal(nrow(pins::pin_versions(backend, "cold-board")), 2L)
 })
 
@@ -414,7 +414,7 @@ test_that("save_as forks the loaded board into a fresh record (#67)", {
     )
   )
 
-  forked <- setdiff(pins::pin_list(backend), "fork-origin")
+  forked <- setdiff(workflow_pins(backend), "fork-origin")
 
   expect_length(forked, 1)
   expect_equal(nrow(pins::pin_versions(backend, "fork-origin")), 1)

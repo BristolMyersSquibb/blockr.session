@@ -121,7 +121,11 @@ rack_rename.rack_id_pins <- function(id, backend, name, ...) {
     tags = unique(c(meta$tags, blockr_session_tags()))
   )
 
-  new_rack_id_pins(id$id, version = rack_info(id, backend)$version[1L])
+  new_info <- rack_info(id, backend)
+
+  index_upsert(backend, id$id, name, if (nrow(new_info)) new_info$created[1L])
+
+  new_rack_id_pins(id$id, version = new_info$version[1L])
 }
 
 # rack_exists ---------------------------------------------------------------
@@ -136,21 +140,16 @@ rack_exists.rack_id_pins <- function(id, backend, ...) {
 #' @export
 rack_list.pins_board <- function(backend, tags = NULL, ...) {
 
-  df <- pins_session_search(backend, tags)
-
-  if (nrow(df) == 0L) {
-    return(list())
+  # Tag-filtered listing is a rare path (legacy / non-default queries); keep it
+  # on the full scan so the index stays a simple id/name/created cache. The
+  # common tags = NULL path reads the cached index (one file) instead.
+  records <- if (not_null(tags)) {
+    scan_records(backend, tags)
+  } else {
+    index_records(backend)
   }
 
-  lapply(
-    seq_len(nrow(df)),
-    function(i) {
-      new_rack_record(
-        id = df$name[i],
-        name = coal(df$meta[[i]]$user$name, df$name[i], fail_all = FALSE)
-      )
-    }
-  )
+  records_to_list(records)
 }
 
 pins_session_search <- function(backend, tags) {
@@ -296,7 +295,24 @@ rack_upload.pins_board <- function(backend, path, id, name = NULL,
     tags = blockr_session_tags()
   )
 
-  new_rack_id_pins(id$id, version = rack_info(id, backend)$version[1L])
+  # Bound version history so a single workflow's version directory never grows
+  # without limit; keeps per-workflow load and any fallback scan cheap.
+  tryCatch(
+    pins::pin_versions_prune(backend, slug, n = max_versions()),
+    error = function(e) {
+      blockr_warn(
+        "Could not prune versions for {slug}: {conditionMessage(e)}",
+        class = "pin_prune_failed"
+      )
+    }
+  )
+
+  info <- rack_info(id, backend)
+  created <- if (nrow(info)) info$created[1L] else NULL
+
+  index_upsert(backend, id$id, display, created)
+
+  new_rack_id_pins(id$id, version = info$version[1L])
 }
 
 # rack_delete ---------------------------------------------------------------
@@ -320,12 +336,26 @@ rack_delete.rack_id_pins <- function(id, backend, ...) {
   }
 
   pins::pin_version_delete(backend, pin_name(id), version)
+
+  # Deleting a version may change the latest (name/created) or remove the pin
+  # entirely; reflect either in the index.
+  if (board_uses_index(backend)) {
+    info <- tryCatch(rack_info(id, backend), error = function(e) NULL)
+    if (is.null(info) || nrow(info) == 0L) {
+      index_remove(backend, pin_name(id))
+    } else {
+      nm <- coal(pin_stored_name(backend, id), pin_name(id), fail_all = FALSE)
+      index_upsert(backend, pin_name(id), nm, info$created[1L])
+    }
+  }
+
   invisible(TRUE)
 }
 
 #' @export
 rack_purge.rack_id_pins <- function(id, backend, ...) {
   pins::pin_delete(backend, pin_name(id))
+  index_remove(backend, pin_name(id))
   invisible(TRUE)
 }
 

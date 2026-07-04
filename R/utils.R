@@ -52,12 +52,22 @@ format_time_ago <- function(time) {
 
 record_time_ago <- function(record, backend) {
 
-  saved <- tryCatch(
-    last_saved(rack_id_from_input(backend, record), backend),
-    error = function(e) NULL
-  )
+  # Prefer the timestamp carried on the record (from the workflow index) so the
+  # common list render costs no per-row backend call. Fall back to a lookup only
+  # for records that predate the index (e.g. constructed elsewhere).
+  saved <- record[["created"]]
 
-  if (is.null(saved)) "" else format_time_ago(saved)
+  if (is.null(saved)) {
+    saved <- tryCatch(
+      last_saved(rack_id_from_input(backend, record), backend),
+      error = function(e) NULL
+    )
+  }
+
+  blank <- is.null(saved) || anyNA(saved) ||
+    (is.character(saved) && !nzchar(saved))
+
+  if (blank) "" else format_time_ago(saved)
 }
 
 get_initials <- function(username) {
