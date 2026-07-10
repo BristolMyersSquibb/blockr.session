@@ -310,6 +310,20 @@ manage_project_server <- function(id, board, ...) {
       modal_n_shown <- reactiveVal(workflow_batch)
       modal_selection <- reactiveVal(character())
       modal_open <- reactiveVal(FALSE)
+      modal_expanded <- reactiveVal(character())
+      modal_focus <- reactiveVal(NULL)
+
+      # Version history for the expanded rows. Recomputes only when the expanded
+      # set or the backend contents change -- not on scroll or filter -- so the
+      # windowed table renders sub-rows without a backend hit per render.
+      expanded_versions <- reactive({
+
+        refresh_trigger()
+
+        recs <- modal_selected_records(modal_expanded(), all_workflows())
+
+        set_names(lapply(recs, record_versions, backend), chr_xtr(recs, "id"))
+      })
 
       observeEvent(
         input$view_all_workflows,
@@ -321,6 +335,8 @@ manage_project_server <- function(id, board, ...) {
 
           modal_n_shown(workflow_batch)
           modal_selection(character())
+          modal_expanded(character())
+          modal_focus(NULL)
           modal_open(TRUE)
 
           show_workflows_modal(session)
@@ -334,6 +350,21 @@ manage_project_server <- function(id, board, ...) {
         {
           modal_n_shown(workflow_batch)
           modal_selection(character())
+          modal_focus(NULL)
+        }
+      )
+
+      observeEvent(
+        input$modal_toggle_expand,
+        {
+          id <- input$modal_toggle_expand$id
+          cur <- modal_expanded()
+
+          if (id %in% cur) {
+            modal_expanded(setdiff(cur, id))
+          } else {
+            modal_expanded(c(cur, id))
+          }
         }
       )
 
@@ -431,13 +462,20 @@ manage_project_server <- function(id, board, ...) {
             return(modal_message_row("No workflows match your search"))
           }
 
+          matches <- float_to_front(matches, modal_focus())
+
           shown <- matches[seq_len(min(modal_n_shown(), length(matches)))]
 
+          active_version <- parseQueryString(current_query())$version
+
+          rows <- lapply(
+            shown, modal_row_with_history,
+            modal_expanded(), expanded_versions(), current_id(),
+            active_version, isolate(modal_selection()), backend, session$ns
+          )
+
           tagList(
-            lapply(
-              shown, workflow_modal_row, isolate(modal_selection()),
-              backend, session$ns
-            ),
+            rows,
             if (length(matches) > length(shown)) {
               modal_sentinel_row(session$ns("modal_load_more"))
             }
@@ -525,7 +563,7 @@ manage_project_server <- function(id, board, ...) {
       output$download_versions <- downloadHandler(
         filename = function() {
           sel <- normalize_js_input(input$ver_selection)
-          slug <- current_id()$id
+          slug <- if (length(sel)) sel[[1]]$id else "workflow"
           if (length(sel) == 1L) {
             paste0(slug, "_v", sel[[1]]$version, ".json")
           } else {
@@ -534,12 +572,11 @@ manage_project_server <- function(id, board, ...) {
         },
         content = function(file) {
           sel <- normalize_js_input(input$ver_selection)
-          req(length(sel) > 0L, current_id())
-          slug <- current_id()$id
+          req(length(sel) > 0L)
           dl_sel <- lapply(sel, function(v) {
             list(
-              id = slug,
-              name = paste0(slug, "_v", v$version),
+              id = v$id,
+              name = paste0(v$id, "_v", v$version),
               user = coal(v$user, ""),
               version = v$version
             )
@@ -633,11 +670,7 @@ manage_project_server <- function(id, board, ...) {
             function(i) {
               v <- versions[i, ]
               time_ago <- format_time_ago(v$created)
-              is_current <- if (is.null(active_version)) {
-                i == 1L
-              } else {
-                identical(v$version, active_version)
-              }
+              is_current <- version_is_current(i, v$version, active_version)
 
               tags$div(
                 class = paste(
@@ -653,9 +686,11 @@ manage_project_server <- function(id, board, ...) {
                   )
                 },
                 tags$div(class = "blockr-workflow-name", time_ago),
-                if (is_current) {
-                  tags$div(class = "blockr-workflow-meta", "(Current)")
-                }
+                tags$div(
+                  class = "blockr-workflow-meta",
+                  tags$span(class = "blockr-wf-version-id", v$hash),
+                  if (is_current) " (Current)"
+                )
               )
             }
           )
@@ -678,67 +713,56 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      # VIEW ALL VERSIONS modal
+      # VIEW ALL VERSIONS: open the workflows overview with the loaded record
+      # expanded in place. History lives inline in the one modal, so a corrupted
+      # latest version stays recoverable without loading the record.
       observeEvent(
         input$view_all_versions,
         {
           id <- current_id()
+
           if (is.null(id)) {
-            notify(
-              "Save workflow first to see versions",
-              type = "message"
-            )
+            notify("Save workflow first to see versions", type = "message")
             return()
           }
 
-          versions <- tryCatch(
-            rack_info(id, backend),
-            error = function(e) NULL
-          )
+          modal_n_shown(workflow_batch)
+          modal_selection(character())
+          modal_expanded(id$id)
+          modal_focus(id$id)
+          modal_open(TRUE)
 
-          if (is.null(versions) || nrow(versions) == 0L) {
-            notify("No versions found", type = "message")
-            return()
-          }
-
-          show_versions_modal(id, versions, session, backend,
-                              name = board_name())
+          show_workflows_modal(session)
         }
       )
 
-      # Delete versions
+      # Delete a single version from the record named in the payload -- each
+      # inline row carries its own id, since several can be open at once.
       observeEvent(
         input$delete_versions,
         {
-          req(input$delete_versions, current_id())
-          id <- current_id()
-          deleted <- 0
-          for (version in input$delete_versions) {
-            ver_id <- rack_id_from_input(
-              backend,
-              list(id = id$id, user = id$user, version = version)
-            )
-            res <- tryCatch(
-              {
-                rack_delete(ver_id, backend)
-                deleted <- deleted + 1
-                TRUE
-              },
-              error = function(e) {
-                notify(
-                  paste("Failed to delete version:", version),
-                  type = "error"
-                )
-                FALSE
-              }
-            )
-          }
-          if (deleted > 0) {
-            notify(
-              paste("Deleted", deleted, "version(s)"),
-              type = "message"
-            )
-            removeModal()
+          del <- input$delete_versions
+          req(del$id, del$version)
+
+          ver_id <- rack_id_from_input(
+            backend,
+            list(id = del$id, user = del$user, version = del$version)
+          )
+
+          ok <- tryCatch(
+            {
+              rack_delete(ver_id, backend)
+              TRUE
+            },
+            error = function(e) {
+              notify(paste("Failed to delete version:", del$version),
+                     type = "error")
+              FALSE
+            }
+          )
+
+          if (isTRUE(ok)) {
+            notify("Deleted version", type = "message")
             refresh_trigger(refresh_trigger() + 1)
           }
         }
@@ -1279,10 +1303,24 @@ delete_rack_records <- function(records, backend, session) {
   deleted
 }
 
-workflow_modal_row <- function(wf, selected, backend, ns) {
+workflow_modal_row <- function(wf, selected, backend, ns, expanded = FALSE) {
 
   tags$tr(
-    class = "blockr-workflow-row",
+    class = paste0("blockr-workflow-row", if (expanded) " expanded"),
+    tags$td(
+      class = "blockr-wf-expand-cell",
+      tags$button(
+        class = "btn btn-sm blockr-wf-expand",
+        title = "Version history",
+        `aria-expanded` = if (expanded) "true" else "false",
+        onclick = shiny_input_obj_js(
+          ns("modal_toggle_expand"),
+          id = wf$id,
+          user = coal(wf$user, "")
+        ),
+        bsicons::bs_icon("chevron-right")
+      )
+    ),
     tags$td(
       class = "blockr-wf-checkbox",
       tags$input(
@@ -1361,7 +1399,7 @@ modal_sentinel_row <- function(input_id) {
     class = "blockr-wf-modal-sentinel",
     `data-input-id` = input_id,
     tags$td(
-      colspan = "4",
+      colspan = "5",
       tags$div(
         class = "blockr-wf-modal-loader",
         tags$div(class = "blockr-workflow-spinner")
@@ -1372,7 +1410,7 @@ modal_sentinel_row <- function(input_id) {
 
 modal_message_row <- function(text) {
   tags$tr(
-    tags$td(class = "blockr-wf-modal-message", colspan = "4", text)
+    tags$td(class = "blockr-wf-modal-message", colspan = "5", text)
   )
 }
 
@@ -1453,6 +1491,7 @@ show_workflows_modal <- function(session) {
             class = "blockr-wf-table",
             tags$thead(
               tags$tr(
+                tags$th(class = "blockr-wf-expand-cell"),
                 tags$th(
                   class = "blockr-wf-checkbox",
                   tags$input(
@@ -1470,294 +1509,188 @@ show_workflows_modal <- function(session) {
         ),
         tags$div(
           style = "display: none;",
-          downloadButton(ns("download_workflows"), label = NULL)
+          downloadButton(ns("download_workflows"), label = NULL),
+          downloadButton(ns("download_versions"), label = NULL)
         )
       )
     )
   )
 }
 
-show_versions_modal <- function(id, versions, session, backend, name = NULL) {
+same_record <- function(x, y) {
 
-  active_version <- getQueryString(session)$version
+  if (is.null(x) || is.null(y)) {
+    return(FALSE)
+  }
 
-  rows <- lapply(
+  identical(x$id, y$id) &&
+    identical(
+      coal(x$user, "", fail_all = FALSE),
+      coal(y$user, "", fail_all = FALSE)
+    )
+}
+
+# When the history is not the loaded board, no row is "current": the URL's
+# ?version= describes the loaded board, and "current" also disables Load/Delete.
+version_is_current <- function(i, version, active_version, is_active = TRUE) {
+
+  if (!is_active) {
+    return(FALSE)
+  }
+
+  if (is.null(active_version)) {
+    return(i == 1L)
+  }
+
+  identical(version, active_version)
+}
+
+record_versions <- function(wf, backend) {
+  tryCatch(
+    rack_info(rack_id_from_input(backend, wf), backend),
+    error = function(e) NULL
+  )
+}
+
+float_to_front <- function(workflows, id) {
+
+  if (is.null(id)) {
+    return(workflows)
+  }
+
+  is_focus <- chr_xtr(workflows, "id") == id
+
+  c(workflows[is_focus], workflows[!is_focus])
+}
+
+modal_row_with_history <- function(wf, expanded, versions, loaded,
+                                   active_version, selected, backend, ns) {
+
+  row <- workflow_modal_row(
+    wf, selected, backend, ns,
+    expanded = wf$id %in% expanded
+  )
+
+  if (!(wf$id %in% expanded)) {
+    return(row)
+  }
+
+  is_active <- same_record(rack_id_from_input(backend, wf), loaded)
+
+  tagList(
+    row,
+    version_subrows(
+      wf, versions[[wf$id]], is_active,
+      if (is_active) active_version, backend, ns
+    )
+  )
+}
+
+version_subrows <- function(wf, versions, is_active, active_version, backend,
+                            ns) {
+
+  if (is.null(versions) || nrow(versions) == 0L) {
+    return(
+      tags$tr(
+        class = "blockr-wf-subrow",
+        tags$td(
+          colspan = "5",
+          tags$div(class = "blockr-wf-subrow-empty", "No versions found")
+        )
+      )
+    )
+  }
+
+  lapply(
     seq_len(nrow(versions)),
     function(i) {
-      v <- versions[i, ]
-      time_ago <- format_time_ago(v$created)
-      is_current <- if (is.null(active_version)) {
-        i == 1L
-      } else {
-        identical(v$version, active_version)
-      }
-
-      tags$tr(
-        class = "blockr-workflow-row",
-        tags$td(
-          class = "blockr-wf-checkbox",
-          tags$input(
-            type = "checkbox",
-            class = "blockr-version-select",
-            value = v$version,
-            `data-version` = v$version,
-            `data-user` = coal(id$user, ""),
-            disabled = if (is_current) "disabled" else NULL
-          )
-        ),
-        tags$td(
-          class = "blockr-wf-name",
-          time_ago,
-          if (is_current) {
-            tags$span(class = "blockr-version-badge", "(Current)")
-          }
-        ),
-        tags$td(
-          class = "blockr-wf-action",
-          tags$div(
-            class = "blockr-wf-row-actions",
-            if (!is_current) {
-              tags$button(
-                class = "btn btn-sm btn-primary",
-                onclick = paste0(
-                  shiny_input_obj_js(
-                    session$ns("load_version"),
-                    id = id$id,
-                    user = coal(id$user, ""),
-                    version = v$version
-                  ),
-                  "\n",
-                  hide_modal_js(session$ns("versions_modal"))
-                ),
-                "Load"
-              )
-            },
-            tags$a(
-              class = "btn btn-sm btn-outline-secondary",
-              href = board_query_string(
-                list(
-                  id = id$id,
-                  user = id$user,
-                  version = v$version
-                ),
-                backend
-              ),
-              target = "_blank",
-              bsicons::bs_icon(
-                "box-arrow-up-right",
-                size = "0.85em"
-              )
-            ),
-            tags$button(
-              class = paste(
-                "btn btn-sm btn-outline-primary blockr-wf-row-btn"
-              ),
-              title = "Download",
-              onclick = sprintf(
-                "Shiny.setInputValue('%s',
-                  [{version: '%s', user: '%s'}],
-                  {priority: 'event'});
-                  setTimeout(function() {
-                    document.getElementById('%s').click();
-                  }, 100);",
-                session$ns("ver_selection"),
-                v$version,
-                coal(id$user, ""),
-                session$ns("download_versions")
-              ),
-              bsicons::bs_icon("download")
-            ),
-            if (!is_current) {
-              tags$button(
-                class = paste(
-                  "btn btn-sm btn-outline-danger blockr-wf-row-btn"
-                ),
-                title = "Delete",
-                onclick = sprintf(
-                  "if (confirm('Delete this version?')) {
-                    Shiny.setInputValue('%s',
-                      ['%s'],
-                      {priority: 'event'});
-                  }",
-                  session$ns("delete_versions"),
-                  v$version
-                ),
-                bsicons::bs_icon("trash")
-              )
-            }
-          )
-        )
-      )
+      version_subrow(wf, versions[i, ], i, is_active, active_version, backend,
+                     ns)
     }
-  )
-
-  modal_js <- versions_modal_js(
-    select_all_id = session$ns("select_all_versions"),
-    checkbox_class = "blockr-version-select",
-    delete_btn_id = session$ns("delete_versions_btn"),
-    delete_input_id = session$ns("delete_versions"),
-    item_type = "version",
-    has_disabled = TRUE,
-    download_btn_id = session$ns("download_versions_btn"),
-    selection_input_id = session$ns("ver_selection")
-  )
-
-  showModal(
-    modalDialog(
-      title = NULL,
-      size = "l",
-      easyClose = TRUE,
-      footer = NULL,
-      tags$div(
-        id = session$ns("versions_modal"),
-        class = "blockr-workflows-modal",
-        tags$div(
-          class = "blockr-wf-header",
-          tags$h5(paste("Version History:", coal(name, id$id,
-                                                 fail_all = FALSE))),
-          tags$div(
-            class = "blockr-wf-header-actions",
-            tags$button(
-              id = session$ns("delete_versions_btn"),
-              class = "btn btn-sm btn-outline-danger",
-              style = "display: none;",
-              "Delete"
-            ),
-            tags$div(
-              id = session$ns("download_versions_btn"),
-              downloadButton(
-                session$ns("download_versions"),
-                label = "Download",
-                class = "btn-sm btn-primary"
-              )
-            )
-          )
-        ),
-        tags$div(
-          class = "blockr-wf-table-container",
-          tags$table(
-            class = "blockr-wf-table",
-            tags$thead(
-              tags$tr(
-                tags$th(
-                  class = "blockr-wf-checkbox",
-                  tags$input(
-                    type = "checkbox",
-                    id = session$ns("select_all_versions")
-                  )
-                ),
-                tags$th("Version"),
-                tags$th("")
-              )
-            ),
-            tags$tbody(rows)
-          )
-        ),
-        tags$script(HTML(modal_js))
-      )
-    )
   )
 }
 
-versions_modal_js <- function(select_all_id, checkbox_class, delete_btn_id,
-                              delete_input_id, item_type = "item",
-                              has_disabled = FALSE, download_btn_id = NULL,
-                              selection_input_id = NULL) {
+version_subrow <- function(wf, v, i, is_active, active_version, backend, ns) {
 
-  if (has_disabled) {
-    disabled_filter <- ":not(:disabled)"
-  } else {
-    disabled_filter <- ""
-  }
+  is_current <- version_is_current(i, v$version, active_version, is_active)
+  user <- coal(wf$user, "")
 
-  # Download button wrapper visibility + selection sync
-  if (!is.null(download_btn_id)) {
-    download_visibility <- sprintf(
-      "var dlWrap = document.getElementById('%s');
-      if (selected.length > 0) {
-        dlWrap.style.visibility = 'visible';
-        dlWrap.style.position = '';
-      } else {
-        dlWrap.style.visibility = 'hidden';
-        dlWrap.style.position = 'absolute';
+  tags$tr(
+    class = "blockr-workflow-row blockr-wf-subrow",
+    tags$td(class = "blockr-wf-expand-cell"),
+    tags$td(class = "blockr-wf-checkbox"),
+    tags$td(
+      class = "blockr-wf-name blockr-wf-subrow-name",
+      tags$span(class = "blockr-wf-version-id", v$hash),
+      if (is_current) {
+        tags$span(class = "blockr-version-badge", "(Current)")
       }
-      var dlLink = dlWrap.querySelector('a');
-      if (dlLink) dlLink.textContent =
-        'Download (' + selected.length + ')';",
-      download_btn_id
-    )
-  } else {
-    download_visibility <- ""
-  }
-
-  # Sync selection to Shiny input for downloadHandler
-  if (!is.null(selection_input_id)) {
-    selection_sync <- sprintf(
-      "var selData = [];
-      selected.forEach(function(cb) {
-        var item = {};
-        for (var key in cb.dataset) {
-          item[key] = cb.dataset[key];
+    ),
+    tags$td(class = "blockr-wf-time", format_time_ago(v$created)),
+    tags$td(
+      class = "blockr-wf-action",
+      tags$div(
+        class = "blockr-wf-row-actions",
+        if (is_current) {
+          tags$span(class = "btn btn-sm blockr-wf-slot-hidden", "Load")
+        } else {
+          tags$button(
+            class = "btn btn-sm btn-primary",
+            onclick = paste0(
+              shiny_input_obj_js(
+                ns("load_version"),
+                id = wf$id, user = user, version = v$version
+              ),
+              "\n",
+              hide_modal_js(ns("workflows_modal"))
+            ),
+            "Load"
+          )
+        },
+        tags$a(
+          class = "btn btn-sm btn-outline-secondary",
+          href = board_query_string(
+            list(id = wf$id, user = wf$user, version = v$version),
+            backend
+          ),
+          target = "_blank",
+          bsicons::bs_icon("box-arrow-up-right", size = "0.85em")
+        ),
+        tags$button(
+          class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
+          title = "Download",
+          onclick = sprintf(
+            "Shiny.setInputValue('%s',
+              [{id: '%s', version: '%s', user: '%s'}],
+              {priority: 'event'});
+              setTimeout(function() {
+                document.getElementById('%s').click();
+              }, 100);",
+            ns("ver_selection"), wf$id, v$version, user,
+            ns("download_versions")
+          ),
+          bsicons::bs_icon("download")
+        ),
+        if (is_current) {
+          tags$span(
+            class = "btn btn-sm blockr-wf-row-btn blockr-wf-slot-hidden"
+          )
+        } else {
+          tags$button(
+            class = "btn btn-sm btn-outline-danger blockr-wf-row-btn",
+            title = "Delete",
+            onclick = sprintf(
+              "if (confirm('Delete this version?')) {
+                Shiny.setInputValue('%s',
+                  {id: '%s', user: '%s', version: '%s'},
+                  {priority: 'event'});
+              }",
+              ns("delete_versions"), wf$id, user, v$version
+            ),
+            bsicons::bs_icon("trash")
+          )
         }
-        selData.push(item);
-      });
-      Shiny.setInputValue('%s', selData, {priority: 'event'});",
-      selection_input_id
+      )
     )
-  } else {
-    selection_sync <- ""
-  }
-
-  sprintf(
-    "document.getElementById('%s').addEventListener('change', function(e) {
-      var checkboxes = document.querySelectorAll('.%s%s');
-      checkboxes.forEach(function(cb) { cb.checked = e.target.checked });
-      updateDeleteBtn();
-    });
-
-    function updateDeleteBtn() {
-      var selected = document.querySelectorAll('.%s:checked');
-      var btn = document.getElementById('%s');
-      btn.style.display = selected.length > 0 ? '' : 'none';
-      btn.textContent = 'Delete (' + selected.length + ')';
-      %s
-      %s
-    }
-
-    document.querySelectorAll('.%s').forEach(function(cb) {
-      cb.addEventListener('change', updateDeleteBtn);
-    });
-
-    document.getElementById('%s').addEventListener('click', function() {
-      var selected = [];
-      document.querySelectorAll('.%s:checked').forEach(function(cb) {
-        var item = cb.dataset && cb.dataset.name
-          ? {
-              id: cb.dataset.id,
-              name: cb.dataset.name,
-              user: cb.dataset.user || ''
-            }
-          : cb.value;
-        selected.push(item);
-      });
-      if (selected.length > 0 &&
-          confirm('Delete ' + selected.length + ' %s(s)?')) {
-        Shiny.setInputValue('%s', selected, {priority: 'event'});
-      }
-    });
-
-    updateDeleteBtn();",
-    select_all_id,
-    checkbox_class,
-    disabled_filter,
-    checkbox_class,
-    delete_btn_id,
-    download_visibility,
-    selection_sync,
-    checkbox_class,
-    delete_btn_id,
-    checkbox_class,
-    item_type,
-    delete_input_id
   )
 }
