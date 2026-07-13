@@ -16,13 +16,14 @@ test_that("cnd_to_notif surfaces brace-bearing condition messages literally", {
   expect_identical(surfaced$type, "warning")
 })
 
-test_that("record_time_ago queries the backend, not a stored field", {
+test_that("record_time_ago formats the record's saved time", {
 
-  backend <- pins::board_temp(versioned = TRUE)
-  rack_create(backend, list(blocks = list()), id = "timed", name = "Timed")
+  saved <- as.POSIXct("2020-01-01 00:00:00", tz = "UTC")
+  rec <- new_rack_record(id = "wf", name = "WF", saved = saved)
 
-  rec <- new_rack_record(id = "timed", name = "Timed")
+  expect_equal(record_time_ago(rec), format_time_ago(saved))
+})
 
-  expect_null(rec$created)
-  expect_equal(record_time_ago(rec, backend), "Just now")
+test_that("record_time_ago is empty when the record has no saved time", {
+  expect_equal(record_time_ago(new_rack_record(id = "wf", name = "WF")), "")
 })
