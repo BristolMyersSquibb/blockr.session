@@ -476,129 +476,120 @@ test_that("last_saved returns NULL for missing pin", {
 
 # Connect: rack_list --------------------------------------------------------
 
-test_that("rack_list on Connect returns records, filters by tags", {
+test_that("rack_list on Connect lists members, probing each pin", {
 
   board <- mock_board_connect()
-
-  record_search <- function() {
-    rack_create(
-      board_a, blockr_test_session,
-      id = "blockr-fixture-board", name = "blockr-fixture-board"
-    )
-    upload_blockr_json(
-      board_a, list(x = 1), "blockr-fixture-plain",
-      versioned = TRUE,
-      metadata = list(format = "v1")
-    )
-    result <- pins::pin_search(board_a)
-    result[grepl("blockr-fixture-", result$name, fixed = TRUE), ]
-  }
-  search_result <- connect_fixture(
-    "pin_search",
-    record_search,
-    pin_cleanup(board_a, "blockr-fixture-board", "blockr-fixture-plain")
-  )
-
-  tagged <- lgl_ply(search_result$meta, has_tags)
-  expect_true(any(tagged))
-  expect_true(any(!tagged))
+  connect_membership$reset()
+  withr::defer(connect_membership$reset())
 
   local_mocked_bindings(
-    pin_search = function(...) search_result,
-    .package = "pins"
-  )
-  local_mocked_bindings(connect_content_titles = function(backend) list())
-
-  result <- rack_list(board)
-  expect_length(result, sum(tagged))
-
-  classes <- lgl_ply(result, inherits, "rack_record")
-  expect_true(all(classes))
-})
-
-test_that("rack_list on Connect splits user/id from qualified names", {
-
-  board <- mock_board_connect()
-
-  record_search <- function() {
-    rack_create(
-      board_a, blockr_test_session,
-      id = "blockr-fixture-board", name = "blockr-fixture-board"
-    )
-    upload_blockr_json(
-      board_a, list(x = 1), "blockr-fixture-plain",
-      versioned = TRUE,
-      metadata = list(format = "v1")
-    )
-    result <- pins::pin_search(board_a)
-    result[grepl("blockr-fixture-", result$name, fixed = TRUE), ]
-  }
-  search_result <- connect_fixture(
-    "pin_search",
-    record_search,
-    pin_cleanup(board_a, "blockr-fixture-board", "blockr-fixture-plain")
-  )
-
-  tagged <- lgl_ply(search_result$meta, has_tags)
-  tagged_names <- search_result$name[tagged]
-
-  local_mocked_bindings(
-    pin_search = function(...) search_result,
-    .package = "pins"
-  )
-  local_mocked_bindings(connect_content_titles = function(backend) list())
-
-  result <- rack_list(board)
-
-  actual_users <- chr_xtr(result, "user")
-  expected_users <- chr_xtr(strsplit(tagged_names, "/", fixed = TRUE), 1L)
-  expect_setequal(actual_users, expected_users)
-
-  actual_ids <- chr_xtr(result, "id")
-  expected_ids <- chr_xtr(strsplit(tagged_names, "/", fixed = TRUE), 2L)
-  expect_setequal(actual_ids, expected_ids)
-})
-
-test_that("rack_list on Connect names records from the content title", {
-
-  board <- mock_board_connect()
-
-  record_search <- function() {
-    rack_create(
-      board_a, blockr_test_session,
-      id = "blockr-fixture-board", name = "blockr-fixture-board"
-    )
-    upload_blockr_json(
-      board_a, list(x = 1), "blockr-fixture-plain",
-      versioned = TRUE,
-      metadata = list(format = "v1")
-    )
-    result <- pins::pin_search(board_a)
-    result[grepl("blockr-fixture-", result$name, fixed = TRUE), ]
-  }
-  search_result <- connect_fixture(
-    "pin_search",
-    record_search,
-    pin_cleanup(board_a, "blockr-fixture-board", "blockr-fixture-plain")
-  )
-
-  tagged <- lgl_ply(search_result$meta, has_tags)
-  slug <- chr_xtr(strsplit(search_result$name[tagged], "/", fixed = TRUE),
-                  2L)[[1L]]
-
-  local_mocked_bindings(
-    pin_search = function(...) search_result,
-    .package = "pins"
-  )
-  local_mocked_bindings(
-    connect_content_titles = function(backend) {
-      set_names(list("A Friendly Title"), slug)
+    connect_api = function(board, route, ...) {
+      if (grepl("GET /users", route, fixed = TRUE)) {
+        return(list(username = "user_a"))
+      }
+      list(
+        list(name = "wf-a", title = "WF A", content_category = "pin",
+             owner_guid = "g", last_deployed_time = "2020-01-01T00:00:00Z"),
+        list(name = "plain-b", title = "Plain B", content_category = "pin",
+             owner_guid = "g")
+      )
     }
   )
+  local_mocked_bindings(
+    pin_meta = function(board, name, ...) {
+      if (grepl("wf-a", name, fixed = TRUE)) {
+        list(tags = "blockr-session")
+      } else {
+        list(tags = character())
+      }
+    },
+    .package = "pins"
+  )
 
   result <- rack_list(board)
-  named <- Filter(function(r) identical(r$id, slug), result)
-  expect_equal(named[[1L]]$name, "A Friendly Title")
+
+  expect_length(result, 1L)
+  expect_equal(result[[1L]]$id, "wf-a")
+  expect_equal(result[[1L]]$name, "WF A")
+  expect_equal(result[[1L]]$user, "user_a")
+  expect_equal(result[[1L]]$saved, as.POSIXct("2020-01-01", tz = "UTC"))
+})
+
+test_that("rack_list on Connect skips non-pin content", {
+
+  board <- mock_board_connect()
+  connect_membership$reset()
+  withr::defer(connect_membership$reset())
+
+  local_mocked_bindings(
+    connect_api = function(board, route, ...) {
+      if (grepl("GET /users", route, fixed = TRUE)) {
+        return(list(username = "user_a"))
+      }
+      list(
+        list(name = "wf", title = "WF", content_category = "pin",
+             owner_guid = "g"),
+        list(name = "an-app", title = "App", content_category = "application")
+      )
+    }
+  )
+  local_mocked_bindings(
+    pin_meta = function(board, name, ...) list(tags = "blockr-session"),
+    .package = "pins"
+  )
+
+  result <- rack_list(board)
+
+  expect_length(result, 1L)
+  expect_equal(result[[1L]]$id, "wf")
+})
+
+test_that("connect_membership probes a pin once and caches it", {
+
+  board <- mock_board_connect()
+  connect_membership$reset()
+  withr::defer(connect_membership$reset())
+
+  probes <- 0L
+  local_mocked_bindings(
+    connect_api = function(board, route, ...) list(username = "user_a")
+  )
+  local_mocked_bindings(
+    pin_meta = function(board, name, ...) {
+      probes <<- probes + 1L
+      list(tags = "blockr-session")
+    },
+    .package = "pins"
+  )
+
+  item <- list(name = "wf", owner_guid = "g")
+  first <- connect_membership$lookup(board, item)
+  connect_membership$lookup(board, item)
+
+  expect_true(first$member)
+  expect_equal(first$user, "user_a")
+  expect_equal(probes, 1L)
+})
+
+test_that("rack_list on Connect with tags uses the pin_search path", {
+
+  board <- mock_board_connect()
+
+  local_mocked_bindings(
+    pin_search = function(...) {
+      df <- data.frame(name = "user_a/wf", stringsAsFactors = FALSE)
+      df$meta <- list(list(tags = c("blockr-session", "prod")))
+      df$created <- as.POSIXct("2020-01-01", tz = "UTC")
+      df
+    },
+    .package = "pins"
+  )
+  local_mocked_bindings(connect_content_titles = function(backend) list())
+
+  result <- rack_list(board, tags = "prod")
+
+  expect_length(result, 1L)
+  expect_equal(result[[1L]]$id, "wf")
 })
 
 # Connect: rack_info / rack_load --------------------------------------------

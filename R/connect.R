@@ -84,6 +84,44 @@ rack_rename.rack_id_pins_connect <- function(id, backend, name, ...) {
 #' @export
 rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
 
+  if (not_null(tags)) {
+    return(connect_list_tagged(backend, tags))
+  }
+
+  items <- tryCatch(
+    connect_api(backend, "GET /content"),
+    error = function(e) NULL
+  )
+
+  if (!length(items)) {
+    return(list())
+  }
+
+  records <- list()
+
+  for (item in items) {
+
+    if (!identical(item$content_category, "pin")) {
+      next
+    }
+
+    membership <- connect_membership$lookup(backend, item)
+
+    if (isTRUE(membership$member)) {
+      records[[length(records) + 1L]] <- new_rack_record(
+        id = item$name,
+        name = connect_item_title(item),
+        user = membership$user,
+        saved = connect_item_saved(item)
+      )
+    }
+  }
+
+  records
+}
+
+connect_list_tagged <- function(backend, tags) {
+
   df <- pins_session_search(backend, tags)
 
   if (nrow(df) == 0L) {
@@ -103,10 +141,69 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
       new_rack_record(
         id = slug,
         name = coal(titles[[slug]], slug, fail_all = FALSE),
-        user = parts[1L]
+        user = parts[1L],
+        saved = df$created[i]
       )
     }
   )
+}
+
+connect_item_title <- function(item) {
+  if (not_null(item$title) && nzchar(item$title)) item$title else item$name
+}
+
+connect_item_saved <- function(item) {
+
+  stamp <- item$last_deployed_time
+
+  if (is.null(stamp) || !nzchar(stamp)) {
+    return(NULL)
+  }
+
+  connect_parse_time(stamp)
+}
+
+# Whether a pin is a blockr workflow -- and who owns it -- is intrinsic to the
+# pin, identical for every viewer, so the check memoizes safely in one
+# process-wide map keyed by slug: a pin is inspected once, the first time a
+# listing meets it, and the result is reused thereafter.
+connect_membership <- local({
+
+  members <- list()
+
+  reset <- function() {
+    members <<- list()
+  }
+
+  lookup <- function(backend, item) {
+
+    slug <- item$name
+
+    if (is.null(members[[slug]])) {
+      members[[slug]] <<- connect_probe_membership(backend, item)
+    }
+
+    members[[slug]]
+  }
+
+  list(lookup = lookup, reset = reset)
+})
+
+connect_probe_membership <- function(backend, item) {
+
+  owner <- tryCatch(
+    connect_api(backend, "GET /users/{item$owner_guid}")$username,
+    error = function(e) NULL
+  )
+
+  owner <- coal(owner, backend$account, fail_all = FALSE)
+
+  meta <- tryCatch(
+    pins::pin_meta(backend, paste0(owner, "/", item$name)),
+    error = function(e) NULL
+  )
+
+  list(member = not_null(meta) && has_tags(meta), user = owner)
 }
 
 # rack_upload ---------------------------------------------------------------
@@ -320,4 +417,8 @@ connect_content_titles <- function(board) {
   }
 
   out
+}
+
+connect_parse_time <- function(x) {
+  as.POSIXct(x, format = "%Y-%m-%dT%H:%M:%OSZ", tz = "UTC")
 }
