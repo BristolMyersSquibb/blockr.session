@@ -122,7 +122,7 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
 
 connect_list_tagged <- function(backend, tags) {
 
-  df <- pins_session_search(backend, tags)
+  df <- filter_workflows(pins::pin_search(backend), tags)
 
   if (nrow(df) == 0L) {
     return(list())

@@ -243,6 +243,84 @@ test_that("rack_create persists and rack_list finds it as a record", {
   expect_equal(boards[[1L]]$name, "Test Board")
 })
 
+test_that("file-board rack_list skips unchanged pin directories (#85)", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  local_pin_cache$reset()
+  withr::defer(local_pin_cache$reset())
+
+  rack_create(backend, list(blocks = list()), id = "alpha", name = "Alpha")
+  rack_create(backend, list(blocks = list()), id = "beta", name = "Beta")
+
+  rack_list(backend)   # warms the per-directory cache
+
+  walked <- 0L
+  real_pin_meta <- pins::pin_meta
+  local_mocked_bindings(
+    pin_meta = function(...) {
+      walked <<- walked + 1L
+      real_pin_meta(...)
+    },
+    .package = "pins"
+  )
+
+  records <- rack_list(backend)
+
+  expect_equal(walked, 0L)
+  expect_length(records, 2L)
+  expect_setequal(chr_xtr(records, "name"), c("Alpha", "Beta"))
+})
+
+test_that("file-board rack_list re-walks only the changed pin (#85)", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  local_pin_cache$reset()
+  withr::defer(local_pin_cache$reset())
+
+  rack_create(backend, list(blocks = list()), id = "alpha", name = "Alpha")
+  rack_create(backend, list(blocks = list()), id = "beta", name = "Beta")
+
+  rack_list(backend)   # warms the cache for both pins
+
+  Sys.sleep(1.1)
+  rack_rename(new_rack_id_pins("alpha"), backend, "Alpha renamed")
+
+  walked <- character()
+  real_pin_meta <- pins::pin_meta
+  local_mocked_bindings(
+    pin_meta = function(board, name, ...) {
+      walked <<- c(walked, name)
+      real_pin_meta(board, name, ...)
+    },
+    .package = "pins"
+  )
+
+  records <- rack_list(backend)
+
+  expect_equal(walked, "alpha")
+
+  nm <- set_names(chr_xtr(records, "name"), chr_xtr(records, "id"))
+  expect_equal(nm[["alpha"]], "Alpha renamed")
+  expect_equal(nm[["beta"]], "Beta")
+})
+
+test_that("file-board rack_list tracks pins added and removed (#85)", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  local_pin_cache$reset()
+  withr::defer(local_pin_cache$reset())
+
+  rack_create(backend, list(blocks = list()), id = "alpha", name = "Alpha")
+  rack_create(backend, list(blocks = list()), id = "beta", name = "Beta")
+
+  expect_setequal(chr_xtr(rack_list(backend), "id"), c("alpha", "beta"))
+
+  rack_create(backend, list(blocks = list()), id = "gamma", name = "Gamma")
+  rack_purge(new_rack_id_pins("alpha"), backend)
+
+  expect_setequal(chr_xtr(rack_list(backend), "id"), c("beta", "gamma"))
+})
+
 test_that("a content hash is stored per version, read via rack_content_hash", {
 
   backend <- pins::board_temp(versioned = TRUE)

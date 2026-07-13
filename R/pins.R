@@ -135,28 +135,15 @@ rack_exists.rack_id_pins <- function(id, backend, ...) {
 
 #' @export
 rack_list.pins_board <- function(backend, tags = NULL, ...) {
-
-  df <- pins_session_search(backend, tags)
-
-  if (nrow(df) == 0L) {
-    return(list())
-  }
-
-  lapply(
-    seq_len(nrow(df)),
-    function(i) {
-      new_rack_record(
-        id = df$name[i],
-        name = coal(df$meta[[i]]$user$name, df$name[i], fail_all = FALSE),
-        saved = df$created[i]
-      )
-    }
-  )
+  as_rack_records(filter_workflows(pins::pin_search(backend), tags))
 }
 
-pins_session_search <- function(backend, tags) {
+#' @export
+rack_list.pins_board_folder <- function(backend, tags = NULL, ...) {
+  as_rack_records(filter_workflows(local_pin_cache$fetch(backend), tags))
+}
 
-  df <- pins::pin_search(backend)
+filter_workflows <- function(df, tags) {
 
   if (nrow(df) == 0L) {
     return(df)
@@ -179,6 +166,98 @@ pins_session_search <- function(backend, tags) {
   log_debug("rack_list matched {nrow(df)} pin(s)")
 
   df
+}
+
+as_rack_records <- function(x, ...) UseMethod("as_rack_records")
+
+#' @export
+as_rack_records.data.frame <- function(x, ...) {
+  lapply(
+    seq_len(nrow(x)),
+    function(i) {
+      new_rack_record(
+        id = x$name[i],
+        name = coal(x$meta[[i]]$user$name, x$name[i], fail_all = FALSE),
+        saved = x$created[i]
+      )
+    }
+  )
+}
+
+# A file board lists by walking each pin's version directories and reading the
+# latest data.txt. A pin's directory mtime changes exactly when a version is
+# added or removed -- every save, rename, tag edit or delete, since pins
+# versions are immutable and each mints or drops a version. So key each pin's
+# metadata on that mtime and re-walk only the pins that moved. The cache is
+# process-wide and keyed by board path; pin metadata is intrinsic to the pin on
+# disk (not session state), so sessions multiplexed on one process share it
+# safely and pick up each other's writes via the same mtime. Shiny runs one
+# session at a time on the R thread, so no locking is needed.
+local_pin_cache <- local({
+
+  cache <- new.env(parent = emptyenv())
+
+  reset <- function() {
+    rm(list = ls(cache, all.names = TRUE), envir = cache)
+  }
+
+  fetch <- function(backend) {
+
+    root <- normalizePath(backend[["path"]], mustWork = FALSE)
+    nms <- pins::pin_list(backend)
+
+    prev <- coal(cache[[root]], list(), fail_all = FALSE)
+    cur <- set_names(vector("list", length(nms)), nms)
+
+    for (nm in nms) {
+
+      mtime <- file.info(file.path(root, nm))[["mtime"]]
+      hit <- prev[[nm]]
+
+      if (not_null(hit) && !is.na(mtime) && identical(hit[["mtime"]], mtime)) {
+        cur[[nm]] <- hit
+        next
+      }
+
+      meta <- tryCatch(pins::pin_meta(backend, nm), error = function(e) NULL)
+
+      if (not_null(meta)) {
+        cur[[nm]] <- list(mtime = mtime, meta = meta)
+      }
+    }
+
+    cur <- cur[lengths(cur) > 0L]
+
+    cache[[root]] <- cur
+
+    pin_search_df(cur)
+  }
+
+  list(fetch = fetch, reset = reset)
+})
+
+pin_search_df <- function(cur) {
+
+  if (!length(cur)) {
+    return(empty_pin_search())
+  }
+
+  metas <- lst_xtr(cur, "meta")
+
+  out <- data.frame(name = names(cur), stringsAsFactors = FALSE)
+  out[["created"]] <- do.call(c, unname(lst_xtr(metas, "created")))
+  out[["meta"]] <- unname(metas)
+
+  out
+}
+
+empty_pin_search <- function() {
+
+  out <- data.frame(name = character(), stringsAsFactors = FALSE)
+  out[["created"]] <- .POSIXct(numeric())
+  out[["meta"]] <- list()
+
+  out
 }
 
 # rack_info -----------------------------------------------------------------
