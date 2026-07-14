@@ -96,21 +96,23 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$save_btn,
         {
-          # Save keys on the board's stable id: a loaded record (current_id),
-          # else the board id. It appends a version to that record if it exists,
-          # else creates it under the board id -- so the record id and board id
-          # match. Only Save As mints a fresh board id to fork.
-          target <- coal(
-            current_id(),
-            rack_id_from_input(backend, list(id = board$board_id))
-          )
+          # Save keys on the id the board carries in the URL (current_id): it
+          # appends a version to that record if it exists, else creates it. A
+          # board with no id in the URL was never saved and has no identity yet,
+          # so it mints one. It must not fall back to board$board_id: that is
+          # the app's Shiny module id, the same string for every session, so
+          # every unsaved board in every session would write versions into one
+          # shared record (each save overwriting the last).
+          target <- current_id()
 
-          exists <- isTRUE(
+          new_id <- if (is.null(target)) rand_names() else target$id
+
+          exists <- not_null(target) && isTRUE(
             tryCatch(rack_exists(target, backend), error = function(e) FALSE)
           )
 
           data <- tryCatch(
-            serialize_now(),
+            serialize_now(new_id),
             error = cnd_to_notif(type = "error")
           )
 
@@ -129,7 +131,7 @@ manage_project_server <- function(id, board, ...) {
             } else {
               rack_create(
                 backend, data,
-                id = board$board_id, name = board_name()
+                id = new_id, name = board_name()
               )
             },
             error = cnd_to_notif(type = "error")
@@ -147,6 +149,8 @@ manage_project_server <- function(id, board, ...) {
           save_status("Just now")
           refresh_trigger(refresh_trigger() + 1)
 
+          # point the session at the record: a freshly minted id only becomes
+          # the board's identity here, so the next save appends to it
           saved <- rack_id_from_input(
             backend,
             list(id = res$id, user = res$user)

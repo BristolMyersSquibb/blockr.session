@@ -128,8 +128,11 @@ test_that("save persists board to backend", {
     )
   )
 
-  saved <- pins::pin_search(backend)
-  expect_true("save-test" %in% saved$name)
+  saved <- pins::pin_list(backend)
+
+  expect_length(saved, 1L)
+  # the record is keyed on a minted id, never on the board's module id
+  expect_false("save-test" %in% saved)
 })
 
 test_that("recent_workflows renders the saved record keyed on its id (#61)", {
@@ -146,7 +149,10 @@ test_that("recent_workflows renders the saved record keyed on its id (#61)", {
       session$setInputs(save_btn = 1)
       html <- as.character(output$recent_workflows)
 
-      expect_true(any(grepl("rebel_eyas", html, fixed = TRUE)))
+      saved <- pins::pin_list(backend)
+
+      expect_length(saved, 1L)
+      expect_true(any(grepl(saved, html, fixed = TRUE)))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "rebel_eyas")
@@ -260,11 +266,13 @@ test_that("loading a record seeds the board name from the stored name (#61)", {
   )
 })
 
-test_that("a cold re-save appends to the existing board_id record (#61)", {
+test_that("saving an unsaved board mints an id instead of using board_id", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
-  # a prior session already saved this board id
+  # a prior session already saved a record under the app's board id: the board
+  # id is the Shiny module id, shared by every session, so a save from a board
+  # that was never loaded from a record must not touch it
   rack_create(backend, list(blocks = list()), id = "cold-board", name = "Cold")
 
   test_board <- new_board(
@@ -274,7 +282,7 @@ test_that("a cold re-save appends to the existing board_id record (#61)", {
   testServer(
     manage_project_server,
     {
-      # cold load (no current_id) but the board_id record exists -> append
+      # cold load (no current_id) -> create a fresh record, do not append
       session$setInputs(save_btn = 1)
       session$flushReact()
     },
@@ -283,8 +291,15 @@ test_that("a cold re-save appends to the existing board_id record (#61)", {
     )
   )
 
-  expect_length(pins::pin_list(backend), 1L)
-  expect_equal(nrow(pins::pin_versions(backend, "cold-board")), 2L)
+  pins <- pins::pin_list(backend)
+
+  expect_length(pins, 2L)
+  expect_equal(nrow(pins::pin_versions(backend, "cold-board")), 1L)
+
+  minted <- setdiff(pins, "cold-board")
+
+  expect_length(minted, 1L)
+  expect_false(identical(minted, "cold-board"))
 })
 
 test_that("saving after a content change creates a new version", {
@@ -311,7 +326,9 @@ test_that("saving after a content change creates a new version", {
     )
   )
 
-  versions <- pins::pin_versions(backend, "version-test")
+  # the first save minted the record id and pointed the session at it, so the
+  # second save appends to that record rather than minting again
+  versions <- pins::pin_versions(backend, pins::pin_list(backend))
   expect_equal(nrow(versions), 2)
 })
 
@@ -335,7 +352,7 @@ test_that("a no-op save does not create a new version (#61)", {
     )
   )
 
-  versions <- pins::pin_versions(backend, "noop-test")
+  versions <- pins::pin_versions(backend, pins::pin_list(backend))
   expect_equal(nrow(versions), 1)
 })
 
@@ -402,10 +419,10 @@ test_that("save_as forks the loaded board into a fresh record (#67)", {
   testServer(
     manage_project_server,
     {
+      prev_query("?id=fork-origin")     # the record the board was loaded from
       session$setInputs(save_btn = 1)
       session$flushReact()
 
-      prev_query("?id=fork-origin")
       session$setInputs(save_as_btn = 1)
       session$flushReact()
     },
@@ -449,7 +466,10 @@ test_that("loader resolve loads a saved board from the backend", {
 
   testServer(
     manage_project_server,
-    session$setInputs(save_btn = 1),
+    {
+      prev_query("?id=loader-test")
+      session$setInputs(save_btn = 1)
+    },
     args = list(
       board = reactiveValues(board = test_board, board_id = "loader-test")
     )
@@ -471,7 +491,10 @@ test_that("loader resolve still reads a legacy board_name handle", {
 
   testServer(
     manage_project_server,
-    session$setInputs(save_btn = 1),
+    {
+      prev_query("?id=legacy-test")
+      session$setInputs(save_btn = 1)
+    },
     args = list(
       board = reactiveValues(board = test_board, board_id = "legacy-test")
     )
@@ -505,7 +528,10 @@ test_that("loader GET user-scopes via the configured user_pins_board (#70)", {
     list(blockr.session_mgmt_backend = visitor_backend),
     testServer(
       manage_project_server,
-      session$setInputs(save_btn = 1),
+      {
+        prev_query("?id=scoped")
+        session$setInputs(save_btn = 1)
+      },
       args = list(
         board = reactiveValues(board = seed, board_id = "scoped")
       )
@@ -537,7 +563,10 @@ test_that("loader leaves a non-Connect backend untouched under a token (#70)", {
 
   testServer(
     manage_project_server,
-    session$setInputs(save_btn = 1),
+    {
+      prev_query("?id=shared")
+      session$setInputs(save_btn = 1)
+    },
     args = list(
       board = reactiveValues(board = seed, board_id = "shared")
     )
@@ -569,7 +598,10 @@ test_that("loader WS user-scopes via the configured user_pins_board (#70)", {
     list(blockr.session_mgmt_backend = visitor_backend),
     testServer(
       manage_project_server,
-      session$setInputs(save_btn = 1),
+      {
+        prev_query("?id=ws-scoped")
+        session$setInputs(save_btn = 1)
+      },
       args = list(
         board = reactiveValues(board = seed, board_id = "ws-scoped")
       )
@@ -600,6 +632,7 @@ test_that("version history marks the URL version as current (#19)", {
   testServer(
     manage_project_server,
     {
+      prev_query("?id=hist-current")
       session$setInputs(save_btn = 1)
       Sys.sleep(1)
       board$board <- new_board(
@@ -644,6 +677,7 @@ test_that("delete_workflows removes pin from backend", {
   testServer(
     manage_project_server,
     {
+      prev_query("?id=del-test")
       session$setInputs(save_btn = 1)
     },
     args = list(
@@ -679,6 +713,7 @@ test_that("delete_versions removes specific version", {
   testServer(
     manage_project_server,
     {
+      prev_query("?id=ver-del-test")
       session$setInputs(save_btn = 1)
       Sys.sleep(1)
       board$board <- new_board(
@@ -715,6 +750,7 @@ test_that("version_history output shows versions after save", {
   testServer(
     manage_project_server,
     {
+      prev_query("?id=vh-test")
       session$setInputs(save_btn = 1)
       Sys.sleep(1)
       session$setInputs(save_btn = 2)
@@ -763,6 +799,7 @@ test_that("view_all_versions triggers modal", {
   testServer(
     manage_project_server,
     {
+      prev_query("?id=vav-test")
       session$setInputs(save_btn = 1)
       Sys.sleep(1)
       session$setInputs(save_btn = 2)
@@ -858,6 +895,7 @@ test_that("sharing observers fire with sharing-capable backend", {
   testServer(
     manage_project_server,
     {
+      prev_query("?id=sharing-obs-test")
       session$setInputs(save_btn = 1)
 
       session$setInputs(visibility_change = "all")
