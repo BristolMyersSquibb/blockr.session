@@ -350,8 +350,7 @@ rack_shares.rack_id_pins_connect <- function(id, backend, ...) {
 
 #' @export
 rack_find_users.pins_board_connect <- function(backend, query, ...) {
-  result <- connect_api(backend, "GET /users", query = list(prefix = query))
-  result$results
+  connect_api_paged(backend, "GET /users", query = list(prefix = query))
 }
 
 # Connect API helpers (internal) -------------------------------------------
@@ -379,6 +378,42 @@ connect_api <- function(board, route, ..., body = NULL, query = NULL,
 
   resp <- httr2::req_perform(req)
   httr2::resp_body_json(resp)
+}
+
+connect_api_paged <- function(board, route, query = NULL,
+                              env = parent.frame()) {
+
+  page_size <- 500L
+
+  results <- list()
+  page <- 1L
+
+  repeat {
+
+    resp <- connect_api(
+      board, route,
+      query = c(query, list(page_number = page, page_size = page_size)),
+      env = env
+    )
+
+    batch <- resp$results
+
+    if (!length(batch)) {
+      break
+    }
+
+    results <- c(results, batch)
+
+    total <- resp$total
+
+    if (!is_number(total) || length(results) >= total) {
+      break
+    }
+
+    page <- page + 1L
+  }
+
+  results
 }
 
 connect_content_find <- function(board, name) {

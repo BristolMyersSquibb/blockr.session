@@ -1859,3 +1859,41 @@ test_that("rack_find_users on Connect returns users from API", {
   expect_equal(users[[1L]]$username, "user_a")
   expect_equal(users[[1L]]$first_name, "Alice")
 })
+
+test_that("rack_find_users pages through every result", {
+
+  board <- mock_board_connect()
+
+  pages <- list(
+    list(
+      results = list(
+        list(username = "user_1"),
+        list(username = "user_2")
+      ),
+      current_page = 1L,
+      total = 3L
+    ),
+    list(
+      results = list(
+        list(username = "user_3")
+      ),
+      current_page = 2L,
+      total = 3L
+    )
+  )
+
+  requested <- integer()
+
+  local_mocked_bindings(
+    connect_api = function(board, route, ..., query = NULL) {
+      page <- coal(query$page_number, 1L, fail_all = FALSE)
+      requested <<- c(requested, page)
+      pages[[page]]
+    }
+  )
+
+  users <- rack_find_users(board, "user")
+
+  expect_equal(chr_xtr(users, "username"), c("user_1", "user_2", "user_3"))
+  expect_equal(requested, c(1L, 2L))
+})
