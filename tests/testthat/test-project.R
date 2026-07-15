@@ -590,6 +590,38 @@ test_that("loader WS user-scopes via the configured user_pins_board (#70)", {
   expect_setequal(board_block_ids(loaded), "a")
 })
 
+test_that("loader refuses a non-blockr pin instead of blanking (#90)", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  upload_blockr_json(backend, list(x = 1), "not-blockr")
+
+  refused <- NULL
+  local_mocked_bindings(
+    refuse_incompatible_load = function(cnd, session) {
+      refused <<- conditionMessage(cnd)
+      invisible()
+    }
+  )
+
+  fake_session <- list(
+    request = list(),
+    clientData = list(url_search = "?id=not-blockr")
+  )
+
+  res <- rack_loader()$resolve(NULL, fake_session, new_board())
+
+  expect_s3_class(res, "board")
+  expect_length(board_block_ids(res), 0)
+  expect_false(is.null(refused))
+  expect_match(refused, "not compatible with blockr")
+})
+
+test_that("refuse_incompatible_load is a no-op without a session", {
+  expect_silent(refuse_incompatible_load(simpleCondition("x"), NULL))
+})
+
 test_that("version history marks the URL version as current (#19)", {
 
   backend <- pins::board_temp(versioned = TRUE)

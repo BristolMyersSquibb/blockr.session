@@ -950,7 +950,14 @@ rack_loader <- function() {
     # double fetch is deliberate: a shared cache keyed by the URL handle would
     # leak across sessions when backend credentials are visitor-scoped, and a
     # session-scoped cache cannot span the GET -> WS boundary.
-    board_ser <- tryCatch(rack_load(id, backend), error = function(e) NULL)
+    board_ser <- tryCatch(
+      rack_load(id, backend),
+      rack_load_invalid_tags = function(e) {
+        refuse_incompatible_load(e, session)
+        NULL
+      },
+      error = function(e) NULL
+    )
 
     if (is.null(board_ser)) {
       return(clear_board(default))
@@ -966,6 +973,24 @@ rack_loader <- function() {
   }
 
   board_loader(resolve)
+}
+
+# A URL may point at a pin that is not a blockr workflow -- directly, or because
+# the unconfigured listing shows every pin. Loading one aborts before the
+# deserializer; warn the visitor at the WS phase (where a session exists) rather
+# than silently handing back a cleared board.
+refuse_incompatible_load <- function(cnd, session) {
+
+  if (is.null(session)) {
+    return(invisible())
+  }
+
+  notify(
+    conditionMessage(cnd),
+    type = "warning",
+    glue = FALSE,
+    session = session
+  )
 }
 
 navigate_to_board <- function(id, backend, session) {

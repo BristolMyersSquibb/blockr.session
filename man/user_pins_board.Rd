@@ -31,4 +31,9 @@ environment (\code{CONNECT_SERVER} and \code{CONNECT_API_KEY}), a board on the
 application's own account.
 \item Otherwise (e.g. local development, off Connect), \code{\link[pins:board_local]{pins::board_local()}}.
 }
+
+Set the \code{session_connect_tag} \code{\link[blockr.core:blockr_option]{blockr.core::blockr_option()}} to an existing
+Connect tag's name (or a \code{"Category/Name"} path) to have the workflow listing
+filter server-side by that native tag; saves then apply it. Unset, the
+listing returns every pin and checks blockr membership only on load.
 }
