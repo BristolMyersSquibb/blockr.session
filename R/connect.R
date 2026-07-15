@@ -88,14 +88,40 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
     return(connect_list_tagged(backend, tags))
   }
 
+  tag_id <- connect_tag_id(backend)
+
+  if (not_null(tag_id)) {
+    return(connect_list_by_tag(backend, tag_id))
+  }
+
+  connect_list_all_pins(backend)
+}
+
+connect_list_by_tag <- function(backend, tag_id) {
+
+  items <- tryCatch(
+    connect_api(backend, "GET /tags/{tag_id}/content"),
+    error = function(e) NULL
+  )
+
+  connect_pin_records(backend, items)
+}
+
+# Without a configured tag the listing shows every pin and defers the blockr
+# membership check to load time. Whether an item is a pin is already in the
+# bulk response, so no pin is inspected -- a non-blockr pin is filtered out
+# only when someone tries to open it.
+connect_list_all_pins <- function(backend) {
+
   items <- tryCatch(
     connect_api(backend, "GET /content"),
     error = function(e) NULL
   )
 
-  if (!length(items)) {
-    return(list())
-  }
+  connect_pin_records(backend, items)
+}
+
+connect_pin_records <- function(backend, items) {
 
   records <- list()
 
@@ -105,19 +131,29 @@ rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
       next
     }
 
-    membership <- connect_membership$lookup(backend, item)
-
-    if (isTRUE(membership$member)) {
-      records[[length(records) + 1L]] <- new_rack_record(
-        id = item$name,
-        name = connect_item_title(item),
-        user = membership$user,
-        saved = connect_item_saved(item)
-      )
-    }
+    records[[length(records) + 1L]] <- new_rack_record(
+      id = item$name,
+      name = connect_item_title(item),
+      user = connect_owner_cache$lookup(backend, item$owner_guid),
+      saved = connect_item_saved(item)
+    )
   }
 
-  records
+  connect_sort_records(records)
+}
+
+connect_sort_records <- function(records) {
+
+  if (length(records) < 2L) {
+    return(records)
+  }
+
+  key <- dbl_ply(
+    records,
+    function(r) if (is.null(r$saved)) NA_real_ else as.numeric(r$saved)
+  )
+
+  records[order(key, decreasing = TRUE, na.last = TRUE)]
 }
 
 connect_list_tagged <- function(backend, tags) {
@@ -163,47 +199,144 @@ connect_item_saved <- function(item) {
   connect_parse_time(stamp)
 }
 
-# Whether a pin is a blockr workflow -- and who owns it -- is intrinsic to the
-# pin, identical for every viewer, so the check memoizes safely in one
-# process-wide map keyed by slug: a pin is inspected once, the first time a
-# listing meets it, and the result is reused thereafter.
-connect_membership <- local({
+# A pin's owner is intrinsic to the content and identical for every viewer, so
+# the guid -> username resolution memoizes process-wide, keyed by server and
+# owner guid: an owner is resolved once however many of their pins are listed.
+connect_owner_cache <- local({
 
-  members <- list()
+  owners <- list()
 
   reset <- function() {
-    members <<- list()
+    owners <<- list()
   }
 
-  lookup <- function(backend, item) {
+  lookup <- function(backend, guid) {
 
-    slug <- item$name
-
-    if (is.null(members[[slug]])) {
-      members[[slug]] <<- connect_probe_membership(backend, item)
+    if (is.null(guid) || !nzchar(guid)) {
+      return(backend$account)
     }
 
-    members[[slug]]
+    key <- paste(backend$url, guid, sep = "\r")
+
+    if (is.null(owners[[key]])) {
+      owners[[key]] <<- list(user = connect_owner_name(backend, guid))
+    }
+
+    owners[[key]]$user
   }
 
   list(lookup = lookup, reset = reset)
 })
 
-connect_probe_membership <- function(backend, item) {
+connect_owner_name <- function(backend, guid) {
 
-  owner <- tryCatch(
-    connect_api(backend, "GET /users/{item$owner_guid}")$username,
+  name <- tryCatch(
+    connect_api(backend, "GET /users/{guid}")$username,
     error = function(e) NULL
   )
 
-  owner <- coal(owner, backend$account, fail_all = FALSE)
+  coal(name, backend$account, fail_all = FALSE)
+}
 
-  meta <- tryCatch(
-    pins::pin_meta(backend, paste0(owner, "/", item$name)),
+# Connect native tags -------------------------------------------------------
+
+connect_tag_id <- function(backend) {
+
+  spec <- blockr_option("session_connect_tag", NULL)
+
+  if (is.null(spec) || !is_string(spec) || !nzchar(spec)) {
+    return(NULL)
+  }
+
+  connect_resolve_tag(backend, spec)
+}
+
+connect_resolve_tag <- function(backend, spec) {
+
+  tags <- tryCatch(
+    connect_api(backend, "GET /tags"),
     error = function(e) NULL
   )
 
-  list(member = not_null(meta) && has_tags(meta), user = owner)
+  if (!length(tags)) {
+    return(NULL)
+  }
+
+  parts <- strsplit(spec, "/", fixed = TRUE)[[1L]]
+  parts <- parts[nzchar(parts)]
+
+  if (!length(parts)) {
+    return(NULL)
+  }
+
+  if (length(parts) > 1L) {
+    return(connect_walk_tag_path(tags, parts))
+  }
+
+  hits <- Filter(function(t) identical(t$name, parts[[1L]]), tags)
+
+  if (!length(hits)) {
+    return(NULL)
+  }
+
+  if (length(hits) > 1L) {
+    blockr_warn(
+      "Connect tag {parts[[1L]]} matches multiple tags; ",
+      "qualify it as \"Category/Name\".",
+      class = "connect_tag_ambiguous"
+    )
+  }
+
+  hits[[1L]]$id
+}
+
+connect_walk_tag_path <- function(tags, parts) {
+
+  parent <- NULL
+
+  for (part in parts) {
+
+    hit <- Find(
+      function(t) identical(t$name, part) && identical(t$parent_id, parent),
+      tags
+    )
+
+    if (is.null(hit)) {
+      return(NULL)
+    }
+
+    parent <- hit$id
+  }
+
+  parent
+}
+
+connect_add_tag <- function(backend, guid, tag_id) {
+  connect_api(
+    backend, "POST /content/{guid}/tags",
+    body = list(tag_id = tag_id)
+  )
+}
+
+connect_apply_tag <- function(backend, slug) {
+
+  tag_id <- connect_tag_id(backend)
+
+  if (is.null(tag_id)) {
+    return(invisible())
+  }
+
+  tryCatch(
+    connect_add_tag(backend, connect_content_find(backend, slug)$guid, tag_id),
+    error = function(e) {
+      blockr_warn(
+        "Could not apply Connect tag to {slug}: {conditionMessage(e)}",
+        class = "connect_tag_apply_failed"
+      )
+    }
+  )
+
+  invisible()
 }
 
 # rack_upload ---------------------------------------------------------------
@@ -238,6 +371,8 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
     metadata = metadata,
     tags = blockr_session_tags()
   )
+
+  connect_apply_tag(backend, slug)
 
   base <- new_rack_id_pins_connect(backend$account, slug)
 

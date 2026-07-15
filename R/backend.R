@@ -14,6 +14,11 @@
 #'    application's own account.
 #' 3. Otherwise (e.g. local development, off Connect), [pins::board_local()].
 #'
+#' Set the `session_connect_tag` [blockr.core::blockr_option()] to an existing
+#' Connect tag's name (or a `"Category/Name"` path) to have the workflow listing
+#' filter server-side by that native tag; saves then apply it. Unset, the
+#' listing returns every pin and checks blockr membership only on load.
+#'
 #' @param session Shiny session whose request carries the Connect user session
 #'   token; defaults to the current reactive domain.
 #'

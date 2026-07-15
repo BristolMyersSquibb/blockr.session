@@ -554,11 +554,13 @@ test_that("last_saved returns NULL for missing pin", {
 
 # Connect: rack_list --------------------------------------------------------
 
-test_that("rack_list on Connect lists members, probing each pin", {
+test_that("rack_list on Connect lists every pin without a per-pin probe", {
 
   board <- mock_board_connect()
-  connect_membership$reset()
-  withr::defer(connect_membership$reset())
+  connect_owner_cache$reset()
+  withr::defer(connect_owner_cache$reset())
+
+  probed <- FALSE
 
   local_mocked_bindings(
     connect_api = function(board, route, ...) {
@@ -567,37 +569,36 @@ test_that("rack_list on Connect lists members, probing each pin", {
       }
       list(
         list(name = "wf-a", title = "WF A", content_category = "pin",
-             owner_guid = "g", last_deployed_time = "2020-01-01T00:00:00Z"),
+             owner_guid = "g", last_deployed_time = "2020-02-01T00:00:00Z"),
         list(name = "plain-b", title = "Plain B", content_category = "pin",
-             owner_guid = "g")
+             owner_guid = "g", last_deployed_time = "2020-01-01T00:00:00Z")
       )
     }
   )
   local_mocked_bindings(
-    pin_meta = function(board, name, ...) {
-      if (grepl("wf-a", name, fixed = TRUE)) {
-        list(tags = "blockr-session")
-      } else {
-        list(tags = character())
-      }
+    pin_meta = function(...) {
+      probed <<- TRUE
+      stop("must not probe a pin at list time")
     },
     .package = "pins"
   )
 
   result <- rack_list(board)
 
-  expect_length(result, 1L)
+  expect_false(probed)
+  expect_length(result, 2L)
   expect_equal(result[[1L]]$id, "wf-a")
+  expect_equal(result[[2L]]$id, "plain-b")
   expect_equal(result[[1L]]$name, "WF A")
   expect_equal(result[[1L]]$user, "user_a")
-  expect_equal(result[[1L]]$saved, as.POSIXct("2020-01-01", tz = "UTC"))
+  expect_equal(result[[1L]]$saved, as.POSIXct("2020-02-01", tz = "UTC"))
 })
 
 test_that("rack_list on Connect skips non-pin content", {
 
   board <- mock_board_connect()
-  connect_membership$reset()
-  withr::defer(connect_membership$reset())
+  connect_owner_cache$reset()
+  withr::defer(connect_owner_cache$reset())
 
   local_mocked_bindings(
     connect_api = function(board, route, ...) {
@@ -611,10 +612,6 @@ test_that("rack_list on Connect skips non-pin content", {
       )
     }
   )
-  local_mocked_bindings(
-    pin_meta = function(board, name, ...) list(tags = "blockr-session"),
-    .package = "pins"
-  )
 
   result <- rack_list(board)
 
@@ -622,31 +619,26 @@ test_that("rack_list on Connect skips non-pin content", {
   expect_equal(result[[1L]]$id, "wf")
 })
 
-test_that("connect_membership probes a pin once and caches it", {
+test_that("connect_owner_cache resolves an owner once and caches it", {
 
   board <- mock_board_connect()
-  connect_membership$reset()
-  withr::defer(connect_membership$reset())
+  connect_owner_cache$reset()
+  withr::defer(connect_owner_cache$reset())
 
-  probes <- 0L
+  calls <- 0L
   local_mocked_bindings(
-    connect_api = function(board, route, ...) list(username = "user_a")
-  )
-  local_mocked_bindings(
-    pin_meta = function(board, name, ...) {
-      probes <<- probes + 1L
-      list(tags = "blockr-session")
-    },
-    .package = "pins"
+    connect_api = function(board, route, ...) {
+      calls <<- calls + 1L
+      list(username = "user_a")
+    }
   )
 
-  item <- list(name = "wf", owner_guid = "g")
-  first <- connect_membership$lookup(board, item)
-  connect_membership$lookup(board, item)
+  first <- connect_owner_cache$lookup(board, "guid-1")
+  second <- connect_owner_cache$lookup(board, "guid-1")
 
-  expect_true(first$member)
-  expect_equal(first$user, "user_a")
-  expect_equal(probes, 1L)
+  expect_equal(first, "user_a")
+  expect_equal(second, "user_a")
+  expect_equal(calls, 1L)
 })
 
 test_that("rack_list on Connect with tags uses the pin_search path", {
