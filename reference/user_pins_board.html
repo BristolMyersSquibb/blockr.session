@@ -77,7 +77,11 @@ their own namespace (<code><a href="https://pins.rstudio.com/reference/board_con
 environment (<code>CONNECT_SERVER</code> and <code>CONNECT_API_KEY</code>), a board on the
 application's own account.</p></li>
 <li><p>Otherwise (e.g. local development, off Connect), <code><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">pins::board_local()</a></code>.</p></li>
-</ol></div>
+</ol><p>Set the <code>session_connect_tag</code> <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/blockr_option.html" class="external-link">blockr.core::blockr_option()</a></code> to an existing
+Connect tag's name (or a <code>"Category/Name"</code> path) to have the workflow listing
+filter server-side by that native tag; saves then apply it. Unset, the
+listing returns every pin and checks blockr membership only on load.</p>
+    </div>
 
   </div>
   <div class="col-md-3 hidden-xs hidden-sm" id="pkgdown-sidebar">
