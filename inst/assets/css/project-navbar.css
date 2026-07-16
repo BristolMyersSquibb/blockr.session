@@ -165,11 +165,33 @@
 }
 
 .blockr-workflow-noresults {
-  display: none;
   color: #9ca3af;
   font-style: italic;
   padding: 10px 12px;
   font-size: 13px;
+}
+
+/* Infinite-scroll sentinel: a scroll into view asks the server for more */
+.blockr-workflow-sentinel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+}
+
+.blockr-workflow-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #9ca3af;
+  border-radius: 50%;
+  animation: blockr-workflow-spin 0.7s linear infinite;
+}
+
+@keyframes blockr-workflow-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .blockr-workflow-item.blockr-hi {

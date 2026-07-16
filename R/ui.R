@@ -61,9 +61,9 @@ manage_project_ui <- function(id, x) {
           tags$div(
             id = ns("panel_workflows"),
             class = "blockr-tab-panel",
-            # Sticky search on top of an always-scrollable list: every workflow
-            # is shown most-recent-first (no recent-4 cap), and typing filters
-            # the list in place, client-side.
+            # Sticky search over the full workflow list. Typing filters
+            # server-side; the list renders a window and materializes more as
+            # you scroll (see project-navbar.js).
             tags$div(
               class = "blockr-workflow-search-wrap",
               tags$div(
@@ -75,19 +75,22 @@ manage_project_ui <- function(id, x) {
                   class = "blockr-workflow-search-input",
                   placeholder = "Search workflows...",
                   autocomplete = "off",
-                  oninput = "blockrFilterWorkflows(this)",
+                  oninput = sprintf(
+                    "Shiny.setInputValue('%s', this.value,
+                    {priority: 'event'})",
+                    ns("workflow_filter")
+                  ),
                   onkeydown = "blockrWorkflowSearchKey(event, this)"
                 ),
-                tags$span(class = "blockr-workflow-count")
+                tags$span(
+                  class = "blockr-workflow-count",
+                  textOutput(ns("workflow_count"), inline = TRUE)
+                )
               )
             ),
             tags$div(
               class = "blockr-workflows-list",
               uiOutput(ns("recent_workflows"))
-            ),
-            tags$div(
-              class = "blockr-workflow-noresults",
-              "No workflows match your search"
             ),
             tags$div(
               class = "blockr-tab-footer",
