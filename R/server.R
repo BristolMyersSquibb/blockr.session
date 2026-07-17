@@ -210,19 +210,9 @@ manage_project_server <- function(id, board, ...) {
         250
       )
 
-      filtered_workflows <- reactive({
-
-        query <- tolower(trimws(workflow_query()))
-
-        if (!nzchar(query)) {
-          return(all_workflows())
-        }
-
-        Filter(
-          function(wf) grepl(query, tolower(coal(wf$name, "")), fixed = TRUE),
-          all_workflows()
-        )
-      })
+      filtered_workflows <- reactive(
+        search_workflows(all_workflows(), workflow_query())
+      )
 
       workflow_batch <- 10L
       n_shown <- reactiveVal(workflow_batch)
@@ -304,21 +294,188 @@ manage_project_server <- function(id, board, ...) {
         )
       )
 
-      # VIEW ALL WORKFLOWS modal
+      # MANAGE WORKFLOWS modal: a server-side window of the filtered list, with
+      # selection tracked server-side so select-all and delete act over the
+      # whole filtered set rather than the loaded rows.
+
+      modal_query <- debounce(
+        reactive(coal(input$modal_workflow_filter, "")),
+        250
+      )
+
+      modal_filtered <- reactive(
+        search_workflows(all_workflows(), modal_query())
+      )
+
+      modal_n_shown <- reactiveVal(workflow_batch)
+      modal_selection <- reactiveVal(character())
+      modal_open <- reactiveVal(FALSE)
+
       observeEvent(
         input$view_all_workflows,
         {
-          workflows <- tryCatch(
-            rack_list(backend),
-            error = function(e) list()
-          )
-
-          if (length(workflows) == 0L) {
+          if (length(all_workflows()) == 0L) {
             notify("No saved workflows", type = "message")
             return()
           }
 
-          show_workflows_modal(workflows, backend, session)
+          modal_n_shown(workflow_batch)
+          modal_selection(character())
+          modal_open(TRUE)
+
+          show_workflows_modal(session)
+        }
+      )
+
+      observeEvent(input$modal_closed, modal_open(FALSE))
+
+      observeEvent(
+        modal_query(),
+        {
+          modal_n_shown(workflow_batch)
+          modal_selection(character())
+        }
+      )
+
+      observeEvent(
+        input$modal_load_more,
+        {
+          total <- length(modal_filtered())
+          modal_n_shown(min(modal_n_shown() + workflow_batch, total))
+        }
+      )
+
+      observeEvent(
+        input$modal_toggle,
+        {
+          tog <- input$modal_toggle
+
+          if (isTRUE(tog$checked)) {
+            modal_selection(union(modal_selection(), tog$id))
+          } else {
+            modal_selection(setdiff(modal_selection(), tog$id))
+          }
+        }
+      )
+
+      observeEvent(
+        input$modal_select_all,
+        {
+          if (isTRUE(input$modal_select_all$checked)) {
+            modal_selection(chr_xtr(modal_filtered(), "id"))
+          } else {
+            modal_selection(character())
+          }
+        }
+      )
+
+      observe(
+        {
+          if (!isTRUE(modal_open())) {
+            return()
+          }
+
+          session$sendCustomMessage(
+            "blockr-modal-selection",
+            list(
+              count = length(
+                modal_selected_records(modal_selection(), all_workflows())
+              ),
+              total = length(modal_filtered())
+            )
+          )
+        }
+      )
+
+      observeEvent(
+        input$modal_delete,
+        {
+          records <- modal_selected_records(modal_selection(), all_workflows())
+          req(length(records) > 0L)
+
+          deleted <- delete_rack_records(records, backend, session)
+
+          if (deleted > 0L) {
+            notify(paste("Deleted", deleted, "workflow(s)"), type = "message")
+            modal_selection(character())
+            refresh_trigger(refresh_trigger() + 1)
+          }
+        }
+      )
+
+      output$modal_workflow_count <- renderText(
+        {
+          total <- length(all_workflows())
+
+          if (total == 0L) {
+            return("")
+          }
+
+          if (nzchar(trimws(modal_query()))) {
+            paste0(length(modal_filtered()), " / ", total)
+          } else {
+            as.character(total)
+          }
+        }
+      )
+
+      output$workflows_modal_rows <- renderUI(
+        {
+          if (length(all_workflows()) == 0L) {
+            return(modal_message_row("No saved workflows"))
+          }
+
+          matches <- modal_filtered()
+
+          if (length(matches) == 0L) {
+            return(modal_message_row("No workflows match your search"))
+          }
+
+          shown <- matches[seq_len(min(modal_n_shown(), length(matches)))]
+
+          tagList(
+            lapply(
+              shown, workflow_modal_row, isolate(modal_selection()),
+              backend, session$ns
+            ),
+            if (length(matches) > length(shown)) {
+              modal_sentinel_row(session$ns("modal_load_more"))
+            }
+          )
+        }
+      )
+
+      output$download_selected <- downloadHandler(
+        filename = function() {
+          records <- modal_selected_records(modal_selection(), all_workflows())
+          if (length(records) == 1L) {
+            paste0(records[[1L]]$name, ".json")
+          } else {
+            "workflows.zip"
+          }
+        },
+        content = function(file) {
+          records <- modal_selected_records(modal_selection(), all_workflows())
+          req(length(records) > 0L)
+
+          sel <- lapply(
+            records,
+            function(wf) {
+              list(id = wf$id, name = wf$name, user = coal(wf$user, ""))
+            }
+          )
+
+          tryCatch(
+            file.copy(prepare_download(sel, backend), file),
+            error = function(e) {
+              notify(
+                paste("Download failed:", conditionMessage(e)),
+                type = "error",
+                glue = FALSE,
+                session = session
+              )
+            }
+          )
         }
       )
 
@@ -326,32 +483,12 @@ manage_project_server <- function(id, board, ...) {
         input$delete_workflows,
         {
           req(input$delete_workflows)
-          sel <- normalize_js_input(input$delete_workflows)
-          deleted <- 0
-          for (wf in sel) {
-            id <- rack_id_from_input(backend, wf)
-            res <- tryCatch(
-              {
-                rack_purge(id, backend)
-                deleted <- deleted + 1
-                TRUE
-              },
-              error = function(e) {
-                notify(
-                  paste("Failed to delete:", coal(wf$name, wf$id,
-                                                  fail_all = FALSE)),
-                  type = "error"
-                )
-                FALSE
-              }
-            )
-          }
+
+          records <- normalize_js_input(input$delete_workflows)
+          deleted <- delete_rack_records(records, backend, session)
+
           if (deleted > 0) {
-            notify(
-              paste("Deleted", deleted, "workflow(s)"),
-              type = "message"
-            )
-            removeModal()
+            notify(paste("Deleted", deleted, "workflow(s)"), type = "message")
             refresh_trigger(refresh_trigger() + 1)
           }
         }
@@ -1033,6 +1170,20 @@ refuse_incompatible_load <- function(cnd, session) {
   )
 }
 
+search_workflows <- function(workflows, query) {
+
+  query <- tolower(trimws(query))
+
+  if (!nzchar(query)) {
+    return(workflows)
+  }
+
+  Filter(
+    function(wf) grepl(query, tolower(coal(wf$name, "")), fixed = TRUE),
+    workflows
+  )
+}
+
 workflow_item <- function(wf, backend, ns) {
 
   tags$div(
@@ -1096,105 +1247,138 @@ hide_modal_js <- function(modal_id) {
   )
 }
 
-show_workflows_modal <- function(workflows, backend, session) {
+modal_selected_records <- function(ids, workflows) {
+  Filter(function(wf) wf$id %in% ids, workflows)
+}
 
-  rows <- lapply(
-    seq_along(workflows),
-    function(i) {
-      wf <- workflows[[i]]
-      wf_time <- record_time_ago(wf)
-      tags$tr(
-        class = "blockr-workflow-row",
-        `data-name` = tolower(wf$name),
-        `data-user` = coal(wf$user, ""),
-        tags$td(
-          class = "blockr-wf-checkbox",
-          tags$input(
-            type = "checkbox",
-            class = "blockr-wf-select",
-            `data-id` = wf$id,
-            `data-name` = wf$name,
-            `data-user` = coal(wf$user, "")
-          )
+delete_rack_records <- function(records, backend, session) {
+
+  deleted <- 0L
+
+  for (wf in records) {
+    ok <- tryCatch(
+      {
+        rack_purge(rack_id_from_input(backend, wf), backend)
+        TRUE
+      },
+      error = function(e) {
+        notify(
+          paste("Failed to delete:", coal(wf$name, wf$id, fail_all = FALSE)),
+          type = "error",
+          session = session
+        )
+        FALSE
+      }
+    )
+
+    if (ok) {
+      deleted <- deleted + 1L
+    }
+  }
+
+  deleted
+}
+
+workflow_modal_row <- function(wf, selected, backend, ns) {
+
+  tags$tr(
+    class = "blockr-workflow-row",
+    tags$td(
+      class = "blockr-wf-checkbox",
+      tags$input(
+        type = "checkbox",
+        class = "blockr-wf-select",
+        `data-id` = wf$id,
+        checked = if (wf$id %in% selected) "checked"
+      )
+    ),
+    tags$td(class = "blockr-wf-name", wf$name),
+    tags$td(class = "blockr-wf-time", record_time_ago(wf)),
+    tags$td(
+      class = "blockr-wf-action",
+      tags$div(
+        class = "blockr-wf-row-actions",
+        tags$button(
+          class = "btn btn-sm btn-primary",
+          onclick = paste0(
+            shiny_input_obj_js(
+              ns("load_workflow"),
+              id = wf$id,
+              user = coal(wf$user, "")
+            ),
+            "\n",
+            hide_modal_js(ns("workflows_modal"))
+          ),
+          "Load"
         ),
-        tags$td(class = "blockr-wf-name", wf$name),
-        tags$td(class = "blockr-wf-time", wf_time),
-        tags$td(
-          class = "blockr-wf-action",
-          tags$div(
-            class = "blockr-wf-row-actions",
-            tags$button(
-              class = "btn btn-sm btn-primary",
-              onclick = paste0(
-                shiny_input_obj_js(
-                  session$ns("load_workflow"),
-                  id = wf$id,
-                  user = coal(wf$user, "")
-                ),
-                "\n",
-                hide_modal_js(session$ns("workflows_modal"))
-              ),
-              "Load"
-            ),
-            tags$a(
-              class = "btn btn-sm btn-outline-secondary",
-              href = board_query_string(wf, backend),
-              target = "_blank",
-              bsicons::bs_icon(
-                "box-arrow-up-right",
-                size = "0.85em"
-              )
-            ),
-            tags$button(
-              class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
-              title = "Download",
-              onclick = sprintf(
-                "Shiny.setInputValue('%s', [{id: '%s', name: '%s',
-                  user: '%s'}], {priority: 'event'});
-                  setTimeout(function() {
-                    document.getElementById('%s').click();
-                  }, 100);",
-                session$ns("wf_selection"),
-                wf$id,
-                wf$name,
-                coal(wf$user, ""),
-                session$ns("download_workflows")
-              ),
-              bsicons::bs_icon("download")
-            ),
-            tags$button(
-              class = "btn btn-sm btn-outline-danger blockr-wf-row-btn",
-              title = "Delete",
-              onclick = sprintf(
-                "if (confirm('Delete %s?')) {
-                  Shiny.setInputValue('%s',
-                    [{id: '%s', name: '%s', user: '%s'}],
-                    {priority: 'event'});
-                }",
-                wf$name,
-                session$ns("delete_workflows"),
-                wf$id,
-                wf$name,
-                coal(wf$user, "")
-              ),
-              bsicons::bs_icon("trash")
-            )
-          )
+        tags$a(
+          class = "btn btn-sm btn-outline-secondary",
+          href = board_query_string(wf, backend),
+          target = "_blank",
+          bsicons::bs_icon("box-arrow-up-right", size = "0.85em")
+        ),
+        tags$button(
+          class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
+          title = "Download",
+          onclick = sprintf(
+            "Shiny.setInputValue('%s', [{id: '%s', name: '%s',
+              user: '%s'}], {priority: 'event'});
+              setTimeout(function() {
+                document.getElementById('%s').click();
+              }, 100);",
+            ns("wf_selection"),
+            wf$id,
+            wf$name,
+            coal(wf$user, ""),
+            ns("download_workflows")
+          ),
+          bsicons::bs_icon("download")
+        ),
+        tags$button(
+          class = "btn btn-sm btn-outline-danger blockr-wf-row-btn",
+          title = "Delete",
+          onclick = sprintf(
+            "if (confirm('Delete %s?')) {
+              Shiny.setInputValue('%s',
+                [{id: '%s', name: '%s', user: '%s'}],
+                {priority: 'event'});
+            }",
+            wf$name,
+            ns("delete_workflows"),
+            wf$id,
+            wf$name,
+            coal(wf$user, "")
+          ),
+          bsicons::bs_icon("trash")
         )
       )
-    }
+    )
   )
+}
 
-  modal_js <- modal_table_js(
-    select_all_id = session$ns("select_all"),
-    checkbox_class = "blockr-wf-select",
-    delete_btn_id = session$ns("delete_workflows_btn"),
-    delete_input_id = session$ns("delete_workflows"),
-    item_type = "workflow",
-    search_id = session$ns("workflow_search"),
-    download_btn_id = session$ns("download_workflows_btn"),
-    selection_input_id = session$ns("wf_selection")
+modal_sentinel_row <- function(input_id) {
+  tags$tr(
+    class = "blockr-wf-modal-sentinel",
+    `data-input-id` = input_id,
+    tags$td(
+      colspan = "4",
+      tags$div(
+        class = "blockr-wf-modal-loader",
+        tags$div(class = "blockr-workflow-spinner")
+      )
+    )
   )
+}
+
+modal_message_row <- function(text) {
+  tags$tr(
+    tags$td(class = "blockr-wf-modal-message", colspan = "4", text)
+  )
+}
+
+show_workflows_modal <- function(session) {
+
+  ns <- session$ns
 
   showModal(
     modalDialog(
@@ -1203,23 +1387,31 @@ show_workflows_modal <- function(workflows, backend, session) {
       easyClose = TRUE,
       footer = NULL,
       tags$div(
-        id = session$ns("workflows_modal"),
-        class = "blockr-workflows-modal",
+        id = ns("workflows_modal"),
+        class = "blockr-workflows-modal blockr-wf-manage-modal",
+        `data-toggle-input` = ns("modal_toggle"),
+        `data-select-all-input` = ns("modal_select_all"),
+        `data-filter-input` = ns("modal_workflow_filter"),
+        `data-delete-input` = ns("modal_delete"),
+        `data-closed-input` = ns("modal_closed"),
+        `data-delete-btn` = ns("delete_selected_btn"),
+        `data-download-wrap` = ns("download_selected_wrap"),
         tags$div(
           class = "blockr-wf-header",
-          tags$h5("All Workflows"),
+          tags$h5("Manage Workflows"),
           tags$div(
             class = "blockr-wf-header-actions",
             tags$button(
-              id = session$ns("delete_workflows_btn"),
+              id = ns("delete_selected_btn"),
               class = "btn btn-sm btn-outline-danger",
               style = "display: none;",
               "Delete"
             ),
             tags$div(
-              id = session$ns("download_workflows_btn"),
+              id = ns("download_selected_wrap"),
+              style = "visibility: hidden; position: absolute;",
               downloadButton(
-                session$ns("download_workflows"),
+                ns("download_selected"),
                 label = "Download",
                 class = "btn-sm btn-primary"
               )
@@ -1227,7 +1419,7 @@ show_workflows_modal <- function(workflows, backend, session) {
             tags$div(
               class = "blockr-wf-upload-compact",
               fileInput(
-                session$ns("upload_file"),
+                ns("upload_file"),
                 label = NULL,
                 accept = ".json",
                 multiple = TRUE,
@@ -1235,11 +1427,23 @@ show_workflows_modal <- function(workflows, backend, session) {
                 placeholder = NULL
               )
             ),
-            tags$input(
-              type = "text",
-              id = session$ns("workflow_search"),
-              class = "blockr-wf-search",
-              placeholder = "Search workflows..."
+            tags$div(
+              class = "blockr-wf-search-wrap",
+              tags$input(
+                type = "text",
+                id = ns("modal_workflow_filter"),
+                class = "blockr-wf-search",
+                placeholder = "Search workflows...",
+                autocomplete = "off",
+                oninput = sprintf(
+                  "Shiny.setInputValue('%s', this.value, {priority: 'event'})",
+                  ns("modal_workflow_filter")
+                )
+              ),
+              tags$span(
+                class = "blockr-wf-count",
+                textOutput(ns("modal_workflow_count"), inline = TRUE)
+              )
             )
           )
         ),
@@ -1253,7 +1457,7 @@ show_workflows_modal <- function(workflows, backend, session) {
                   class = "blockr-wf-checkbox",
                   tags$input(
                     type = "checkbox",
-                    id = session$ns("select_all")
+                    class = "blockr-wf-select-all"
                   )
                 ),
                 tags$th("Name"),
@@ -1261,10 +1465,13 @@ show_workflows_modal <- function(workflows, backend, session) {
                 tags$th("")
               )
             ),
-            tags$tbody(rows)
+            uiOutput(ns("workflows_modal_rows"), container = tags$tbody)
           )
         ),
-        tags$script(HTML(modal_js))
+        tags$div(
+          style = "display: none;",
+          downloadButton(ns("download_workflows"), label = NULL)
+        )
       )
     )
   )
@@ -1384,7 +1591,7 @@ show_versions_modal <- function(id, versions, session, backend, name = NULL) {
     }
   )
 
-  modal_js <- modal_table_js(
+  modal_js <- versions_modal_js(
     select_all_id = session$ns("select_all_versions"),
     checkbox_class = "blockr-version-select",
     delete_btn_id = session$ns("delete_versions_btn"),
@@ -1452,27 +1659,10 @@ show_versions_modal <- function(id, versions, session, backend, name = NULL) {
   )
 }
 
-modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
-                           delete_input_id, item_type = "item",
-                           search_id = NULL, has_disabled = FALSE,
-                           download_btn_id = NULL,
-                           selection_input_id = NULL) {
-
-  if (!is.null(search_id)) {
-    search_block <- sprintf(
-      "document.getElementById('%s').addEventListener('input', function(e) {
-        var filter = e.target.value.toLowerCase();
-        var rows = document.querySelectorAll('.blockr-workflow-row');
-        rows.forEach(function(row) {
-          var name = row.getAttribute('data-name');
-          row.style.display = name.includes(filter) ? '' : 'none';
-        });
-      });",
-      search_id
-    )
-  } else {
-    search_block <- ""
-  }
+versions_modal_js <- function(select_all_id, checkbox_class, delete_btn_id,
+                              delete_input_id, item_type = "item",
+                              has_disabled = FALSE, download_btn_id = NULL,
+                              selection_input_id = NULL) {
 
   if (has_disabled) {
     disabled_filter <- ":not(:disabled)"
@@ -1519,8 +1709,7 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
   }
 
   sprintf(
-    "%s
-    document.getElementById('%s').addEventListener('change', function(e) {
+    "document.getElementById('%s').addEventListener('change', function(e) {
       var checkboxes = document.querySelectorAll('.%s%s');
       checkboxes.forEach(function(cb) { cb.checked = e.target.checked });
       updateDeleteBtn();
@@ -1558,7 +1747,6 @@ modal_table_js <- function(select_all_id, checkbox_class, delete_btn_id,
     });
 
     updateDeleteBtn();",
-    search_block,
     select_all_id,
     checkbox_class,
     disabled_filter,
