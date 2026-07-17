@@ -616,9 +616,35 @@
   color: #9ca3af;
 }
 
+.blockr-wf-search-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.blockr-wf-count {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  min-width: 1.5em;
+}
+
 .blockr-wf-table-container {
   max-height: 400px;
   overflow-y: auto;
+}
+
+.blockr-wf-modal-message {
+  padding: 24px 16px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.blockr-wf-modal-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
 }
 
 .blockr-wf-table {
