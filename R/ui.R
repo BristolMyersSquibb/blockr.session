@@ -61,7 +61,33 @@ manage_project_ui <- function(id, x) {
           tags$div(
             id = ns("panel_workflows"),
             class = "blockr-tab-panel",
-            tags$div(class = "blockr-workflows-section", "RECENT"),
+            # Sticky search over the full workflow list. Typing filters
+            # server-side; the list renders a window and materializes more as
+            # you scroll (see project-navbar.js).
+            tags$div(
+              class = "blockr-workflow-search-wrap",
+              tags$div(
+                class = "blockr-workflow-search",
+                bsicons::bs_icon("search", size = "0.9em"),
+                tags$input(
+                  id = ns("workflow_filter"),
+                  type = "text",
+                  class = "blockr-workflow-search-input",
+                  placeholder = "Search workflows...",
+                  autocomplete = "off",
+                  oninput = sprintf(
+                    "Shiny.setInputValue('%s', this.value,
+                    {priority: 'event'})",
+                    ns("workflow_filter")
+                  ),
+                  onkeydown = "blockrWorkflowSearchKey(event, this)"
+                ),
+                tags$span(
+                  class = "blockr-workflow-count",
+                  textOutput(ns("workflow_count"), inline = TRUE)
+                )
+              )
+            ),
             tags$div(
               class = "blockr-workflows-list",
               uiOutput(ns("recent_workflows"))
@@ -76,7 +102,7 @@ manage_project_ui <- function(id, x) {
                   return false;",
                   ns("view_all_workflows")
                 ),
-                "View all workflows ",
+                "Manage workflows ",
                 bsicons::bs_icon("arrow-right")
               )
             )

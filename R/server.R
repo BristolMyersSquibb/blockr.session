@@ -200,52 +200,92 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      all_workflows <- reactive({
+        refresh_trigger()
+        tryCatch(rack_list(backend), error = function(e) list())
+      })
+
+      workflow_query <- debounce(
+        reactive(coal(input$workflow_filter, "")),
+        250
+      )
+
+      filtered_workflows <- reactive({
+
+        query <- tolower(trimws(workflow_query()))
+
+        if (!nzchar(query)) {
+          return(all_workflows())
+        }
+
+        Filter(
+          function(wf) grepl(query, tolower(coal(wf$name, "")), fixed = TRUE),
+          all_workflows()
+        )
+      })
+
+      workflow_batch <- 10L
+      n_shown <- reactiveVal(workflow_batch)
+
+      observeEvent(
+        list(workflow_query(), refresh_trigger()),
+        n_shown(workflow_batch)
+      )
+
+      observeEvent(
+        input$workflow_load_more,
+        {
+          total <- length(filtered_workflows())
+          n_shown(min(n_shown() + workflow_batch, total))
+        }
+      )
+
+      output$workflow_count <- renderText(
+        {
+          total <- length(all_workflows())
+
+          if (total == 0L) {
+            return("")
+          }
+
+          if (nzchar(trimws(workflow_query()))) {
+            paste0(length(filtered_workflows()), " / ", total)
+          } else {
+            as.character(total)
+          }
+        }
+      )
+
       output$recent_workflows <- renderUI(
         {
-          refresh_trigger()
-
-          workflows <- tryCatch(
-            rack_list(backend),
-            error = function(e) list()
-          )
-
-          if (length(workflows) == 0L) {
+          if (length(all_workflows()) == 0L) {
             return(
               tags$div(class = "blockr-workflow-empty", "No saved workflows")
             )
           }
 
-          tagList(
-            lapply(
-              seq_len(min(length(workflows), 4L)),
-              function(i) {
-                wf <- workflows[[i]]
-                wf_time <- record_time_ago(wf)
-                tags$div(
-                  class = "blockr-workflow-item",
-                  onclick = shiny_input_obj_js(
-                    session$ns("load_workflow"),
-                    id = wf$id,
-                    user = coal(wf$user, "")
-                  ),
-                  tags$div(
-                    class = "blockr-workflow-item-content",
-                    tags$div(
-                      class = "blockr-workflow-name",
-                      wf$name
-                    ),
-                    tags$div(class = "blockr-workflow-meta", wf_time)
-                  ),
-                  tags$a(
-                    class = "blockr-open-newtab",
-                    href = board_query_string(wf, backend),
-                    target = "_blank",
-                    onclick = "event.stopPropagation();",
-                    bsicons::bs_icon("box-arrow-up-right", size = "0.75em")
-                  )
-                )
-              }
+          matches <- filtered_workflows()
+
+          if (length(matches) == 0L) {
+            return(
+              tags$div(
+                class = "blockr-workflow-noresults",
+                "No workflows match your search"
+              )
             )
+          }
+
+          shown <- matches[seq_len(min(n_shown(), length(matches)))]
+
+          tagList(
+            lapply(shown, workflow_item, backend, session$ns),
+            if (length(matches) > length(shown)) {
+              tags$div(
+                class = "blockr-workflow-sentinel",
+                `data-input-id` = session$ns("workflow_load_more"),
+                tags$div(class = "blockr-workflow-spinner")
+              )
+            }
           )
         }
       )
@@ -990,6 +1030,30 @@ refuse_incompatible_load <- function(cnd, session) {
     type = "warning",
     glue = FALSE,
     session = session
+  )
+}
+
+workflow_item <- function(wf, backend, ns) {
+
+  tags$div(
+    class = "blockr-workflow-item",
+    onclick = shiny_input_obj_js(
+      ns("load_workflow"),
+      id = wf$id,
+      user = coal(wf$user, "")
+    ),
+    tags$div(
+      class = "blockr-workflow-item-content",
+      tags$div(class = "blockr-workflow-name", wf$name),
+      tags$div(class = "blockr-workflow-meta", record_time_ago(wf))
+    ),
+    tags$a(
+      class = "blockr-open-newtab",
+      href = board_query_string(wf, backend),
+      target = "_blank",
+      onclick = "event.stopPropagation();",
+      bsicons::bs_icon("box-arrow-up-right", size = "0.75em")
+    )
   )
 }
 

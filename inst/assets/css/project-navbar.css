@@ -32,6 +32,10 @@
   border-bottom: 1px solid #e5e7eb;
   background: white;
   padding: 0 8px;
+  /* the tab bar is the top element; round its corners so the dropdown's
+     rounded top corners aren't squared off by its background */
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
 }
 
 .blockr-tab {
@@ -102,7 +106,96 @@
 }
 
 .blockr-workflows-list {
-  margin-bottom: 16px;
+  margin-bottom: 8px;
+}
+
+/* Sticky search on top of the scrollable workflow list (variant A) */
+.blockr-workflow-search-wrap {
+  position: sticky;
+  top: -8px;
+  z-index: 3;
+  background: #fff;
+  margin: -8px -8px 8px;
+  padding: 8px;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.blockr-workflow-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f3f4f6;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 10px;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.blockr-workflow-search:focus-within {
+  background: #fff;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12);
+}
+
+.blockr-workflow-search svg {
+  color: #9ca3af;
+  flex: none;
+}
+
+.blockr-workflow-search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  width: 100%;
+  color: #111827;
+  font-family: inherit;
+}
+
+.blockr-workflow-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.blockr-workflow-count {
+  font-size: 11px;
+  color: #9ca3af;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.blockr-workflow-noresults {
+  color: #9ca3af;
+  font-style: italic;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+/* Infinite-scroll sentinel: a scroll into view asks the server for more */
+.blockr-workflow-sentinel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+}
+
+.blockr-workflow-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #9ca3af;
+  border-radius: 50%;
+  animation: blockr-workflow-spin 0.7s linear infinite;
+}
+
+@keyframes blockr-workflow-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.blockr-workflow-item.blockr-hi {
+  background-color: #eef2ff;
 }
 
 /* Individual workflow item */
@@ -178,10 +271,20 @@
   text-decoration: none;
 }
 
-/* Footer link */
+/* Footer link: pinned to the bottom of the scrolling panel so "Manage
+   workflows" stays reachable no matter how long the list is. */
 .blockr-tab-footer {
+  position: sticky;
+  bottom: -8px;
+  z-index: 3;
+  background: #fff;
+  margin: 8px -8px -8px;
   padding: 12px;
   border-top: 1px solid #e5e7eb;
+  /* full-bleed footer reaches the container edge, so round its bottom to keep
+     the dropdown's rounded corners */
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 
 .blockr-workflows-link {
