@@ -742,6 +742,61 @@
   height: 14px;
 }
 
+.blockr-wf-expand-cell {
+  width: 28px;
+  text-align: center;
+}
+
+.blockr-wf-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.blockr-wf-expand svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+
+.blockr-workflow-row.expanded .blockr-wf-expand svg {
+  transform: rotate(90deg);
+}
+
+.blockr-wf-subrow td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+  background: #fafbfc;
+}
+
+.blockr-wf-subrow-name {
+  padding-left: 40px;
+}
+
+.blockr-wf-version-id {
+  font-family: var(--bs-font-monospace, monospace);
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+/* Reserve the Load/Delete slots on the current version row so the remaining
+   actions stay column-aligned with the other rows. */
+.blockr-wf-slot-hidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.blockr-wf-subrow-empty {
+  padding: 8px 16px 8px 40px;
+  color: #9ca3af;
+  font-size: 0.8125rem;
+}
+
 /* Compact fileInput — show only the button */
 .blockr-wf-upload-compact { display: inline-flex; align-items: center; }
 .blockr-wf-upload-compact .form-group { margin: 0; width: auto; }

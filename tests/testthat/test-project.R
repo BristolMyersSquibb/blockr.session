@@ -724,7 +724,12 @@ test_that("delete_versions removes specific version", {
       versions <- versions[order(versions$created), ]
       older_version <- versions$version[1]
 
-      session$setInputs(delete_versions = list(older_version))
+      session$setInputs(
+        delete_versions = list(
+          id = "ver-del-test", user = "", version = older_version
+        )
+      )
+      session$flushReact()
 
       remaining <- pins::pin_versions(backend, "ver-del-test")
       expect_equal(nrow(remaining), 1)
@@ -782,6 +787,125 @@ test_that("version_history output shows empty message for unsaved board", {
       board = reactiveValues(board = test_board, board_id = "vh-empty-test")
     )
   )
+})
+
+test_that("expanding a picker row surfaces that workflow's version history", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  ser <- function(board) {
+    shiny::isolate(serialize_board(board, blocks = list(), session = NULL))
+  }
+
+  one_block <- new_board(blocks = c(a = new_dataset_block("iris")))
+  two_blocks <- new_board(
+    blocks = c(a = new_dataset_block("iris"), b = new_subset_block())
+  )
+
+  # a proper, listed workflow that is NOT the loaded board -- the #51 case
+  rack_create(backend, ser(one_block), "other-wf", "Other workflow")
+  Sys.sleep(1)
+  rack_append(
+    rack_id_from_input(backend, list(id = "other-wf")), backend,
+    ser(two_blocks)
+  )
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+
+      session$setInputs(modal_toggle_expand = list(id = "other-wf", user = ""))
+      session$flushReact()
+
+      expect_equal(modal_expanded(), "other-wf")
+      expect_equal(nrow(expanded_versions()[["other-wf"]]), 2)
+
+      # toggling the same row again collapses it
+      session$setInputs(modal_toggle_expand = list(id = "other-wf", user = ""))
+      session$flushReact()
+
+      expect_length(modal_expanded(), 0)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "vvf-test")
+    )
+  )
+})
+
+test_that("delete_versions removes a version from the named record", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  pins::pin_write(backend, list(x = 1), "other-wf", type = "json")
+  Sys.sleep(1)
+  pins::pin_write(backend, list(x = 2), "other-wf", type = "json")
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      Sys.sleep(1)
+      board$board <- new_board(
+        blocks = c(a = new_dataset_block("iris"), b = new_subset_block())
+      )
+      session$setInputs(save_btn = 2)
+
+      expect_equal(nrow(pins::pin_versions(backend, "dvf-test")), 2)
+
+      # each inline history row carries its own id, so delete follows the
+      # named record rather than the loaded board
+      victim <- pins::pin_versions(backend, "other-wf")$version[1]
+      session$setInputs(
+        delete_versions = list(id = "other-wf", user = "", version = victim)
+      )
+      session$flushReact()
+
+      remaining <- pins::pin_versions(backend, "other-wf")
+      expect_equal(nrow(remaining), 1)
+      expect_false(victim %in% remaining$version)
+
+      expect_equal(nrow(pins::pin_versions(backend, "dvf-test")), 2)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "dvf-test")
+    )
+  )
+})
+
+test_that("float_to_front moves the focused record to the front", {
+
+  wfs <- list(list(id = "a"), list(id = "b"), list(id = "c"))
+
+  expect_equal(chr_xtr(float_to_front(wfs, "c"), "id"), c("c", "a", "b"))
+  expect_equal(chr_xtr(float_to_front(wfs, "a"), "id"), c("a", "b", "c"))
+
+  # a focus id absent from the list, or none at all, leaves order untouched
+  expect_equal(chr_xtr(float_to_front(wfs, "z"), "id"), c("a", "b", "c"))
+  expect_equal(chr_xtr(float_to_front(wfs, NULL), "id"), c("a", "b", "c"))
+})
+
+test_that("no version is current when history is not the loaded board", {
+
+  # loaded board, no ?version= in the URL: the newest row is the current one
+  expect_true(version_is_current(1L, "v2", NULL, is_active = TRUE))
+  expect_false(version_is_current(2L, "v1", NULL, is_active = TRUE))
+
+  # loaded board pinned to an older version via ?version=
+  expect_false(version_is_current(1L, "v2", "v1", is_active = TRUE))
+  expect_true(version_is_current(2L, "v1", "v1", is_active = TRUE))
+
+  # a workflow that is not the loaded board flags nothing, so every row --
+  # including the newest, the corrupted one a user needs to load past or
+  # remove -- keeps its Load and Delete actions
+  expect_false(version_is_current(1L, "v2", NULL, is_active = FALSE))
+  expect_false(version_is_current(1L, "v2", "v2", is_active = FALSE))
 })
 
 test_that("view_all_versions triggers modal", {
