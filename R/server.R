@@ -338,7 +338,19 @@ manage_project_server <- function(id, board, ...) {
         save_status()
       )
 
-      output$rack_id <- renderText(current_rack_id())
+      output$rack_id_area <- renderUI({
+
+        req(current_id())
+
+        tagList(
+          tagAppendAttributes(
+            tags$span(current_rack_id()),
+            class = "blockr-navbar-title blockr-navbar-rack-id",
+            title = "Workflow ID"
+          ),
+          tags$span(class = "blockr-navbar-divider")
+        )
+      })
 
       observeEvent(
         input$load_workflow,

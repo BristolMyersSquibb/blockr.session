@@ -316,11 +316,11 @@
 }
 
 /* --- Workflow (rack) ID --- */
-.blockr-navbar-title-wrapper {
-  position: relative;
-  min-width: 120px;
+.blockr-navbar-id-area {
   display: flex;
   align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
 
 .blockr-navbar-title {
@@ -335,6 +335,7 @@
 .blockr-navbar-rack-id {
   font-family: var(--bs-font-monospace, monospace);
   color: #555;
+  white-space: nowrap;
 }
 
 .blockr-rack-id-hint {

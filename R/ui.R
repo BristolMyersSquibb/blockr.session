@@ -135,17 +135,12 @@ manage_project_ui <- function(id, x) {
           uiOutput(ns("sharing_panel"))
         )
       ),
-      # Read-only workflow (rack) ID
-      tags$div(
-        class = "blockr-navbar-title-wrapper",
-        tagAppendAttributes(
-          textOutput(ns("rack_id"), container = tags$span, inline = TRUE),
-          class = "blockr-navbar-title blockr-navbar-rack-id",
-          title = "Workflow ID"
-        )
+      # Read-only workflow (rack) ID -- rendered only once the workflow has a
+      # chosen id; an unsaved board has none, and "Not saved" carries that state
+      tagAppendAttributes(
+        uiOutput(ns("rack_id_area")),
+        class = "blockr-navbar-id-area"
       ),
-      # Divider
-      tags$span(class = "blockr-navbar-divider"),
       # Save status
       tags$div(
         class = "blockr-navbar-save-section",

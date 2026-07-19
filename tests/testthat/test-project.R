@@ -938,20 +938,19 @@ test_that("sharing observers fire with sharing-capable backend", {
   )
 })
 
-test_that("navbar shows a read-only rack id, not an editable title (#81)", {
+test_that("navbar shows a rack id area, not an editable title (#81)", {
   doc <- xml2::read_html(
     as.character(manage_project_ui("project", new_board()))
   )
 
-  rack_id <- xml2::xml_find_all(doc, "//*[@id='project-rack_id']")
-  expect_length(rack_id, 1)
-  expect_match(xml2::xml_attr(rack_id, "class"), "blockr-navbar-rack-id")
+  area <- xml2::xml_find_all(doc, "//*[@id='project-rack_id_area']")
+  expect_length(area, 1)
 
   title_input <- xml2::xml_find_all(doc, "//input[@id='project-title_input']")
   expect_length(title_input, 0)
 })
 
-test_that("the rack id output reflects the loaded record (#81)", {
+test_that("the rack id area shows only for a saved workflow (#81)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -960,11 +959,12 @@ test_that("the rack id output reflects the loaded record (#81)", {
   testServer(
     manage_project_server,
     {
-      expect_equal(output$rack_id, "fresh-board")
+      # a never-saved board has no chosen id, so the area renders nothing
+      expect_error(output$rack_id_area, class = "shiny.silent.error")
 
       prev_query("?id=loaded-board")
       session$flushReact()
-      expect_equal(output$rack_id, "loaded-board")
+      expect_true(any(grepl("loaded-board", output$rack_id_area, fixed = TRUE)))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "fresh-board")
