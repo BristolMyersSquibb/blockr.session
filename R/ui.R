@@ -135,47 +135,13 @@ manage_project_ui <- function(id, x) {
           uiOutput(ns("sharing_panel"))
         )
       ),
-      # Editable workflow title
+      # Read-only workflow (rack) ID
       tags$div(
-        id = ns("title_wrapper"),
         class = "blockr-navbar-title-wrapper",
-        tags$span(
-          id = ns("title_display"),
-          class = "blockr-navbar-title",
-          onclick = sprintf(
-            "document.getElementById('%s').classList.add('editing');
-            document.getElementById('%s').focus();
-            document.getElementById('%s').select();",
-            ns("title_wrapper"),
-            ns("title_input"),
-            ns("title_input")
-          ),
-          ""
-        ),
-        tags$input(
-          id = ns("title_input"),
-          class = "blockr-navbar-title-input shiny-bound-input",
-          type = "text",
-          value = "",
-          onblur = sprintf(
-            "Shiny.setInputValue('%s', this.value, {priority: 'event'});
-            document.getElementById('%s').classList.remove('editing');
-            document.getElementById('%s').textContent = this.value;",
-            ns("title_edit"),
-            ns("title_wrapper"),
-            ns("title_display")
-          ),
-          onkeydown = sprintf(
-            "if(event.key === 'Enter') {
-              this.blur();
-            }
-            if(event.key === 'Escape') {
-              document.getElementById('%s').classList.remove('editing');
-              this.value = document.getElementById('%s').textContent;
-            }",
-            ns("title_wrapper"),
-            ns("title_display")
-          )
+        tagAppendAttributes(
+          textOutput(ns("rack_id"), container = tags$span, inline = TRUE),
+          class = "blockr-navbar-title blockr-navbar-rack-id",
+          title = "Workflow ID"
         )
       ),
       # Divider

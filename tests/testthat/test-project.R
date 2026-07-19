@@ -1,3 +1,9 @@
+# Drive the first-save id chooser: open it with Save, then confirm the id.
+first_save <- function(session, id, n = 1L) {
+  session$setInputs(save_btn = n)
+  session$setInputs(rack_id_input = id, rack_id_confirm = n)
+}
+
 test_that("manage_project plugin", {
 
   a <- manage_project()
@@ -26,7 +32,7 @@ test_that("manage_project server", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "test")
       expect_no_error(session$flushReact())
     },
     args = list(board = reactiveValues(board = test_board, board_id = "test"))
@@ -48,36 +54,6 @@ test_that("manage_project server", {
       expect_no_error(session$flushReact())
     },
     args = list(board = reactiveValues(board = test_board, board_id = "test"))
-  )
-})
-
-test_that("title edit forwards a board to set_board_option_value (#60)", {
-
-  withr::local_options(
-    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
-  )
-
-  captured <- new.env()
-
-  testServer(
-    manage_project_server,
-    {
-      local_mocked_bindings(
-        set_board_option_value = function(opt, val, board, ...) {
-          captured$board <- board
-          invisible(val)
-        },
-        .package = "blockr.session"
-      )
-
-      session$setInputs(title_edit = "Renamed board")
-      session$flushReact()
-
-      expect_true(is_board(captured$board))
-    },
-    args = list(
-      board = reactiveValues(board = new_board(), board_id = "title-test")
-    )
   )
 })
 
@@ -120,7 +96,7 @@ test_that("save persists board to backend", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "save-test")
       expect_equal(output$save_status, "Just now")
     },
     args = list(
@@ -143,83 +119,13 @@ test_that("recent_workflows renders the saved record keyed on its id (#61)", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "rebel_eyas")
       html <- as.character(output$recent_workflows)
 
       expect_true(any(grepl("rebel_eyas", html, fixed = TRUE)))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "rebel_eyas")
-    )
-  )
-})
-
-test_that("editing the title renames the loaded record (#61)", {
-  backend <- pins::board_temp(versioned = TRUE)
-  withr::local_options(blockr.session_mgmt_backend = backend)
-
-  # an existing record we're editing; stored name differs from the edit
-  rack_create(backend, list(blocks = list()), id = "rename-edit",
-              name = "Old name")
-
-  renamed_to <- NULL
-  local_mocked_bindings(
-    set_board_option_value = function(opt, val, board, ...) invisible(val),
-    rack_rename = function(id, backend, name, ...) {
-      renamed_to <<- name
-      id
-    },
-    .package = "blockr.session"
-  )
-
-  test_board <- new_board(
-    blocks = c(a = new_dataset_block("iris"))
-  )
-
-  testServer(
-    manage_project_server,
-    {
-      prev_query("?id=rename-edit")     # a loaded record (current_id set)
-      session$setInputs(title_edit = "New name")
-      session$flushReact()
-
-      expect_equal(renamed_to, "New name")
-    },
-    args = list(
-      board = reactiveValues(board = test_board, board_id = "rename-edit")
-    )
-  )
-})
-
-test_that("editing the title of an unsaved board does not rename (#61)", {
-  backend <- pins::board_temp(versioned = TRUE)
-  withr::local_options(blockr.session_mgmt_backend = backend)
-
-  renamed <- FALSE
-  local_mocked_bindings(
-    set_board_option_value = function(opt, val, board, ...) invisible(val),
-    rack_rename = function(id, backend, name, ...) {
-      renamed <<- TRUE
-      id
-    },
-    .package = "blockr.session"
-  )
-
-  test_board <- new_board(
-    blocks = c(a = new_dataset_block("iris"))
-  )
-
-  testServer(
-    manage_project_server,
-    {
-      # no current_id (unsaved board): the name rides along until first save
-      session$setInputs(title_edit = "Fresh name")
-      session$flushReact()
-
-      expect_false(renamed)
-    },
-    args = list(
-      board = reactiveValues(board = test_board, board_id = "unsaved-board")
     )
   )
 })
@@ -298,7 +204,7 @@ test_that("saving after a content change creates a new version", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "version-test")
       Sys.sleep(1)
       # a real content change between saves
       board$board <- new_board(
@@ -326,7 +232,7 @@ test_that("a no-op save does not create a new version (#61)", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "noop-test")
       Sys.sleep(1)
       session$setInputs(save_btn = 2)   # nothing changed since the first save
     },
@@ -402,11 +308,12 @@ test_that("save_as forks the loaded board into a fresh record (#67)", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "fork-origin")
       session$flushReact()
 
       prev_query("?id=fork-origin")
       session$setInputs(save_as_btn = 1)
+      session$setInputs(rack_id_input = "fork-copy", rack_id_confirm = 2)
       session$flushReact()
     },
     args = list(
@@ -449,7 +356,7 @@ test_that("loader resolve loads a saved board from the backend", {
 
   testServer(
     manage_project_server,
-    session$setInputs(save_btn = 1),
+    first_save(session, "loader-test"),
     args = list(
       board = reactiveValues(board = test_board, board_id = "loader-test")
     )
@@ -471,7 +378,7 @@ test_that("loader resolve still reads a legacy board_name handle", {
 
   testServer(
     manage_project_server,
-    session$setInputs(save_btn = 1),
+    first_save(session, "legacy-test"),
     args = list(
       board = reactiveValues(board = test_board, board_id = "legacy-test")
     )
@@ -505,7 +412,7 @@ test_that("loader GET user-scopes via the configured user_pins_board (#70)", {
     list(blockr.session_mgmt_backend = visitor_backend),
     testServer(
       manage_project_server,
-      session$setInputs(save_btn = 1),
+      first_save(session, "scoped"),
       args = list(
         board = reactiveValues(board = seed, board_id = "scoped")
       )
@@ -537,7 +444,7 @@ test_that("loader leaves a non-Connect backend untouched under a token (#70)", {
 
   testServer(
     manage_project_server,
-    session$setInputs(save_btn = 1),
+    first_save(session, "shared"),
     args = list(
       board = reactiveValues(board = seed, board_id = "shared")
     )
@@ -569,7 +476,7 @@ test_that("loader WS user-scopes via the configured user_pins_board (#70)", {
     list(blockr.session_mgmt_backend = visitor_backend),
     testServer(
       manage_project_server,
-      session$setInputs(save_btn = 1),
+      first_save(session, "ws-scoped"),
       args = list(
         board = reactiveValues(board = seed, board_id = "ws-scoped")
       )
@@ -632,7 +539,7 @@ test_that("version history marks the URL version as current (#19)", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "hist-current")
       Sys.sleep(1)
       board$board <- new_board(
         blocks = c(a = new_dataset_block("iris"), b = new_subset_block())
@@ -676,7 +583,7 @@ test_that("delete_workflows removes pin from backend", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "del-test")
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "del-test")
@@ -711,7 +618,7 @@ test_that("delete_versions removes specific version", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "ver-del-test")
       Sys.sleep(1)
       board$board <- new_board(
         blocks = c(a = new_dataset_block("iris"), b = new_subset_block())
@@ -752,7 +659,7 @@ test_that("version_history output shows versions after save", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "vh-test")
       Sys.sleep(1)
       session$setInputs(save_btn = 2)
 
@@ -815,7 +722,7 @@ test_that("expanding a picker row surfaces that workflow's version history", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "vvf-test")
 
       session$setInputs(modal_toggle_expand = list(id = "other-wf", user = ""))
       session$flushReact()
@@ -850,7 +757,7 @@ test_that("delete_versions removes a version from the named record", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "dvf-test")
       Sys.sleep(1)
       board$board <- new_board(
         blocks = c(a = new_dataset_block("iris"), b = new_subset_block())
@@ -919,7 +826,7 @@ test_that("view_all_versions triggers modal", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "vav-test")
       Sys.sleep(1)
       session$setInputs(save_btn = 2)
       session$setInputs(view_all_versions = 1)
@@ -1014,7 +921,7 @@ test_that("sharing observers fire with sharing-capable backend", {
   testServer(
     manage_project_server,
     {
-      session$setInputs(save_btn = 1)
+      first_save(session, "sharing-obs-test")
 
       session$setInputs(visibility_change = "all")
       expect_no_error(session$flushReact())
@@ -1029,4 +936,102 @@ test_that("sharing observers fire with sharing-capable backend", {
       board = reactiveValues(board = test_board, board_id = "sharing-obs-test")
     )
   )
+})
+
+test_that("navbar shows a read-only rack id, not an editable title (#81)", {
+  doc <- xml2::read_html(
+    as.character(manage_project_ui("project", new_board()))
+  )
+
+  rack_id <- xml2::xml_find_all(doc, "//*[@id='project-rack_id']")
+  expect_length(rack_id, 1)
+  expect_match(xml2::xml_attr(rack_id, "class"), "blockr-navbar-rack-id")
+
+  title_input <- xml2::xml_find_all(doc, "//input[@id='project-title_input']")
+  expect_length(title_input, 0)
+})
+
+test_that("the rack id output reflects the loaded record (#81)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    {
+      expect_equal(output$rack_id, "fresh-board")
+
+      prev_query("?id=loaded-board")
+      session$flushReact()
+      expect_equal(output$rack_id, "loaded-board")
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "fresh-board")
+    )
+  )
+})
+
+test_that("first save mints the chosen id, not the board id (#81)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      session$setInputs(rack_id_input = "chosen-id", rack_id_confirm = 1)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "auto-slug")
+    )
+  )
+
+  expect_true("chosen-id" %in% pins::pin_list(backend))
+  expect_false("auto-slug" %in% pins::pin_list(backend))
+})
+
+test_that("the id chooser rejects an invalid id (#81)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      session$setInputs(rack_id_input = "no spaces!", rack_id_confirm = 1)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "invalid-test")
+    )
+  )
+
+  expect_length(pins::pin_list(backend), 0L)
+})
+
+test_that("the id chooser refuses to overwrite an existing id (#81)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  rack_create(backend, list(blocks = list()), id = "taken", name = "taken")
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      session$setInputs(rack_id_input = "taken", rack_id_confirm = 1)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "collision-test")
+    )
+  )
+
+  expect_equal(pins::pin_list(backend), "taken")
+  expect_equal(nrow(pins::pin_versions(backend, "taken")), 1L)
 })

@@ -315,7 +315,7 @@
   margin-bottom: 8px;
 }
 
-/* --- Editable Title --- */
+/* --- Workflow (rack) ID --- */
 .blockr-navbar-title-wrapper {
   position: relative;
   min-width: 120px;
@@ -329,49 +329,18 @@
   font-size: 0.875rem;
   font-weight: 500;
   color: #333;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  cursor: text;
-  transition: border-color 0.15s ease;
   line-height: 1.2;
 }
 
-.blockr-navbar-title:hover {
-  border-color: hsl(220, 3%, 85%);
+.blockr-navbar-rack-id {
+  font-family: var(--bs-font-monospace, monospace);
+  color: #555;
 }
 
-.blockr-navbar-title-input {
-  position: absolute;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%);
-  width: 100%;
-  padding: 6px 10px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #333;
-  border: 2px solid #4a7dff;
-  border-radius: 6px;
-  background: white;
-  opacity: 0;
-  pointer-events: none;
-  line-height: 1.2;
-  box-sizing: border-box;
-}
-
-.blockr-navbar-title-input:focus {
-  outline: none;
-  border-color: #4a7dff;
-  box-shadow: 0 0 0 3px rgba(74, 125, 255, 0.15);
-}
-
-.blockr-navbar-title-wrapper.editing .blockr-navbar-title {
-  opacity: 0;
-}
-
-.blockr-navbar-title-wrapper.editing .blockr-navbar-title-input {
-  opacity: 1;
-  pointer-events: auto;
+.blockr-rack-id-hint {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: hsl(220, 3%, 45%);
 }
 
 /* --- Divider --- */

@@ -142,6 +142,10 @@ reset_board_name <- function(board, name) {
   board
 }
 
+valid_rack_id <- function(x) {
+  is_string(x) && grepl("^[A-Za-z0-9_-]+$", x)
+}
+
 board_query_string <- function(id, backend) {
 
   params <- list(id = coal(id$id, id[["name"]], fail_all = FALSE))
