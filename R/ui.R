@@ -135,51 +135,12 @@ manage_project_ui <- function(id, x) {
           uiOutput(ns("sharing_panel"))
         )
       ),
-      # Editable workflow title
-      tags$div(
-        id = ns("title_wrapper"),
-        class = "blockr-navbar-title-wrapper",
-        tags$span(
-          id = ns("title_display"),
-          class = "blockr-navbar-title",
-          onclick = sprintf(
-            "document.getElementById('%s').classList.add('editing');
-            document.getElementById('%s').focus();
-            document.getElementById('%s').select();",
-            ns("title_wrapper"),
-            ns("title_input"),
-            ns("title_input")
-          ),
-          ""
-        ),
-        tags$input(
-          id = ns("title_input"),
-          class = "blockr-navbar-title-input shiny-bound-input",
-          type = "text",
-          value = "",
-          onblur = sprintf(
-            "Shiny.setInputValue('%s', this.value, {priority: 'event'});
-            document.getElementById('%s').classList.remove('editing');
-            document.getElementById('%s').textContent = this.value;",
-            ns("title_edit"),
-            ns("title_wrapper"),
-            ns("title_display")
-          ),
-          onkeydown = sprintf(
-            "if(event.key === 'Enter') {
-              this.blur();
-            }
-            if(event.key === 'Escape') {
-              document.getElementById('%s').classList.remove('editing');
-              this.value = document.getElementById('%s').textContent;
-            }",
-            ns("title_wrapper"),
-            ns("title_display")
-          )
-        )
+      # Read-only workflow (rack) ID -- rendered only once the workflow has a
+      # chosen id; an unsaved board has none, and "Not saved" carries that state
+      tagAppendAttributes(
+        uiOutput(ns("rack_id_area")),
+        class = "blockr-navbar-id-area"
       ),
-      # Divider
-      tags$span(class = "blockr-navbar-divider"),
       # Save status
       tags$div(
         class = "blockr-navbar-save-section",
@@ -191,44 +152,11 @@ manage_project_ui <- function(id, x) {
           ),
           class = "blockr-navbar-meta"
         ),
-        tags$div(
-          class = "btn-group blockr-navbar-save-group",
-          tags$button(
-            id = ns("save_btn"),
-            class = "blockr-navbar-save-btn shiny-bound-input",
-            type = "button",
-            onclick = sprintf(
-              "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-              ns("save_btn")
-            ),
-            bsicons::bs_icon("floppy", size = "1em")
-          ),
-          tags$button(
-            class = paste(
-              "blockr-navbar-save-btn blockr-navbar-save-toggle",
-              "dropdown-toggle"
-            ),
-            type = "button",
-            `data-bs-toggle` = "dropdown",
-            `aria-expanded` = "false",
-            tags$span(class = "visually-hidden", "Toggle save menu")
-          ),
-          tags$ul(
-            class = "dropdown-menu dropdown-menu-end blockr-navbar-save-menu",
-            tags$li(
-              tags$button(
-                id = ns("save_as_btn"),
-                class = "dropdown-item",
-                type = "button",
-                onclick = sprintf(
-                  "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-                  ns("save_as_btn")
-                ),
-                bsicons::bs_icon("files"),
-                "Save as new workflow"
-              )
-            )
-          )
+        # Save on its own until the workflow is saved; the "Save as new
+        # workflow" split only appears once there is a record to fork from
+        tagAppendAttributes(
+          uiOutput(ns("save_controls")),
+          class = "btn-group blockr-navbar-save-group"
         )
       ),
       # New button

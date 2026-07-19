@@ -15,6 +15,7 @@ manage_project_server <- function(id, board, ...) {
 
       refresh_trigger <- reactiveVal(0)
       save_status <- reactiveVal("Not saved")
+      pending_save_mode <- reactiveVal(NULL)
 
       serialize_now <- function(id = board$board_id) {
         do.call(
@@ -26,13 +27,6 @@ manage_project_server <- function(id, board, ...) {
           )
         )
       }
-
-      board_name <- reactive(
-        coal(
-          get_board_option_or_null("board_name", session),
-          board$board_id
-        )
-      )
 
       prev_query <- reactiveVal(NULL)
 
@@ -55,6 +49,10 @@ manage_project_server <- function(id, board, ...) {
           list(id = qid, user = query$user)
         )
       })
+
+      current_rack_id <- reactive(
+        coal(current_id()$id, board$board_id, fail_all = FALSE)
+      )
 
       observeEvent(
         current_id(),
@@ -97,9 +95,9 @@ manage_project_server <- function(id, board, ...) {
         input$save_btn,
         {
           # Save keys on the board's stable id: a loaded record (current_id),
-          # else the board id. It appends a version to that record if it exists,
-          # else creates it under the board id -- so the record id and board id
-          # match. Only Save As mints a fresh board id to fork.
+          # else the board id. A first save of a not-yet-persisted board mints
+          # the record, so it opens the id chooser (like naming an untitled
+          # document); a save of an existing record appends a version silently.
           target <- coal(
             current_id(),
             rack_id_from_input(backend, list(id = board$board_id))
@@ -108,6 +106,15 @@ manage_project_server <- function(id, board, ...) {
           exists <- isTRUE(
             tryCatch(rack_exists(target, backend), error = function(e) FALSE)
           )
+
+          if (!exists) {
+            pending_save_mode("create")
+            show_rack_id_modal(
+              session,
+              default = coal(current_id()$id, board$board_id, fail_all = FALSE)
+            )
+            return()
+          }
 
           data <- tryCatch(
             serialize_now(),
@@ -118,20 +125,13 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          if (exists && !rack_content_changed(target, backend, data)) {
+          if (!rack_content_changed(target, backend, data)) {
             notify("No changes to save", type = "message", session = session)
             return()
           }
 
           res <- tryCatch(
-            if (exists) {
-              rack_append(target, backend, data)
-            } else {
-              rack_create(
-                backend, data,
-                id = board$board_id, name = board_name()
-              )
-            },
+            rack_append(target, backend, data),
             error = cnd_to_notif(type = "error")
           )
 
@@ -140,8 +140,9 @@ manage_project_server <- function(id, board, ...) {
           }
 
           notify(
-            sprintf("Successfully saved %s (%s)", board_name(), res$id),
+            sprintf("Saved workflow %s", res$id),
             type = "message",
+            glue = FALSE,
             session = session
           )
           save_status("Just now")
@@ -160,7 +161,45 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$save_as_btn,
         {
-          new_id <- rand_names()
+          pending_save_mode("fork")
+          show_rack_id_modal(session, default = rand_names())
+        }
+      )
+
+      observeEvent(
+        input$rack_id_confirm,
+        {
+          new_id <- trimws(coal(input$rack_id_input, ""))
+          mode <- pending_save_mode()
+
+          if (!valid_rack_id(new_id)) {
+            notify(
+              paste(
+                "Workflow ID may contain only letters, numbers, hyphens",
+                "and underscores."
+              ),
+              type = "error",
+              glue = FALSE,
+              session = session
+            )
+            return()
+          }
+
+          rid <- rack_id_from_input(backend, list(id = new_id))
+
+          record_exists <- isTRUE(
+            tryCatch(rack_exists(rid, backend), error = function(e) FALSE)
+          )
+
+          if (record_exists) {
+            notify(
+              sprintf("A workflow named %s already exists.", new_id),
+              type = "error",
+              glue = FALSE,
+              session = session
+            )
+            return()
+          }
 
           data <- tryCatch(
             serialize_now(new_id),
@@ -172,10 +211,7 @@ manage_project_server <- function(id, board, ...) {
           }
 
           res <- tryCatch(
-            rack_create(
-              backend, data,
-              id = new_id, name = board_name()
-            ),
+            rack_create(backend, data, id = new_id, name = new_id),
             error = cnd_to_notif(type = "error")
           )
 
@@ -183,13 +219,31 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          forked <- rack_id_from_input(
+          removeModal(session)
+          refresh_trigger(refresh_trigger() + 1)
+
+          saved <- rack_id_from_input(
             backend,
             list(id = res$id, user = res$user)
           )
 
-          navigate_to_board(forked, backend, session)
-        }
+          if (identical(mode, "fork")) {
+            navigate_to_board(saved, backend, session)
+            return()
+          }
+
+          save_status("Just now")
+          new_url <- board_query_string(saved, backend)
+          prev_query(new_url)
+          updateQueryString(new_url, mode = "replace", session = session)
+          notify(
+            sprintf("Saved workflow %s", res$id),
+            type = "message",
+            glue = FALSE,
+            session = session
+          )
+        },
+        ignoreInit = TRUE
       )
 
       observeEvent(
@@ -280,9 +334,26 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      # Save status output
       output$save_status <- renderText(
         save_status()
+      )
+
+      output$rack_id_area <- renderUI({
+
+        req(current_id())
+
+        tagList(
+          tagAppendAttributes(
+            tags$span(current_rack_id()),
+            class = "blockr-navbar-title blockr-navbar-rack-id",
+            title = "Workflow ID"
+          ),
+          tags$span(class = "blockr-navbar-divider")
+        )
+      })
+
+      output$save_controls <- renderUI(
+        save_controls(session$ns, saved = not_null(current_id()))
       )
 
       observeEvent(
@@ -633,7 +704,7 @@ manage_project_server <- function(id, board, ...) {
           id <- current_id()
 
           if (not_null(id)) {
-            tags$span(board_name())
+            tags$span(current_rack_id())
           }
         }
       )
@@ -766,40 +837,6 @@ manage_project_server <- function(id, board, ...) {
             refresh_trigger(refresh_trigger() + 1)
           }
         }
-      )
-
-      # Title edit drives the rename (it isn't coupled to a save): the
-      # in-session option updates, and for a loaded record the backend's native
-      # name field is written too. An unsaved board carries the name until
-      # rack_create persists it on first save. `title_edit` fires on blur, so
-      # it is already one event per edit (no per-keystroke debounce needed).
-      observeEvent(
-        input$title_edit,
-        {
-          name <- input$title_edit
-
-          set_board_option_value("board_name", name, board$board, session)
-
-          id <- current_id()
-
-          if (not_null(id) && not_null(name) && nzchar(name)) {
-            current <- tryCatch(
-              rack_name(id, backend),
-              error = function(e) NULL
-            )
-            if (!identical(current, name)) {
-              tryCatch(
-                rack_rename(id, backend, name),
-                error = cnd_to_notif(type = "warning")
-              )
-            }
-          }
-        }
-      )
-
-      # Initialize title
-      observe(
-        session$sendCustomMessage("blockr-update-navbar-title", board_name())
       )
 
       # --- Sharing & visibility (capability-driven) ---
@@ -1241,6 +1278,76 @@ navigate_to_board <- function(id, backend, session) {
   )
 
   session$reload()
+}
+
+save_controls <- function(ns, saved) {
+
+  save_btn <- tags$button(
+    id = ns("save_btn"),
+    class = "blockr-navbar-save-btn",
+    type = "button",
+    onclick = sprintf(
+      "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+      ns("save_btn")
+    ),
+    bsicons::bs_icon("floppy", size = "1em")
+  )
+
+  if (!saved) {
+    return(save_btn)
+  }
+
+  tagList(
+    save_btn,
+    tags$button(
+      class = paste(
+        "blockr-navbar-save-btn blockr-navbar-save-toggle",
+        "dropdown-toggle"
+      ),
+      type = "button",
+      `data-bs-toggle` = "dropdown",
+      `aria-expanded` = "false",
+      tags$span(class = "visually-hidden", "Toggle save menu")
+    ),
+    tags$ul(
+      class = "dropdown-menu dropdown-menu-end blockr-navbar-save-menu",
+      tags$li(
+        tags$button(
+          id = ns("save_as_btn"),
+          class = "dropdown-item",
+          type = "button",
+          onclick = sprintf(
+            "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+            ns("save_as_btn")
+          ),
+          bsicons::bs_icon("files"),
+          "Save as new workflow"
+        )
+      )
+    )
+  )
+}
+
+show_rack_id_modal <- function(session, default) {
+
+  ns <- session$ns
+
+  showModal(
+    modalDialog(
+      title = "Choose a workflow ID",
+      size = "s",
+      easyClose = TRUE,
+      textInput(ns("rack_id_input"), "Workflow ID", value = default),
+      tags$p(
+        class = "blockr-rack-id-hint",
+        "Letters, numbers, hyphens and underscores. Must be unique."
+      ),
+      footer = tagList(
+        modalButton("Cancel"),
+        actionButton(ns("rack_id_confirm"), "Save", class = "btn-primary")
+      )
+    )
+  )
 }
 
 shiny_input_js <- function(ns_id, value) {
