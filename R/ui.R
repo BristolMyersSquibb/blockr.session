@@ -152,44 +152,11 @@ manage_project_ui <- function(id, x) {
           ),
           class = "blockr-navbar-meta"
         ),
-        tags$div(
-          class = "btn-group blockr-navbar-save-group",
-          tags$button(
-            id = ns("save_btn"),
-            class = "blockr-navbar-save-btn shiny-bound-input",
-            type = "button",
-            onclick = sprintf(
-              "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-              ns("save_btn")
-            ),
-            bsicons::bs_icon("floppy", size = "1em")
-          ),
-          tags$button(
-            class = paste(
-              "blockr-navbar-save-btn blockr-navbar-save-toggle",
-              "dropdown-toggle"
-            ),
-            type = "button",
-            `data-bs-toggle` = "dropdown",
-            `aria-expanded` = "false",
-            tags$span(class = "visually-hidden", "Toggle save menu")
-          ),
-          tags$ul(
-            class = "dropdown-menu dropdown-menu-end blockr-navbar-save-menu",
-            tags$li(
-              tags$button(
-                id = ns("save_as_btn"),
-                class = "dropdown-item",
-                type = "button",
-                onclick = sprintf(
-                  "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-                  ns("save_as_btn")
-                ),
-                bsicons::bs_icon("files"),
-                "Save as new workflow"
-              )
-            )
-          )
+        # Save on its own until the workflow is saved; the "Save as new
+        # workflow" split only appears once there is a record to fork from
+        tagAppendAttributes(
+          uiOutput(ns("save_controls")),
+          class = "btn-group blockr-navbar-save-group"
         )
       ),
       # New button

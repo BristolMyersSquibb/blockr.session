@@ -352,6 +352,10 @@ manage_project_server <- function(id, board, ...) {
         )
       })
 
+      output$save_controls <- renderUI(
+        save_controls(session$ns, saved = not_null(current_id()))
+      )
+
       observeEvent(
         input$load_workflow,
         navigate_to_board(
@@ -1274,6 +1278,54 @@ navigate_to_board <- function(id, backend, session) {
   )
 
   session$reload()
+}
+
+save_controls <- function(ns, saved) {
+
+  save_btn <- tags$button(
+    id = ns("save_btn"),
+    class = "blockr-navbar-save-btn",
+    type = "button",
+    onclick = sprintf(
+      "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+      ns("save_btn")
+    ),
+    bsicons::bs_icon("floppy", size = "1em")
+  )
+
+  if (!saved) {
+    return(save_btn)
+  }
+
+  tagList(
+    save_btn,
+    tags$button(
+      class = paste(
+        "blockr-navbar-save-btn blockr-navbar-save-toggle",
+        "dropdown-toggle"
+      ),
+      type = "button",
+      `data-bs-toggle` = "dropdown",
+      `aria-expanded` = "false",
+      tags$span(class = "visually-hidden", "Toggle save menu")
+    ),
+    tags$ul(
+      class = "dropdown-menu dropdown-menu-end blockr-navbar-save-menu",
+      tags$li(
+        tags$button(
+          id = ns("save_as_btn"),
+          class = "dropdown-item",
+          type = "button",
+          onclick = sprintf(
+            "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+            ns("save_as_btn")
+          ),
+          bsicons::bs_icon("files"),
+          "Save as new workflow"
+        )
+      )
+    )
+  )
 }
 
 show_rack_id_modal <- function(session, default) {

@@ -61,28 +61,33 @@ test_that("manage_project ui", {
   expect_s3_class(manage_project_ui("project", new_board()), "shiny.tag.list")
 })
 
-test_that("manage_project ui puts Save As in a split-button dropdown (#67)", {
-  doc <- xml2::read_html(
-    as.character(manage_project_ui("project", new_board()))
-  )
+test_that("save-as appears in the split menu only once saved (#67, #81)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
 
-  save_btn <- xml2::xml_find_all(doc, "//button[@id='project-save_btn']")
-  expect_length(save_btn, 1)
-  expect_match(xml2::xml_attr(save_btn, "onclick"), "save_btn", fixed = TRUE)
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
-  toggle <- xml2::xml_find_all(
-    doc,
-    paste0(
-      "//button[@data-bs-toggle='dropdown' and contains(",
-      "concat(' ', normalize-space(@class), ' '), ' dropdown-toggle ')]"
+  testServer(
+    manage_project_server,
+    {
+      # unsaved: a bare Save button, no split dropdown and no Save As
+      unsaved <- output$save_controls
+      expect_true(any(grepl("save_btn", unsaved, fixed = TRUE)))
+      expect_false(any(grepl("save_as_btn", unsaved, fixed = TRUE)))
+      expect_false(any(grepl("dropdown-toggle", unsaved, fixed = TRUE)))
+
+      prev_query("?id=saveas-test")
+      session$flushReact()
+
+      # saved: the split dropdown carrying Save As appears
+      saved <- output$save_controls
+      expect_true(any(grepl("save_as_btn", saved, fixed = TRUE)))
+      expect_true(any(grepl("dropdown-toggle", saved, fixed = TRUE)))
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "saveas-test")
     )
   )
-  expect_length(toggle, 1)
-
-  save_as <- xml2::xml_find_all(doc, "//button[@id='project-save_as_btn']")
-  expect_length(save_as, 1)
-  expect_match(xml2::xml_attr(save_as, "class"), "dropdown-item")
-  expect_match(xml2::xml_attr(save_as, "onclick"), "save_as_btn", fixed = TRUE)
 })
 
 test_that("save persists board to backend", {
