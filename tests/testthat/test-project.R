@@ -863,7 +863,7 @@ test_that("sharing tab absent with pins backend", {
   )
 })
 
-test_that("sharing tab rendered with sharing-capable backend", {
+test_that("sharing tab appears only once the workflow is saved", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -880,14 +880,24 @@ test_that("sharing tab rendered with sharing-capable backend", {
     }
   )
 
+  # Unsaved: nothing to share yet, so the tab stays hidden even though the
+  # backend is sharing-capable
+  testServer(
+    manage_project_server,
+    expect_error(output$sharing_tab, class = "shiny.silent.error"),
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "unsaved")
+    )
+  )
+
+  # Saved: the tab and its controls render
   testServer(
     manage_project_server,
     {
-      html <- output$sharing_tab
-      expect_true(any(grepl("Sharing", html)))
+      prev_query("?id=sharing-test")
 
-      html <- output$sharing_panel
-      expect_true(any(grepl("VISIBILITY", html)))
+      expect_true(any(grepl("Sharing", output$sharing_tab)))
+      expect_true(any(grepl("VISIBILITY", output$sharing_panel)))
 
       # Sharing controls only render in "Restricted" (acl) mode
       session$setInputs(visibility_select = "acl")

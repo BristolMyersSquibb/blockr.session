@@ -845,7 +845,10 @@ manage_project_server <- function(id, board, ...) {
 
       has_sharing <- reactive({
         caps <- capabilities()
-        isTRUE(caps$sharing) || isTRUE(caps$visibility)
+
+        # no sharing UI until the workflow is a saved pin to share
+        (isTRUE(caps$sharing) || isTRUE(caps$visibility)) &&
+          not_null(current_id())
       })
 
       sharing_trigger <- reactiveVal(0)
@@ -923,11 +926,6 @@ manage_project_server <- function(id, board, ...) {
         req(isTRUE(caps$visibility))
 
         id <- current_id()
-        if (is.null(id)) {
-          return(
-            tags$div(class = "blockr-sharing-hint", "Save workflow first")
-          )
-        }
 
         acl <- tryCatch(rack_acl(id, backend), error = function(e) "acl")
 
@@ -962,11 +960,6 @@ manage_project_server <- function(id, board, ...) {
         req(isTRUE(caps$sharing))
 
         id <- current_id()
-        if (is.null(id)) {
-          return(
-            tags$div(class = "blockr-sharing-hint", "Save workflow first")
-          )
-        }
 
         shares <- tryCatch(
           rack_shares(id, backend),
