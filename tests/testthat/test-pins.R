@@ -416,7 +416,11 @@ test_that("rack_info returns version data.frame", {
   cols <- colnames(info)
   expect_true("version" %in% cols)
   expect_true("created" %in% cols)
-  expect_true("hash" %in% cols)
+  expect_true("ref" %in% cols)
+  expect_false("hash" %in% cols)
+
+  # local pins resolve ref to the content pin-hash carried by pin_versions
+  expect_setequal(info$ref, pins::pin_versions(backend, "info-test")$hash)
 })
 
 test_that("rack_info returns empty data.frame for missing pin", {
@@ -702,7 +706,11 @@ test_that("rack_info on Connect returns version data.frame", {
   cols <- colnames(info)
   expect_true("version" %in% cols)
   expect_true("created" %in% cols)
-  expect_true("hash" %in% cols)
+  expect_true("ref" %in% cols)
+  expect_false("hash" %in% cols)
+
+  # Connect has no hash column, so ref resolves to the version integer
+  expect_identical(info$ref, paste0("v", info$version))
 })
 
 test_that("rack_load on Connect uses qualified pin name", {
