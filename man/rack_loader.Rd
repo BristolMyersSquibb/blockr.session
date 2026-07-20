@@ -13,7 +13,9 @@ A \code{\link[blockr.core:board_loader]{blockr.core::board_loader()}} object.
 A \code{\link[blockr.core:board_loader]{blockr.core::board_loader()}} for \code{\link[blockr.core:serve]{blockr.core::serve()}} that picks the
 board to build from the request URL. The board named by the URL handle
 (\code{board_name} / \code{user} / \code{version}) loads from the \code{session_mgmt_backend}
-backend; a request without such a handle (a cold load, or a "New" board)
+backend; a \code{new} handle (minted when the user hits New) yields an empty
+board under that fresh id, so saving it forks a distinct record rather than
+overwriting the served board; a request without any handle (a cold load)
 gets a cleared copy of the served board. The backend is resolved with the
 loader's own request (at the GET, before any session) or session (at the WS
 connect), so a user-scoped backend such as \code{\link[=user_pins_board]{user_pins_board()}} resolves
