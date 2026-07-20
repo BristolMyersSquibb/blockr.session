@@ -901,6 +901,55 @@ test_that("sharing tab rendered with sharing-capable backend", {
   )
 })
 
+test_that("visibility control offers four levels incl. Public/all", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  test_board <- new_board(
+    blocks = c(a = new_dataset_block("iris"))
+  )
+
+  local_mocked_bindings(
+    rack_capabilities = function(backend, ...) {
+      list(
+        versioning = TRUE, tags = TRUE, metadata = TRUE,
+        sharing = TRUE, visibility = TRUE, user_discovery = TRUE
+      )
+    },
+    rack_acl = function(id, backend, ...) "all",
+    rack_shares = function(id, backend, ...) list()
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      prev_query("?id=vis-test")
+
+      html <- as.character(output$visibility_control)
+      opts <- xml2::xml_find_all(
+        xml2::read_html(paste(html, collapse = "")),
+        ".//option"
+      )
+
+      expect_setequal(
+        xml2::xml_attr(opts, "value"),
+        c("private", "acl", "logged_in", "all")
+      )
+      expect_setequal(
+        xml2::xml_text(opts),
+        c("Private", "Restricted", "Logged-in", "Public")
+      )
+
+      # Connect access_type "all" is read back onto the Public option
+      has_sel <- !is.na(xml2::xml_attr(opts, "selected"))
+      expect_identical(xml2::xml_attr(opts, "value")[has_sel], "all")
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "vis-test")
+    )
+  )
+})
+
 test_that("sharing observers fire with sharing-capable backend", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
@@ -928,7 +977,7 @@ test_that("sharing observers fire with sharing-capable backend", {
     {
       first_save(session, "sharing-obs-test")
 
-      session$setInputs(visibility_change = "all")
+      session$setInputs(visibility_select = "all")
       expect_no_error(session$flushReact())
 
       session$setInputs(share_user = "user-guid-123")

@@ -947,7 +947,8 @@ manage_project_server <- function(id, board, ...) {
           choices = c(
             "Private" = "private",
             "Restricted" = "acl",
-            "Public" = "logged_in"
+            "Logged-in" = "logged_in",
+            "Public" = "all"
           ),
           selected = selected,
           width = "100%"
