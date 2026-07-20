@@ -759,7 +759,7 @@ manage_project_server <- function(id, board, ...) {
                 tags$div(class = "blockr-workflow-name", time_ago),
                 tags$div(
                   class = "blockr-workflow-meta",
-                  tags$span(class = "blockr-wf-version-id", v$hash),
+                  version_id_span(v),
                   if (is_current) " (Current)"
                 )
               )
@@ -845,7 +845,10 @@ manage_project_server <- function(id, board, ...) {
 
       has_sharing <- reactive({
         caps <- capabilities()
-        isTRUE(caps$sharing) || isTRUE(caps$visibility)
+
+        # no sharing UI until the workflow is a saved pin to share
+        (isTRUE(caps$sharing) || isTRUE(caps$visibility)) &&
+          not_null(current_id())
       })
 
       sharing_trigger <- reactiveVal(0)
@@ -883,6 +886,12 @@ manage_project_server <- function(id, board, ...) {
           uiOutput(session$ns("sharing_controls"))
         )
       })
+
+      # Render the tab and panel eagerly (whether the tab shows is fixed once
+      # a workflow loads), so opening the hamburger shows all three tabs at
+      # once instead of two with the sharing tab flashing in a beat later.
+      outputOptions(output, "sharing_tab", suspendWhenHidden = FALSE)
+      outputOptions(output, "sharing_panel", suspendWhenHidden = FALSE)
 
       output$sharing_controls <- renderUI({
         req(identical(input$visibility_select, "acl"))
@@ -923,11 +932,6 @@ manage_project_server <- function(id, board, ...) {
         req(isTRUE(caps$visibility))
 
         id <- current_id()
-        if (is.null(id)) {
-          return(
-            tags$div(class = "blockr-sharing-hint", "Save workflow first")
-          )
-        }
 
         acl <- tryCatch(rack_acl(id, backend), error = function(e) "acl")
 
@@ -947,7 +951,8 @@ manage_project_server <- function(id, board, ...) {
           choices = c(
             "Private" = "private",
             "Restricted" = "acl",
-            "Public" = "logged_in"
+            "Logged-in" = "logged_in",
+            "Public" = "all"
           ),
           selected = selected,
           width = "100%"
@@ -961,11 +966,6 @@ manage_project_server <- function(id, board, ...) {
         req(isTRUE(caps$sharing))
 
         id <- current_id()
-        if (is.null(id)) {
-          return(
-            tags$div(class = "blockr-sharing-hint", "Save workflow first")
-          )
-        }
 
         shares <- tryCatch(
           rack_shares(id, backend),
@@ -1717,6 +1717,10 @@ version_subrows <- function(wf, versions, is_active, active_version, backend,
   )
 }
 
+version_id_span <- function(v) {
+  tags$span(class = "blockr-wf-version-id", v$ref)
+}
+
 version_subrow <- function(wf, v, i, is_active, active_version, backend, ns) {
 
   is_current <- version_is_current(i, v$version, active_version, is_active)
@@ -1728,7 +1732,7 @@ version_subrow <- function(wf, v, i, is_active, active_version, backend, ns) {
     tags$td(class = "blockr-wf-checkbox"),
     tags$td(
       class = "blockr-wf-name blockr-wf-subrow-name",
-      tags$span(class = "blockr-wf-version-id", v$hash),
+      version_id_span(v),
       if (is_current) {
         tags$span(class = "blockr-version-badge", "(Current)")
       }

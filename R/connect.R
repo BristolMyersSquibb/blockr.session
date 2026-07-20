@@ -339,6 +339,25 @@ connect_apply_tag <- function(backend, slug) {
   invisible()
 }
 
+# rack_info -----------------------------------------------------------------
+
+#' @export
+rack_info.rack_id_pins_connect <- function(id, backend, ...) {
+
+  versions <- version_table(id, backend)
+
+  if (is.null(versions)) {
+    return(empty_version_info())
+  }
+
+  data.frame(
+    version = versions$version,
+    created = versions$created,
+    ref = paste0("v", versions$version),
+    stringsAsFactors = FALSE
+  )
+}
+
 # rack_upload ---------------------------------------------------------------
 
 #' @export

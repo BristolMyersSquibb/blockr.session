@@ -262,8 +262,7 @@ empty_pin_search <- function() {
 
 # rack_info -----------------------------------------------------------------
 
-#' @export
-rack_info.rack_id_pins <- function(id, backend, ...) {
+version_table <- function(id, backend) {
 
   versions <- tryCatch(
     pins::pin_versions(backend, pin_name(id)),
@@ -282,24 +281,39 @@ rack_info.rack_id_pins <- function(id, backend, ...) {
   )
 
   if (is.null(versions) || nrow(versions) == 0L) {
-    return(
-      data.frame(
-        version = character(),
-        created = as.POSIXct(character()),
-        hash = character(),
-        stringsAsFactors = FALSE
-      )
-    )
+    return(NULL)
   }
 
   versions <- versions[order(versions$created, decreasing = TRUE), ]
+  rownames(versions) <- NULL
 
-  if (!"hash" %in% colnames(versions)) {
-    versions$hash <- NA_character_
+  versions
+}
+
+empty_version_info <- function() {
+  data.frame(
+    version = character(),
+    created = as.POSIXct(character()),
+    ref = character(),
+    stringsAsFactors = FALSE
+  )
+}
+
+#' @export
+rack_info.rack_id_pins <- function(id, backend, ...) {
+
+  versions <- version_table(id, backend)
+
+  if (is.null(versions)) {
+    return(empty_version_info())
   }
 
-  rownames(versions) <- NULL
-  versions[, c("version", "created", "hash"), drop = FALSE]
+  data.frame(
+    version = versions$version,
+    created = versions$created,
+    ref = versions$hash,
+    stringsAsFactors = FALSE
+  )
 }
 
 # rack_download -------------------------------------------------------------
