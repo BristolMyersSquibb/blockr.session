@@ -29,9 +29,13 @@
 /* Tab bar */
 .blockr-tab-bar {
   display: flex;
+  /* even gaps around content-sized tabs: equal outer margins and equal
+     inter-tab gaps, rather than equal-width boxes whose centred labels
+     read as uneven when the labels differ in width */
+  justify-content: space-evenly;
   border-bottom: 1px solid #e5e7eb;
   background: white;
-  padding: 0 8px;
+  padding: 0;
   /* the tab bar is the top element; round its corners so the dropdown's
      rounded top corners aren't squared off by its background */
   border-top-left-radius: 12px;
@@ -43,8 +47,6 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  flex: 1;
-  min-width: 0;
   padding: 12px 8px;
   background: transparent;
   border: none;
@@ -373,7 +375,7 @@
   padding: 0;
   background: transparent;
   border: 1px solid hsl(220, 3%, 91%);
-  border-radius: 4px;
+  border-radius: 6px;
   color: #666;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -447,7 +449,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 6px 12px;
+  height: 28px;
+  padding: 0 12px;
   background: transparent;
   border: 1px solid hsl(220, 3%, 91%);
   border-radius: 6px;
