@@ -464,6 +464,10 @@ test_that("New navigates to a fresh `?new=` id the loader honors (#68)", {
 
   expect_match(seen, "^\\?new=")
 
+  # a non-session param in the URL survives New (MockShinySession seeds
+  # url_search with ?mocksearch=1)
+  expect_identical(parseQueryString(seen)[["mocksearch"]], "1")
+
   fresh_id <- parseQueryString(seen)[["new"]]
   reloaded <- rack_loader()$resolve(
     list(QUERY_STRING = sub("^\\?", "", seen)), NULL, new_board()

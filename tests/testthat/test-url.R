@@ -51,3 +51,27 @@ test_that("board_query_string accepts a rack_record", {
   backend <- pins::board_temp()
   expect_equal(board_query_string(rec, backend), "?id=slug")
 })
+
+test_that("board_query_string keep preserves non-session params", {
+  id <- new_rack_id_pins("my_board")
+  backend <- pins::board_temp()
+  expect_equal(
+    board_query_string(id, backend, keep = "?new=xyz&theme=dark&tab=2"),
+    "?id=my_board&theme=dark&tab=2"
+  )
+})
+
+test_that("drop_session_query keeps only non-session query params", {
+  keep <- drop_session_query(
+    "?id=b&board_name=n&user=u&version=v&new=x&theme=dark&tab=2"
+  )
+  expect_named(keep, c("theme", "tab"))
+  expect_equal(keep[["theme"]], "dark")
+})
+
+test_that("build_query_string url-encodes reserved characters in values", {
+  expect_equal(
+    build_query_string(list(id = "b", q = "a b")),
+    "?id=b&q=a%20b"
+  )
+})

@@ -152,7 +152,7 @@ manage_project_server <- function(id, board, ...) {
             backend,
             list(id = res$id, user = res$user)
           )
-          new_url <- board_query_string(saved, backend)
+          new_url <- board_query_string(saved, backend, keep = current_query())
           prev_query(new_url)
           updateQueryString(new_url, mode = "replace", session = session)
         }
@@ -233,7 +233,7 @@ manage_project_server <- function(id, board, ...) {
           }
 
           save_status("Just now")
-          new_url <- board_query_string(saved, backend)
+          new_url <- board_query_string(saved, backend, keep = current_query())
           prev_query(new_url)
           updateQueryString(new_url, mode = "replace", session = session)
           notify(
@@ -250,7 +250,9 @@ manage_project_server <- function(id, board, ...) {
         input$new_btn,
         {
           updateQueryString(
-            paste0("?new=", rand_names()),
+            build_query_string(
+              c(list(new = rand_names()), drop_session_query(current_query()))
+            ),
             mode = "replace",
             session = session
           )
@@ -1296,7 +1298,11 @@ workflow_item <- function(wf, backend, ns) {
 navigate_to_board <- function(id, backend, session) {
 
   updateQueryString(
-    board_query_string(id, backend),
+    board_query_string(
+      id,
+      backend,
+      keep = isolate(session$clientData$url_search)
+    ),
     mode = "replace",
     session = session
   )
