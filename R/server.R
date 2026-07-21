@@ -362,6 +362,15 @@ manage_project_server <- function(id, board, ...) {
         save_controls(session$ns, saved = not_null(current_id()))
       )
 
+      output$new_controls <- renderUI(
+        new_controls(
+          session$ns,
+          build_query_string(
+            c(list(new = rand_names()), drop_session_query(current_query()))
+          )
+        )
+      )
+
       observeEvent(
         input$load_workflow,
         navigate_to_board(
@@ -1352,6 +1361,47 @@ save_controls <- function(ns, saved) {
           ),
           bsicons::bs_icon("files"),
           "Save as new workflow"
+        )
+      )
+    )
+  )
+}
+
+new_controls <- function(ns, new_tab_href) {
+
+  new_btn <- tags$button(
+    id = ns("new_btn"),
+    class = "blockr-navbar-btn-new",
+    type = "button",
+    onclick = sprintf(
+      "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+      ns("new_btn")
+    ),
+    bsicons::bs_icon("plus"),
+    "New"
+  )
+
+  tagList(
+    new_btn,
+    tags$button(
+      class = paste(
+        "blockr-navbar-btn-new blockr-navbar-new-toggle",
+        "dropdown-toggle"
+      ),
+      type = "button",
+      `data-bs-toggle` = "dropdown",
+      `aria-expanded` = "false",
+      tags$span(class = "visually-hidden", "Toggle new menu")
+    ),
+    tags$ul(
+      class = "dropdown-menu dropdown-menu-end blockr-navbar-new-menu",
+      tags$li(
+        tags$a(
+          class = "dropdown-item",
+          href = new_tab_href,
+          target = "_blank",
+          bsicons::bs_icon("box-arrow-up-right"),
+          "New in new tab"
         )
       )
     )
