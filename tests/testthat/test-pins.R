@@ -645,22 +645,35 @@ test_that("connect_owner_cache resolves an owner once and caches it", {
   expect_equal(calls, 1L)
 })
 
-test_that("rack_list on Connect with tags uses the pin_search path", {
+test_that("rack_list on Connect ignores the tags argument", {
 
   board <- mock_board_connect()
+  connect_owner_cache$reset()
+  withr::defer(connect_owner_cache$reset())
 
   local_mocked_bindings(
-    pin_search = function(...) {
-      df <- data.frame(name = "user_a/wf", stringsAsFactors = FALSE)
-      df$meta <- list(list(tags = c("blockr-session", "prod")))
-      df$created <- as.POSIXct("2020-01-01", tz = "UTC")
-      df
-    },
+    connect_api = function(board, route, ...) {
+      if (grepl("GET /users", route, fixed = TRUE)) {
+        return(list(username = "user_a"))
+      }
+      if (identical(route, "GET /content")) {
+        return(
+          list(
+            list(name = "wf", title = "WF", content_category = "pin",
+                 owner_guid = "g", last_deployed_time = "2020-01-01T00:00:00Z")
+          )
+        )
+      }
+      list()
+    }
+  )
+  local_mocked_bindings(
+    pin_search = function(...) stop("Connect listing must not call pin_search"),
+    pin_meta = function(...) stop("Connect listing must not probe pins"),
     .package = "pins"
   )
-  local_mocked_bindings(connect_content_titles = function(backend) list())
 
-  result <- rack_list(board, tags = "prod")
+  result <- rack_list(board, tags = "does-not-match")
 
   expect_length(result, 1L)
   expect_equal(result[[1L]]$id, "wf")
