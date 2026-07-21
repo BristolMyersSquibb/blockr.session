@@ -146,7 +146,28 @@ valid_rack_id <- function(x) {
   is_string(x) && grepl("^[A-Za-z0-9_-]+$", x)
 }
 
-board_query_string <- function(id, backend) {
+# the query keys rack_loader() interprets; everything else in the URL is
+# preserved across New and save/navigate so app-level params survive.
+session_query_keys <- c("id", "board_name", "user", "version", "new")
+
+drop_session_query <- function(query) {
+  parsed <- parseQueryString(coal(query, ""))
+  parsed[setdiff(names(parsed), session_query_keys)]
+}
+
+build_query_string <- function(params) {
+  paste0(
+    "?",
+    paste(
+      names(params),
+      chr_ply(params, utils::URLencode, reserved = TRUE),
+      sep = "=",
+      collapse = "&"
+    )
+  )
+}
+
+board_query_string <- function(id, backend, keep = NULL) {
 
   params <- list(id = coal(id$id, id[["name"]], fail_all = FALSE))
 
@@ -158,8 +179,5 @@ board_query_string <- function(id, backend) {
     params$version <- id$version
   }
 
-  paste0(
-    "?",
-    paste(names(params), params, sep = "=", collapse = "&")
-  )
+  build_query_string(c(params, drop_session_query(keep)))
 }

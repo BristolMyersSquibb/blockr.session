@@ -152,7 +152,7 @@ manage_project_server <- function(id, board, ...) {
             backend,
             list(id = res$id, user = res$user)
           )
-          new_url <- board_query_string(saved, backend)
+          new_url <- board_query_string(saved, backend, keep = current_query())
           prev_query(new_url)
           updateQueryString(new_url, mode = "replace", session = session)
         }
@@ -233,7 +233,7 @@ manage_project_server <- function(id, board, ...) {
           }
 
           save_status("Just now")
-          new_url <- board_query_string(saved, backend)
+          new_url <- board_query_string(saved, backend, keep = current_query())
           prev_query(new_url)
           updateQueryString(new_url, mode = "replace", session = session)
           notify(
@@ -249,7 +249,13 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$new_btn,
         {
-          updateQueryString("?", mode = "replace", session = session)
+          updateQueryString(
+            build_query_string(
+              c(list(new = rand_names()), drop_session_query(current_query()))
+            ),
+            mode = "replace",
+            session = session
+          )
           session$reload()
         }
       )
@@ -1142,7 +1148,9 @@ manage_project_server <- function(id, board, ...) {
 #' A [blockr.core::board_loader()] for [blockr.core::serve()] that picks the
 #' board to build from the request URL. The board named by the URL handle
 #' (`board_name` / `user` / `version`) loads from the `session_mgmt_backend`
-#' backend; a request without such a handle (a cold load, or a "New" board)
+#' backend; a `new` handle (minted when the user hits New) yields an empty
+#' board under that fresh id, so saving it forks a distinct record rather than
+#' overwriting the served board; a request without any handle (a cold load)
 #' gets a cleared copy of the served board. The backend is resolved with the
 #' loader's own request (at the GET, before any session) or session (at the WS
 #' connect), so a user-scoped backend such as [user_pins_board()] resolves
@@ -1168,6 +1176,16 @@ rack_loader <- function() {
     }
 
     query <- parseQueryString(coal(search, ""))
+
+    # the fresh id rides in the URL rather than being minted here: resolve runs
+    # once at the GET and again at the WS connect, and the id becomes the board
+    # module's namespace at both, so it must be identical across the two phases.
+    fresh <- query[["new"]]
+
+    if (not_null(fresh) && nzchar(fresh)) {
+      return(new_rack_board(default, fresh))
+    }
+
     handle <- coal(query$id, query$board_name, fail_all = FALSE)
 
     if (is.null(handle) || !nzchar(handle)) {
@@ -1211,6 +1229,14 @@ rack_loader <- function() {
   }
 
   board_loader(resolve)
+}
+
+new_rack_board <- function(board, id) {
+
+  board <- clear_board(board)
+  attr(board, "id") <- id
+
+  reset_board_name(board, id_to_sentence_case(id))
 }
 
 # A URL may point at a pin that is not a blockr workflow -- directly, or because
@@ -1272,7 +1298,11 @@ workflow_item <- function(wf, backend, ns) {
 navigate_to_board <- function(id, backend, session) {
 
   updateQueryString(
-    board_query_string(id, backend),
+    board_query_string(
+      id,
+      backend,
+      keep = isolate(session$clientData$url_search)
+    ),
     mode = "replace",
     session = session
   )

@@ -408,6 +408,75 @@ test_that("loader resolve serves the cleared default for an unknown board", {
   expect_length(board_block_ids(res), 0)
 })
 
+test_that("loader resolve mints a fresh board for a `new` handle (#68)", {
+  initial <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  res <- rack_loader()$resolve(
+    list(QUERY_STRING = "new=rebel_eyas"), NULL, initial
+  )
+
+  expect_s3_class(res, "board")
+  expect_length(board_block_ids(res), 0)
+  expect_identical(attr(res, "id"), "rebel_eyas")
+  expect_identical(
+    board_option_value(board_options(res)[["board_name"]]),
+    "Rebel eyas"
+  )
+})
+
+test_that("loader derives the `new` id identically at GET and WS (#68)", {
+  initial <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  get_phase <- rack_loader()$resolve(
+    list(QUERY_STRING = "new=rebel_eyas"), NULL, initial
+  )
+
+  ws_phase <- rack_loader()$resolve(
+    NULL,
+    list(request = list(), clientData = list(url_search = "?new=rebel_eyas")),
+    initial
+  )
+
+  expect_identical(attr(get_phase, "id"), "rebel_eyas")
+  expect_identical(attr(ws_phase, "id"), attr(get_phase, "id"))
+})
+
+test_that("New navigates to a fresh `?new=` id the loader honors (#68)", {
+  withr::local_options(
+    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
+  )
+
+  seen <- NULL
+  local_mocked_bindings(
+    updateQueryString = function(query, ...) seen <<- query
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(new_btn = 1)
+      session$flushReact()
+    },
+    args = list(
+      board = reactiveValues(board = new_board(), board_id = "served")
+    )
+  )
+
+  expect_match(seen, "^\\?new=")
+
+  # a non-session param in the URL survives New (MockShinySession seeds
+  # url_search with ?mocksearch=1)
+  expect_identical(parseQueryString(seen)[["mocksearch"]], "1")
+
+  fresh_id <- parseQueryString(seen)[["new"]]
+  reloaded <- rack_loader()$resolve(
+    list(QUERY_STRING = sub("^\\?", "", seen)), NULL, new_board()
+  )
+
+  expect_identical(attr(reloaded, "id"), fresh_id)
+  expect_false(identical(fresh_id, "served"))
+})
+
 test_that("loader GET user-scopes via the configured user_pins_board (#70)", {
   visitor_backend <- pins::board_temp(versioned = TRUE)
 
