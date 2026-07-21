@@ -413,7 +413,8 @@
   margin: 0;
 }
 
-.blockr-navbar-save-menu {
+.blockr-navbar-save-menu,
+.blockr-navbar-new-menu {
   min-width: 200px;
   margin-top: 6px;
   padding: 6px;
@@ -422,7 +423,8 @@
   box-shadow: 0 10px 25px -8px rgb(0 0 0 / 0.2);
 }
 
-.blockr-navbar-save-menu .dropdown-item {
+.blockr-navbar-save-menu .dropdown-item,
+.blockr-navbar-new-menu .dropdown-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -433,12 +435,15 @@
 }
 
 .blockr-navbar-save-menu .dropdown-item:hover,
-.blockr-navbar-save-menu .dropdown-item:focus {
+.blockr-navbar-save-menu .dropdown-item:focus,
+.blockr-navbar-new-menu .dropdown-item:hover,
+.blockr-navbar-new-menu .dropdown-item:focus {
   background-color: #f3f4f6;
   color: #111827;
 }
 
-.blockr-navbar-save-menu .dropdown-item svg {
+.blockr-navbar-save-menu .dropdown-item svg,
+.blockr-navbar-new-menu .dropdown-item svg {
   width: 14px;
   height: 14px;
   color: #6b7280;
@@ -470,6 +475,28 @@
 .blockr-navbar-btn-new svg {
   width: 14px;
   height: 14px;
+}
+
+/* --- New Split Button --- */
+.blockr-navbar-new-group {
+  display: inline-flex;
+}
+
+.blockr-navbar-new-group > .blockr-navbar-btn-new:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.blockr-navbar-new-toggle {
+  gap: 0;
+  padding: 0 7px;
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.blockr-navbar-new-toggle::after {
+  margin: 0;
 }
 
 /* --- User Avatar --- */

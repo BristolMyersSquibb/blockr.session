@@ -159,17 +159,11 @@ manage_project_ui <- function(id, x) {
           class = "btn-group blockr-navbar-save-group"
         )
       ),
-      # New button
-      tags$button(
-        id = ns("new_btn"),
-        class = "blockr-navbar-btn-new shiny-bound-input",
-        type = "button",
-        onclick = sprintf(
-          "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-          ns("new_btn")
-        ),
-        bsicons::bs_icon("plus"),
-        "New"
+      # New split button: "New" creates in place; caret opens a fresh
+      # board in a new tab
+      tagAppendAttributes(
+        uiOutput(ns("new_controls")),
+        class = "btn-group blockr-navbar-new-group"
       ),
       # Spacer to push avatar to the right
       tags$span(class = "manage-project-spacer"),

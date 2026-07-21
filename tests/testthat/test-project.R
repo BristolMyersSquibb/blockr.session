@@ -477,6 +477,37 @@ test_that("New navigates to a fresh `?new=` id the loader honors (#68)", {
   expect_false(identical(fresh_id, "served"))
 })
 
+test_that("New split button offers a fresh `?new=` new tab (#74)", {
+  withr::local_options(
+    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      doc <- xml2::read_html(
+        paste(as.character(output$new_controls), collapse = "")
+      )
+
+      in_place <- xml2::xml_find_all(
+        doc, ".//button[contains(@onclick, 'new_btn')]"
+      )
+      expect_length(in_place, 1L)
+
+      link <- xml2::xml_find_all(doc, ".//a[@target='_blank']")
+      expect_length(link, 1L)
+      expect_match(xml2::xml_text(link), "New in new tab")
+
+      href <- xml2::xml_attr(link, "href")
+      expect_match(href, "^\\?new=")
+      expect_identical(parseQueryString(href)[["mocksearch"]], "1")
+    },
+    args = list(
+      board = reactiveValues(board = new_board(), board_id = "served")
+    )
+  )
+})
+
 test_that("loader GET user-scopes via the configured user_pins_board (#70)", {
   visitor_backend <- pins::board_temp(versioned = TRUE)
 
