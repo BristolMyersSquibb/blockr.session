@@ -84,10 +84,6 @@ rack_rename.rack_id_pins_connect <- function(id, backend, name, ...) {
 #' @export
 rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
 
-  if (not_null(tags)) {
-    return(connect_list_tagged(backend, tags))
-  }
-
   tag_id <- connect_tag_id(backend)
 
   if (not_null(tag_id)) {
@@ -154,34 +150,6 @@ connect_sort_records <- function(records) {
   )
 
   records[order(key, decreasing = TRUE, na.last = TRUE)]
-}
-
-connect_list_tagged <- function(backend, tags) {
-
-  df <- filter_workflows(pins::pin_search(backend), tags)
-
-  if (nrow(df) == 0L) {
-    return(list())
-  }
-
-  titles <- tryCatch(
-    connect_content_titles(backend),
-    error = function(e) list()
-  )
-
-  lapply(
-    seq_len(nrow(df)),
-    function(i) {
-      parts <- strsplit(df$name[i], "/", fixed = TRUE)[[1L]]
-      slug <- parts[2L]
-      new_rack_record(
-        id = slug,
-        name = coal(titles[[slug]], slug, fail_all = FALSE),
-        user = parts[1L],
-        saved = df$created[i]
-      )
-    }
-  )
 }
 
 connect_item_title <- function(item) {
@@ -582,30 +550,6 @@ connect_content_find <- function(board, name) {
   }
 
   results[[1L]]
-}
-
-connect_content_titles <- function(board) {
-
-  results <- connect_api(board, "GET /content")
-
-  out <- list()
-
-  for (item in results) {
-
-    slug <- item$name
-
-    if (is.null(slug) || !nzchar(slug)) {
-      next
-    }
-
-    out[[slug]] <- if (not_null(item$title) && nzchar(item$title)) {
-      item$title
-    } else {
-      slug
-    }
-  }
-
-  out
 }
 
 connect_parse_time <- function(x) {
