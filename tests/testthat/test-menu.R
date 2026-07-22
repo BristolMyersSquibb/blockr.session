@@ -284,3 +284,55 @@ test_that("modal_toggle updates the server-side selection", {
     )
   )
 })
+
+test_that("suggest_copy_id suffixes -copy when no copy exists (#99)", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  rack_create(backend, list(blocks = list()), id = "sales", name = "sales")
+
+  expect_identical(suggest_copy_id("sales", backend), "sales-copy")
+})
+
+test_that("suggest_copy_id increments past existing copies (#99)", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  for (nm in c("sales", "sales-copy", "sales-copy-2")) {
+    rack_create(backend, list(blocks = list()), id = nm, name = nm)
+  }
+
+  expect_identical(suggest_copy_id("sales", backend), "sales-copy-3")
+})
+
+test_that("suggest_copy_id falls back to the plain suffix at max_tries (#99)", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  rack_create(backend, list(blocks = list()), id = "x-copy", name = "x-copy")
+
+  expect_identical(suggest_copy_id("x", backend, max_tries = 1L), "x-copy")
+})
+
+test_that("save-as prefills the current id plus -copy as the default (#99)", {
+
+  withr::local_options(
+    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
+  )
+
+  captured <- NULL
+  local_mocked_bindings(
+    show_rack_id_modal = function(session, default) captured <<- default
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_as_btn = 1)
+      session$flushReact()
+
+      expect_identical(captured, "sales-copy")
+    },
+    args = list(
+      board = reactiveValues(board = new_board(), board_id = "sales")
+    )
+  )
+})
