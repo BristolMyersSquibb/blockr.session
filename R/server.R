@@ -162,7 +162,10 @@ manage_project_server <- function(id, board, ...) {
         input$save_as_btn,
         {
           pending_save_mode("fork")
-          show_rack_id_modal(session, default = rand_names())
+          show_rack_id_modal(
+            session,
+            default = suggest_copy_id(current_rack_id(), backend)
+          )
         }
       )
 
@@ -1428,6 +1431,28 @@ show_rack_id_modal <- function(session, default) {
       )
     )
   )
+}
+
+suggest_copy_id <- function(base, backend, max_tries = 100L) {
+
+  taken <- function(id) {
+    isTRUE(
+      tryCatch(
+        rack_exists(rack_id_from_input(backend, list(id = id)), backend),
+        error = function(e) FALSE
+      )
+    )
+  }
+
+  candidate <- paste0(base, "-copy")
+
+  n <- 2L
+  while (taken(candidate) && n <= max_tries) {
+    candidate <- paste0(base, "-copy-", n)
+    n <- n + 1L
+  }
+
+  candidate
 }
 
 shiny_input_js <- function(ns_id, value) {
