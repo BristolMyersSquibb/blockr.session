@@ -1,5 +1,100 @@
+#' Rack storage backend contract
+#'
+#' The rack layer is the storage abstraction behind blockr session
+#' persistence: it turns a save into a stored, versioned record and a load back
+#' into board state. The shipped backend dispatches on \pkg{pins} boards (see
+#' [user_pins_board()]), but the contract is storage-agnostic -- a database or
+#' document store is supported by implementing the generics documented here and
+#' carrying the `rack_backend` class, which is what wiring a non-pins backend
+#' into the `session_mgmt_backend` [blockr.core::blockr_option()] requires. The
+#' high-level [rack_create()],
+#' [rack_append()] and [rack_load()] entry points that application code calls
+#' are built on these generics.
+#'
+#' Two kinds of object flow through the contract. A *backend* is the board or
+#' store itself, the dispatch target for `rack_capabilities()`, `rack_list()`,
+#' `rack_upload()`, `rack_id_from_input()` and `rack_find_users()`. A `rack_id`
+#' is a handle to one stored record, the dispatch target for the remaining
+#' generics; `rack_id_from_input()` parses the raw identifier components (`id`,
+#' `version`, `user`) carried in a session URL into the backend's own `rack_id`
+#' subclass, minted with `new_rack_id(..., class = )`. `rack_list()` returns
+#' [new_rack_record()] summaries, the listing rows the workflow menu renders.
+#'
+#' @section Capabilities:
+#' `rack_capabilities()` is the feature switch: it returns a named list of
+#' logical flags declaring which optional features the backend supports, and
+#' the management UI gates the matching generics on it.
+#'
+#' - `versioning`: a version history is kept per record: `rack_info()` lists it
+#'   and `rack_download()` / `rack_delete()` accept a version.
+#' - `tags`: `rack_tags()` and `rack_set_tags()` are implemented.
+#' - `metadata`: a display name (`rack_name()`, `rack_rename()`) and a content
+#'   hash (`rack_content_hash()`) are stored alongside the payload.
+#' - `sharing`: `rack_share()`, `rack_unshare()` and `rack_shares()` are
+#'   implemented.
+#' - `visibility`: `rack_acl()` and `rack_set_acl()` are implemented.
+#' - `user_discovery`: `rack_find_users()` is implemented.
+#'
+#' A minimal backend implements only the core create / load / list set --
+#' `rack_id_from_input()`, `rack_upload()`, `rack_download()`, `rack_exists()`,
+#' `rack_list()`, `rack_info()` and `rack_name()` -- and returns `FALSE` for
+#' every optional capability; the generics behind a `FALSE` flag are then never
+#' reached and need no method.
+#'
+#' @param backend A rack backend: the storage object dispatched on. A
+#'   \pkg{pins} board is recognized directly; any other backend carries the
+#'   `rack_backend` class so the `session_mgmt_backend` option accepts it.
+#' @param id A `rack_id` identifying a stored record, for the accessor and
+#'   mutator generics. For `new_rack_id()` and `new_rack_record()`, the
+#'   record's storage id: a non-empty string, stable and independent of the
+#'   display name.
+#' @param x A list of the raw identifier components (`id`, and optionally
+#'   `version` and `user`) parsed from a session URL, to coerce into a
+#'   backend-specific `rack_id`.
+#' @param path Path to the local file to upload as a new version.
+#' @param name Display name for the record, written to the backend's native
+#'   name field and never used as the storage key; `NULL` keeps the current
+#'   name.
+#' @param tags Character vector of tags: the filter applied by `rack_list()`
+#'   (`NULL` for none), or the tag set written by `rack_set_tags()`.
+#' @param acl_type Access-control level to set, backend-defined (e.g.
+#'   `"private"`, `"acl"`, `"all"`).
+#' @param with_sub Backend identifier of the principal to share a record with
+#'   or revoke.
+#' @param query Search prefix for `rack_find_users()`.
+#' @param version For `new_rack_id()`, an optional version string pinning the
+#'   `rack_id` to one stored version; `NULL` tracks the latest.
+#' @param user For `new_rack_id()`, the owning account, used to reach records
+#'   stored under another user's namespace.
+#' @param class Character vector prepended to the object's class, so a backend
+#'   carries its own `rack_id` / `rack_record` subclass.
+#' @param ... Passed on to methods; for the constructors, extra named fields
+#'   stored on the object.
+#'
+#' @return
+#' `new_rack_id()` and `new_rack_record()` return a `rack_id` and `rack_record`
+#' respectively. `rack_capabilities()` returns the named list of flags above.
+#' `rack_list()` returns a list of `rack_record`s and `rack_info()` a data
+#' frame of versions (columns `version`, `created`, `ref`, newest first).
+#' `rack_id_from_input()`, `rack_upload()` and `rack_rename()` return a
+#' `rack_id`; `rack_download()` a local file path; `rack_name()` a string;
+#' `last_saved()` a timestamp; `rack_exists()` a scalar logical;
+#' `rack_content_hash()` the stored payload hash; `rack_tags()`, `rack_acl()`
+#' and `rack_shares()` the stored tags, access level and shares. The mutators
+#' (`rack_set_tags()`, `rack_set_acl()`, `rack_share()`, `rack_unshare()`,
+#' `rack_delete()`, `rack_purge()`) return invisibly.
+#'
+#' @seealso [rack_create()], [rack_append()] and [rack_load()] for the
+#'   high-level save / load API built on the contract, and [user_pins_board()]
+#'   for the default \pkg{pins} backend.
+#'
+#' @name rack-backend
+NULL
+
 # new_rack_id ---------------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 new_rack_id <- function(id, version = NULL, user = NULL, ...,
                         class = character()) {
 
@@ -18,6 +113,8 @@ new_rack_id <- function(id, version = NULL, user = NULL, ...,
 
 # new_rack_record -----------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 new_rack_record <- function(id, name, ..., class = character()) {
 
   if (!is_string(id) || !nzchar(id)) {
@@ -42,14 +139,24 @@ new_rack_record <- function(id, name, ..., class = character()) {
 
 # Accessor generics ---------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 last_saved <- function(id, ...) UseMethod("last_saved")
 
+#' @rdname rack-backend
+#' @export
 rack_content_hash <- function(id, backend, ...) UseMethod("rack_content_hash")
 
+#' @rdname rack-backend
+#' @export
 rack_name <- function(id, backend, ...) UseMethod("rack_name")
 
+#' @rdname rack-backend
+#' @export
 rack_rename <- function(id, backend, name, ...) UseMethod("rack_rename")
 
+#' @rdname rack-backend
+#' @export
 rack_exists <- function(id, backend, ...) UseMethod("rack_exists")
 
 # Format / print ------------------------------------------------------------
@@ -78,59 +185,31 @@ print.rack_record <- function(x, ...) {
 
 # rack_list -----------------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 rack_list <- function(backend, tags = NULL, ...) UseMethod("rack_list")
 
 # rack_id_from_input --------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 rack_id_from_input <- function(backend, x, ...) UseMethod("rack_id_from_input")
 
 # rack_info -----------------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 rack_info <- function(id, backend, ...) UseMethod("rack_info")
 
 # rack_download -------------------------------------------------------------
 
-#' Download a session file from a rack backend
-#'
-#' Retrieves the raw file path(s) for a stored session identified by `id` from
-#' the given `backend`. This is a low-level generic; most callers should use
-#' [rack_load()] instead.
-#'
-#' @param id A `rack_id` object identifying the session to download.
-#' @param backend A rack backend object (e.g. a `pins_board`).
-#' @param ... Additional arguments passed to the method.
-#'
-#' @return A character vector of local file paths to the downloaded content.
-#'
-#' @seealso [rack_load()] for the high-level wrapper that parses the result,
-#'   [rack_upload()] for the complementary upload generic.
-#'
+#' @rdname rack-backend
 #' @export
 rack_download <- function(id, backend, ...) UseMethod("rack_download")
 
 # rack_upload ---------------------------------------------------------------
 
-#' Upload a session file to a rack backend
-#'
-#' Stores the file at `path` under the record identified by `id`, adding a new
-#' version. The storage handle is taken purely from `id` (its stable, name-
-#' independent slug); the display `name`, when supplied, is written to the
-#' backend's native name field (Connect content title, or pin metadata for file
-#' boards) and never affects the storage key. This is a low-level generic; most
-#' callers should use [rack_create()] or [rack_append()].
-#'
-#' @param backend A rack backend object (e.g. a `pins_board`).
-#' @param path Character scalar. Path to the local file to upload.
-#' @param ... Additional arguments passed to the method, including `id` (the
-#'   `rack_id` whose slug keys the record) and `name` (the display name to set;
-#'   `NULL` preserves the existing name).
-#'
-#' @return A `rack_id` object identifying the newly created version.
-#'
-#' @seealso [rack_create()] and [rack_append()] for the high-level wrappers that
-#'   serialise R data before uploading, [rack_download()] for the complementary
-#'   download generic.
-#'
+#' @rdname rack-backend
 #' @export
 rack_upload <- function(backend, path, ...) UseMethod("rack_upload")
 
@@ -238,34 +317,56 @@ rack_content_changed <- function(id, backend, data) {
 
 # rack_delete ---------------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 rack_delete <- function(id, backend, ...) UseMethod("rack_delete")
 
+#' @rdname rack-backend
+#' @export
 rack_purge <- function(id, backend, ...) UseMethod("rack_purge")
 
 # rack_capabilities --------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 rack_capabilities <- function(backend, ...) UseMethod("rack_capabilities")
 
 # rack_tags ----------------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 rack_tags <- function(id, backend, ...) UseMethod("rack_tags")
 
+#' @rdname rack-backend
+#' @export
 rack_set_tags <- function(id, backend, tags, ...) UseMethod("rack_set_tags")
 
 # rack_acl -----------------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 rack_acl <- function(id, backend, ...) UseMethod("rack_acl")
 
+#' @rdname rack-backend
+#' @export
 rack_set_acl <- function(id, backend, acl_type, ...) UseMethod("rack_set_acl")
 
 # rack_share ---------------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 rack_share <- function(id, backend, with_sub, ...) UseMethod("rack_share")
 
+#' @rdname rack-backend
+#' @export
 rack_unshare <- function(id, backend, with_sub, ...) UseMethod("rack_unshare")
 
+#' @rdname rack-backend
+#' @export
 rack_shares <- function(id, backend, ...) UseMethod("rack_shares")
 
 # rack_find_users ----------------------------------------------------------
 
+#' @rdname rack-backend
+#' @export
 rack_find_users <- function(backend, query, ...) UseMethod("rack_find_users")

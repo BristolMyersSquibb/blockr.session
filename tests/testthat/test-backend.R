@@ -53,3 +53,35 @@ test_that("connect_board errors when connectapi is unavailable", {
     class = "connectapi_not_installed"
   )
 })
+
+test_that("is_rack_backend recognizes pins boards and the rack_backend class", {
+
+  expect_true(is_rack_backend(pins::board_temp()))
+  expect_true(is_rack_backend(mock_board_connect()))
+  expect_true(is_rack_backend(structure(list(), class = "rack_backend")))
+  expect_true(
+    is_rack_backend(structure(list(), class = c("demo_store", "rack_backend")))
+  )
+
+  expect_false(is_rack_backend(list()))
+  expect_false(is_rack_backend(42))
+  expect_false(is_rack_backend(structure(list(), class = "not_a_backend")))
+})
+
+test_that("get_session_backend accepts a non-pins backend on the contract", {
+
+  demo <- structure(list(), class = c("demo_store", "rack_backend"))
+
+  withr::local_options(blockr.session_mgmt_backend = function() demo)
+
+  expect_identical(get_session_backend(), demo)
+})
+
+test_that("get_session_backend rejects a value that is not a rack backend", {
+
+  withr::local_options(
+    blockr.session_mgmt_backend = function() list(nope = TRUE)
+  )
+
+  expect_error(get_session_backend(), class = "invalid_session_backend")
+})
