@@ -1,0 +1,25 @@
+url: https://bristolmyerssquibb.github.io/blockr.session/
+
+template:
+  bootstrap: 5
+  light-switch: true
+
+reference:
+- title: Board management plugin
+  desc: The navbar plugin that adds project save, history and restore to a board.
+  contents:
+    - manage_project
+- title: Storage backend contract
+  desc: The generics and constructors a custom rack storage backend implements.
+  contents:
+    - rack-backend
+- title: Saving and loading
+  desc: The high-level save and load API, and the board loader that restores from a request URL.
+  contents:
+    - rack_create
+    - rack_load
+    - rack_loader
+- title: Default pins backend
+  desc: The shipped storage backend, resolving per-user pin storage on Posit Connect.
+  contents:
+    - user_pins_board

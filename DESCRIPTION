@@ -9,6 +9,8 @@ Authors@R:
     )
 Description: Provides a "preserve_board" module for blockr apps to save and
     manage projects and restore existing boards.
+URL: https://bristolmyerssquibb.github.io/blockr.session/
+BugReports: https://github.com/BristolMyersSquibb/blockr.session/issues
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -28,8 +30,12 @@ Suggests:
     testthat (>= 3.0.0),
     blockr.dock,
     connectapi,
+    knitr,
+    rmarkdown,
+    quarto,
     withr,
     xml2
+VignetteBuilder: quarto
 Config/testthat/edition: 3
 Remotes:
     BristolMyersSquibb/blockr.core

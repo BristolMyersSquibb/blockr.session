@@ -2,3 +2,8 @@
 ^\.github$
 ^\.claude$
 ^plans$
+^vignettes/*_files$
+^vignettes/\.quarto$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
