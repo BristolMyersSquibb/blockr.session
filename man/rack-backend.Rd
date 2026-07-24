@@ -4,13 +4,12 @@
 \alias{rack-backend}
 \alias{new_rack_id}
 \alias{new_rack_record}
-\alias{last_saved}
 \alias{rack_content_hash}
 \alias{rack_name}
 \alias{rack_rename}
 \alias{rack_exists}
 \alias{rack_list}
-\alias{rack_id_from_input}
+\alias{as_rack_id}
 \alias{rack_info}
 \alias{rack_download}
 \alias{rack_upload}
@@ -31,8 +30,6 @@ new_rack_id(id, version = NULL, user = NULL, ..., class = character())
 
 new_rack_record(id, name, ..., class = character())
 
-last_saved(id, ...)
-
 rack_content_hash(id, backend, ...)
 
 rack_name(id, backend, ...)
@@ -43,7 +40,7 @@ rack_exists(id, backend, ...)
 
 rack_list(backend, tags = NULL, ...)
 
-rack_id_from_input(backend, x, ...)
+as_rack_id(x, backend, ...)
 
 rack_info(id, backend, ...)
 
@@ -102,9 +99,10 @@ name.}
 \item{tags}{Character vector of tags: the filter applied by \code{rack_list()}
 (\code{NULL} for none), or the tag set written by \code{rack_set_tags()}.}
 
-\item{x}{A list of the raw identifier components (\code{id}, and optionally
-\code{version} and \code{user}) parsed from a session URL, to coerce into a
-backend-specific \code{rack_id}.}
+\item{x}{The object to coerce with \code{as_rack_id()}: an existing \code{rack_id}
+(returned unchanged), or a component bag -- a list of identifier fields
+(\code{id}, and optionally \code{version} and \code{user}) or a \code{rack_record} -- turned
+into the backend's own \code{rack_id} subclass.}
 
 \item{path}{Path to the local file to upload as a new version.}
 
@@ -121,13 +119,13 @@ or revoke.}
 respectively. \code{rack_capabilities()} returns the named list of flags above.
 \code{rack_list()} returns a list of \code{rack_record}s and \code{rack_info()} a data
 frame of versions (columns \code{version}, \code{created}, \code{ref}, newest first).
-\code{rack_id_from_input()}, \code{rack_upload()} and \code{rack_rename()} return a
-\code{rack_id}; \code{rack_download()} a local file path; \code{rack_name()} a string;
-\code{last_saved()} a timestamp; \code{rack_exists()} a scalar logical;
-\code{rack_content_hash()} the stored payload hash; \code{rack_tags()}, \code{rack_acl()}
-and \code{rack_shares()} the stored tags, access level and shares. The mutators
-(\code{rack_set_tags()}, \code{rack_set_acl()}, \code{rack_share()}, \code{rack_unshare()},
-\code{rack_delete()}, \code{rack_purge()}) return invisibly.
+\code{as_rack_id()}, \code{rack_upload()} and \code{rack_rename()} return a \code{rack_id};
+\code{rack_download()} a local file path; \code{rack_name()} a string; \code{rack_exists()}
+a scalar logical; \code{rack_content_hash()} the stored payload hash;
+\code{rack_tags()}, \code{rack_acl()} and \code{rack_shares()} the stored tags, access
+level and shares. The mutators (\code{rack_set_tags()}, \code{rack_set_acl()},
+\code{rack_share()}, \code{rack_unshare()}, \code{rack_delete()}, \code{rack_purge()}) return
+invisibly.
 }
 \description{
 The rack layer is the storage abstraction behind blockr session
@@ -143,13 +141,15 @@ are built on these generics.
 }
 \details{
 Two kinds of object flow through the contract. A \emph{backend} is the board or
-store itself, the dispatch target for \code{rack_capabilities()}, \code{rack_list()},
-\code{rack_upload()}, \code{rack_id_from_input()} and \code{rack_find_users()}. A \code{rack_id}
-is a handle to one stored record, the dispatch target for the remaining
-generics; \code{rack_id_from_input()} parses the raw identifier components (\code{id},
-\code{version}, \code{user}) carried in a session URL into the backend's own \code{rack_id}
-subclass, minted with \code{new_rack_id(..., class = )}. \code{rack_list()} returns
-\code{\link[=new_rack_record]{new_rack_record()}} summaries, the listing rows the workflow menu renders.
+store itself, the dispatch target for \code{as_rack_id()}, \code{rack_capabilities()},
+\code{rack_list()}, \code{rack_upload()} and \code{rack_find_users()}. A \code{rack_id} is a
+handle to one stored record, the dispatch target for the remaining generics.
+\code{\link[=as_rack_id]{as_rack_id()}} coerces a raw identifier -- a component list or a
+\code{rack_record} listing row -- into the backend's own \code{rack_id} subclass (via
+\code{new_rack_id(..., class = )}) from the components (\code{id}, \code{version}, \code{user})
+carried in a session URL, and returns an existing \code{rack_id} unchanged.
+\code{rack_list()} returns \code{\link[=new_rack_record]{new_rack_record()}} summaries, the listing rows the
+workflow menu renders.
 }
 \section{Capabilities}{
 
@@ -169,7 +169,7 @@ implemented.
 }
 
 A minimal backend implements only the core create / load / list set --
-\code{rack_id_from_input()}, \code{rack_upload()}, \code{rack_download()}, \code{rack_exists()},
+\code{as_rack_id()}, \code{rack_upload()}, \code{rack_download()}, \code{rack_exists()},
 \code{rack_list()}, \code{rack_info()} and \code{rack_name()} -- and returns \code{FALSE} for
 every optional capability; the generics behind a \code{FALSE} flag are then never
 reached and need no method.

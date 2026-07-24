@@ -13,7 +13,7 @@ new_rack_id_pins <- function(id, version = NULL) {
 }
 
 #' @export
-rack_id_from_input.pins_board <- function(backend, x, ...) {
+as_rack_id.pins_board <- function(x, backend, ...) {
   new_rack_id_pins(input_id(x), input_version(x))
 }
 
@@ -49,15 +49,6 @@ pin_name.rack_id_pins <- function(id, ...) id$id
 format.rack_id_pins <- function(x, ...) {
   v <- if (not_null(x$version)) paste0("@", x$version) else ""
   paste0("<rack_id_pins: ", x$id, v, ">")
-}
-
-# last_saved ----------------------------------------------------------------
-
-#' @export
-last_saved.rack_id_pins <- function(id, backend, ...) {
-  info <- rack_info(id, backend)
-  if (nrow(info) == 0L) return(NULL)
-  info$created[1L]
 }
 
 # rack_name / rack_rename ---------------------------------------------------

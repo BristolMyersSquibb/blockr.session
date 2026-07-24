@@ -72,52 +72,52 @@ test_that("format.rack_id_pins_connect", {
   expect_equal(format(id_v), "<rack_id_pins_connect: alice/board@v1>")
 })
 
-test_that("rack_id_from_input builds a local id for a file board", {
+test_that("as_rack_id builds a local id for a file board", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  id <- rack_id_from_input(backend, list(id = "board"))
+  id <- as_rack_id(list(id = "board"), backend)
 
   expect_s3_class(id, "rack_id_pins")
   expect_false(inherits(id, "rack_id_pins_connect"))
   expect_equal(id$id, "board")
 })
 
-test_that("rack_id_from_input keys a connect id on the account", {
+test_that("as_rack_id keys a connect id on the account", {
 
   backend <- mock_board_connect(account = "nicolas")
-  id <- rack_id_from_input(backend, list(id = "board"))
+  id <- as_rack_id(list(id = "board"), backend)
 
   expect_s3_class(id, "rack_id_pins_connect")
   expect_equal(id$user, "nicolas")
   expect_equal(id$id, "board")
 })
 
-test_that("rack_id_from_input lets an explicit user override the account", {
+test_that("as_rack_id lets an explicit user override the account", {
 
   backend <- mock_board_connect(account = "nicolas")
-  id <- rack_id_from_input(backend, list(id = "board", user = "alice"))
+  id <- as_rack_id(list(id = "board", user = "alice"), backend)
 
   expect_s3_class(id, "rack_id_pins_connect")
   expect_equal(id$user, "alice")
   expect_equal(id$id, "board")
 })
 
-test_that("rack_id_from_input carries and cleans the version", {
+test_that("as_rack_id carries and cleans the version", {
 
   backend <- pins::board_temp(versioned = TRUE)
 
-  with_v <- rack_id_from_input(backend, list(id = "b", version = "v1"))
+  with_v <- as_rack_id(list(id = "b", version = "v1"), backend)
   expect_equal(with_v$version, "v1")
 
-  null_v <- rack_id_from_input(backend, list(id = "b", version = "null"))
+  null_v <- as_rack_id(list(id = "b", version = "null"), backend)
   expect_null(null_v$version)
-  expect_null(rack_id_from_input(backend, list(id = "b"))$version)
+  expect_null(as_rack_id(list(id = "b"), backend)$version)
 })
 
-test_that("rack_id_from_input accepts the legacy board_name key", {
+test_that("as_rack_id accepts the legacy board_name key", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  id <- rack_id_from_input(backend, list(name = "legacy_board"))
+  id <- as_rack_id(list(name = "legacy_board"), backend)
 
   expect_equal(id$id, "legacy_board")
 })
@@ -535,25 +535,6 @@ test_that("rack_purge removes entire pin", {
   rack_purge(new_rack_id_pins("purge-me"), backend)
 
   expect_false("purge-me" %in% pins::pin_list(backend))
-})
-
-test_that("last_saved returns timestamp", {
-
-  backend <- pins::board_temp(versioned = TRUE)
-
-  rack_create(backend, list(blocks = list()), id = "ts-test", name = "TS")
-
-  ts <- last_saved(new_rack_id_pins("ts-test"), backend)
-  expect_s3_class(ts, "POSIXct")
-})
-
-test_that("last_saved returns NULL for missing pin", {
-
-  backend <- pins::board_temp(versioned = TRUE)
-  id <- new_rack_id_pins("no-such-pin")
-
-  ts <- last_saved(id, backend)
-  expect_null(ts)
 })
 
 # Connect: rack_list --------------------------------------------------------

@@ -44,9 +44,9 @@ manage_project_server <- function(id, board, ...) {
           return(NULL)
         }
 
-        rack_id_from_input(
-          backend,
-          list(id = qid, user = query$user)
+        as_rack_id(
+          list(id = qid, user = query$user),
+          backend
         )
       })
 
@@ -100,7 +100,7 @@ manage_project_server <- function(id, board, ...) {
           # document); a save of an existing record appends a version silently.
           target <- coal(
             current_id(),
-            rack_id_from_input(backend, list(id = board$board_id))
+            as_rack_id(list(id = board$board_id), backend)
           )
 
           exists <- isTRUE(
@@ -148,9 +148,9 @@ manage_project_server <- function(id, board, ...) {
           save_status("Just now")
           refresh_trigger(refresh_trigger() + 1)
 
-          saved <- rack_id_from_input(
-            backend,
-            list(id = res$id, user = res$user)
+          saved <- as_rack_id(
+            list(id = res$id, user = res$user),
+            backend
           )
           new_url <- board_query_string(saved, backend, keep = current_query())
           prev_query(new_url)
@@ -188,7 +188,7 @@ manage_project_server <- function(id, board, ...) {
             return()
           }
 
-          rid <- rack_id_from_input(backend, list(id = new_id))
+          rid <- as_rack_id(list(id = new_id), backend)
 
           record_exists <- isTRUE(
             tryCatch(rack_exists(rid, backend), error = function(e) FALSE)
@@ -225,9 +225,9 @@ manage_project_server <- function(id, board, ...) {
           removeModal(session)
           refresh_trigger(refresh_trigger() + 1)
 
-          saved <- rack_id_from_input(
-            backend,
-            list(id = res$id, user = res$user)
+          saved <- as_rack_id(
+            list(id = res$id, user = res$user),
+            backend
           )
 
           if (identical(mode, "fork")) {
@@ -377,7 +377,7 @@ manage_project_server <- function(id, board, ...) {
       observeEvent(
         input$load_workflow,
         navigate_to_board(
-          rack_id_from_input(backend, input$load_workflow),
+          as_rack_id(input$load_workflow, backend),
           backend,
           session
         )
@@ -795,7 +795,7 @@ manage_project_server <- function(id, board, ...) {
           req(coal(ver$id, ver$name, fail_all = FALSE), ver$version)
 
           navigate_to_board(
-            rack_id_from_input(backend, ver),
+            as_rack_id(ver, backend),
             backend,
             session
           )
@@ -833,9 +833,9 @@ manage_project_server <- function(id, board, ...) {
           del <- input$delete_versions
           req(del$id, del$version)
 
-          ver_id <- rack_id_from_input(
-            backend,
-            list(id = del$id, user = del$user, version = del$version)
+          ver_id <- as_rack_id(
+            list(id = del$id, user = del$user, version = del$version),
+            backend
           )
 
           ok <- tryCatch(
@@ -1208,9 +1208,9 @@ rack_loader <- function() {
       if (is.null(session)) list(request = request) else session
     )
 
-    id <- rack_id_from_input(
-      backend,
-      list(id = handle, user = query$user, version = query$version)
+    id <- as_rack_id(
+      list(id = handle, user = query$user, version = query$version),
+      backend
     )
 
     # resolve runs at both the GET (UI) and the WS connect (server), so a
@@ -1438,7 +1438,7 @@ suggest_copy_id <- function(base, backend, max_tries = 100L) {
   taken <- function(id) {
     isTRUE(
       tryCatch(
-        rack_exists(rack_id_from_input(backend, list(id = id)), backend),
+        rack_exists(as_rack_id(list(id = id), backend), backend),
         error = function(e) FALSE
       )
     )
@@ -1494,7 +1494,7 @@ delete_rack_records <- function(records, backend, session) {
   for (wf in records) {
     ok <- tryCatch(
       {
-        rack_purge(rack_id_from_input(backend, wf), backend)
+        rack_purge(as_rack_id(wf, backend), backend)
         TRUE
       },
       error = function(e) {
@@ -1759,7 +1759,7 @@ version_is_current <- function(i, version, active_version, is_active = TRUE) {
 
 record_versions <- function(wf, backend) {
   tryCatch(
-    rack_info(rack_id_from_input(backend, wf), backend),
+    rack_info(as_rack_id(wf, backend), backend),
     error = function(e) NULL
   )
 }
@@ -1787,7 +1787,7 @@ modal_row_with_history <- function(wf, expanded, versions, loaded,
     return(row)
   }
 
-  is_active <- same_record(rack_id_from_input(backend, wf), loaded)
+  is_active <- same_record(as_rack_id(wf, backend), loaded)
 
   tagList(
     row,

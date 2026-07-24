@@ -12,13 +12,15 @@
 #' are built on these generics.
 #'
 #' Two kinds of object flow through the contract. A *backend* is the board or
-#' store itself, the dispatch target for `rack_capabilities()`, `rack_list()`,
-#' `rack_upload()`, `rack_id_from_input()` and `rack_find_users()`. A `rack_id`
-#' is a handle to one stored record, the dispatch target for the remaining
-#' generics; `rack_id_from_input()` parses the raw identifier components (`id`,
-#' `version`, `user`) carried in a session URL into the backend's own `rack_id`
-#' subclass, minted with `new_rack_id(..., class = )`. `rack_list()` returns
-#' [new_rack_record()] summaries, the listing rows the workflow menu renders.
+#' store itself, the dispatch target for `as_rack_id()`, `rack_capabilities()`,
+#' `rack_list()`, `rack_upload()` and `rack_find_users()`. A `rack_id` is a
+#' handle to one stored record, the dispatch target for the remaining generics.
+#' [as_rack_id()] coerces a raw identifier -- a component list or a
+#' `rack_record` listing row -- into the backend's own `rack_id` subclass (via
+#' `new_rack_id(..., class = )`) from the components (`id`, `version`, `user`)
+#' carried in a session URL, and returns an existing `rack_id` unchanged.
+#' `rack_list()` returns [new_rack_record()] summaries, the listing rows the
+#' workflow menu renders.
 #'
 #' @section Capabilities:
 #' `rack_capabilities()` is the feature switch: it returns a named list of
@@ -36,7 +38,7 @@
 #' - `user_discovery`: `rack_find_users()` is implemented.
 #'
 #' A minimal backend implements only the core create / load / list set --
-#' `rack_id_from_input()`, `rack_upload()`, `rack_download()`, `rack_exists()`,
+#' `as_rack_id()`, `rack_upload()`, `rack_download()`, `rack_exists()`,
 #' `rack_list()`, `rack_info()` and `rack_name()` -- and returns `FALSE` for
 #' every optional capability; the generics behind a `FALSE` flag are then never
 #' reached and need no method.
@@ -48,9 +50,10 @@
 #'   mutator generics. For `new_rack_id()` and `new_rack_record()`, the
 #'   record's storage id: a non-empty string, stable and independent of the
 #'   display name.
-#' @param x A list of the raw identifier components (`id`, and optionally
-#'   `version` and `user`) parsed from a session URL, to coerce into a
-#'   backend-specific `rack_id`.
+#' @param x The object to coerce with `as_rack_id()`: an existing `rack_id`
+#'   (returned unchanged), or a component bag -- a list of identifier fields
+#'   (`id`, and optionally `version` and `user`) or a `rack_record` -- turned
+#'   into the backend's own `rack_id` subclass.
 #' @param path Path to the local file to upload as a new version.
 #' @param name Display name for the record, written to the backend's native
 #'   name field and never used as the storage key; `NULL` keeps the current
@@ -76,13 +79,13 @@
 #' respectively. `rack_capabilities()` returns the named list of flags above.
 #' `rack_list()` returns a list of `rack_record`s and `rack_info()` a data
 #' frame of versions (columns `version`, `created`, `ref`, newest first).
-#' `rack_id_from_input()`, `rack_upload()` and `rack_rename()` return a
-#' `rack_id`; `rack_download()` a local file path; `rack_name()` a string;
-#' `last_saved()` a timestamp; `rack_exists()` a scalar logical;
-#' `rack_content_hash()` the stored payload hash; `rack_tags()`, `rack_acl()`
-#' and `rack_shares()` the stored tags, access level and shares. The mutators
-#' (`rack_set_tags()`, `rack_set_acl()`, `rack_share()`, `rack_unshare()`,
-#' `rack_delete()`, `rack_purge()`) return invisibly.
+#' `as_rack_id()`, `rack_upload()` and `rack_rename()` return a `rack_id`;
+#' `rack_download()` a local file path; `rack_name()` a string; `rack_exists()`
+#' a scalar logical; `rack_content_hash()` the stored payload hash;
+#' `rack_tags()`, `rack_acl()` and `rack_shares()` the stored tags, access
+#' level and shares. The mutators (`rack_set_tags()`, `rack_set_acl()`,
+#' `rack_share()`, `rack_unshare()`, `rack_delete()`, `rack_purge()`) return
+#' invisibly.
 #'
 #' @seealso [rack_create()], [rack_append()] and [rack_load()] for the
 #'   high-level save / load API built on the contract, and [user_pins_board()]
@@ -141,10 +144,6 @@ new_rack_record <- function(id, name, ..., class = character()) {
 
 #' @rdname rack-backend
 #' @export
-last_saved <- function(id, ...) UseMethod("last_saved")
-
-#' @rdname rack-backend
-#' @export
 rack_content_hash <- function(id, backend, ...) UseMethod("rack_content_hash")
 
 #' @rdname rack-backend
@@ -189,11 +188,19 @@ print.rack_record <- function(x, ...) {
 #' @export
 rack_list <- function(backend, tags = NULL, ...) UseMethod("rack_list")
 
-# rack_id_from_input --------------------------------------------------------
+# as_rack_id ----------------------------------------------------------------
 
 #' @rdname rack-backend
 #' @export
-rack_id_from_input <- function(backend, x, ...) UseMethod("rack_id_from_input")
+as_rack_id <- function(x, backend, ...) {
+
+  if (inherits(x, "rack_id")) {
+    return(x)
+  }
+
+  # dispatch on the backend, not x
+  UseMethod("as_rack_id", backend)
+}
 
 # rack_info -----------------------------------------------------------------
 
@@ -269,7 +276,7 @@ rack_load <- function(id, backend, ...) {
 #' @export
 rack_create <- function(backend, data, id, name, ...) {
 
-  rid <- rack_id_from_input(backend, list(id = id))
+  rid <- as_rack_id(list(id = id), backend)
 
   if (rack_exists(rid, backend)) {
     blockr_abort(
