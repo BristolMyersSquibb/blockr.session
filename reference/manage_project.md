@@ -41,3 +41,11 @@ manage_project_ui(id, x)
 
 See
 [`blockr.core::preserve_board()`](https://bristolmyerssquibb.github.io/blockr.core/reference/preserve_board.html).
+
+## Examples
+
+``` r
+plg <- manage_project()
+blockr.core::is_plugin(plg)
+#> [1] TRUE
+```

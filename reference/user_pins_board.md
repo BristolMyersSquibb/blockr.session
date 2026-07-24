@@ -46,3 +46,15 @@ to an existing Connect tag's name (or a `"Category/Name"` path) to have
 the workflow listing filter server-side by that native tag; saves then
 apply it. Unset, the listing returns every pin and checks blockr
 membership only on load.
+
+## Examples
+
+``` r
+if (FALSE) { # \dontrun{
+  # Resolves the backend for the current visitor; call from within a
+  # running Shiny app, as it reads the session request for a Connect
+  # user session token. It is the default value of the
+  # `session_mgmt_backend` blockr option.
+  board <- user_pins_board()
+} # }
+```

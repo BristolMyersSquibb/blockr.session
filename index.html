@@ -5,14 +5,14 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Session management for blockr • blockr.session</title>
+<title>Session Management for blockr • blockr.session</title>
 <script src="lightswitch.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Session management for blockr">
-<meta name="description" content='Provides a "preserve_board" module for blockr apps to save and manage projects and restore existing boards.'>
-<meta property="og:description" content='Provides a "preserve_board" module for blockr apps to save and manage projects and restore existing boards.'>
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Session Management for blockr">
+<meta name="description" content="Persist, restore and manage blockr boards from within a running app. Provides a manage_project plugin for blockr.core that replaces the built-in file upload and download interface with storage backed by the pins package. On Posit Connect each visitor reads and writes pins under their own account, with board sharing, visibility controls and version history.">
+<meta property="og:description" content="Persist, restore and manage blockr boards from within a running app. Provides a manage_project plugin for blockr.core that replaces the built-in file upload and download interface with storage backed by the pins package. On Posit Connect each visitor reads and writes pins under their own account, with board sharing, visibility controls and version history.">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="index.html">blockr.session</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,6 +38,7 @@
 <li><a class="dropdown-item" href="articles/custom-storage-backend.html">Implementing a custom storage backend</a></li>
   </ul>
 </li>
+<li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
 <li class="nav-item"><form class="form-inline" role="search">
@@ -64,7 +65,7 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>Project (i.e. board) management provided by blockr.core via the <code>preserve_board</code> plugin is a simple file upload/download-based mechanism. More user-friendly alternatives using the pins package are available as <code>manage_project</code> plugin.</p>
+<p>blockr.session adds project (i.e. board) persistence to <a href="https://bristolmyerssquibb.github.io/blockr.core/" class="external-link">blockr</a> apps: save, restore and manage boards from within a running app. It provides a <code><a href="reference/manage_project.html">manage_project()</a></code> plugin backed by the <a href="https://pins.rstudio.com/" class="external-link">pins</a> package – a more capable alternative to blockr.core’s built-in <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/preserve_board.html" class="external-link">preserve_board()</a></code>, which offers only simple file upload and download.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -86,19 +87,24 @@
 <span>  <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.dock/reference/dock.html" class="external-link">new_dock_board</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  plugins <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">custom_plugins</a></span><span class="op">(</span><span class="fu"><a href="reference/manage_project.html">manage_project</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>The default storage backend is [user_pins_board()]: on Posit Connect it resolves per-visitor pin storage from the visitor’s own session token (falling back to the application’s Connect credentials), and off Connect it falls back to [pins::board_local()]. Override it by setting the <code>session_mgmt_backend</code> [blockr_option()].</p>
+<p>The default storage backend is <code><a href="reference/user_pins_board.html">user_pins_board()</a></code>: on Posit Connect it resolves per-visitor pin storage from the visitor’s own session token (falling back to the application’s Connect credentials), and off Connect it falls back to <code><a href="https://pins.rstudio.com/reference/board_folder.html" class="external-link">pins::board_local()</a></code>. Override it by setting the <code>session_mgmt_backend</code> <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/blockr_option.html" class="external-link">blockr.core::blockr_option()</a></code>.</p>
+</div>
+<div class="section level2">
+<h2 id="custom-storage-backends">Custom storage backends<a class="anchor" aria-label="anchor" href="#custom-storage-backends"></a>
+</h2>
+<p>Storage is a pluggable S3 contract, not tied to pins. <code><a href="reference/user_pins_board.html">user_pins_board()</a></code> is the default backend, but you can implement your own (a database, an object store, a REST service) by defining methods for the exported rack generics. See <code><a href="articles/custom-storage-backend.html">vignette("custom-storage-backend")</a></code> for a worked, file-based example.</p>
 </div>
 <div class="section level2">
 <h2 id="connect-storage">Connect storage<a class="anchor" aria-label="anchor" href="#connect-storage"></a>
 </h2>
 <p>On Posit Connect with the Connect API Integration enabled, each user reads and writes pins under their own account out of the box, with no backend option to set. The navbar dropdown gains a <strong>Sharing</strong> tab (next to Workflows and History) that lets you set visibility and share with other Connect users.</p>
-<p>To override the default, set the option to a <code>pins</code> board or to a function returning one, which <code>get_session_backend()</code> calls once per session so credentials are picked up at runtime. For example, to use a single shared namespace on the publisher’s account instead of per-visitor storage:</p>
+<p>To override the default, set the option to a <code>pins</code> board or to a function returning one, which blockr.session resolves once per session so credentials are picked up at runtime. For example, to use a single shared namespace on the publisher’s account instead of per-visitor storage:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/options.html" class="external-link">options</a></span><span class="op">(</span>blockr.session_mgmt_backend <span class="op">=</span> <span class="fu">pins</span><span class="fu">::</span><span class="va"><a href="https://pins.rstudio.com/reference/board_connect.html" class="external-link">board_connect</a></span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="deploying-to-posit-connect">Deploying to Posit Connect<a class="anchor" aria-label="anchor" href="#deploying-to-posit-connect"></a>
 </h3>
-<p>When deploying to Connect no backend option is needed: the default [user_pins_board()] picks up Connect credentials from the environment automatically.</p>
+<p>When deploying to Connect no backend option is needed: the default <code><a href="reference/user_pins_board.html">user_pins_board()</a></code> picks up Connect credentials from the environment automatically.</p>
 </div>
 <div class="section level3">
 <h3 id="per-user-pins-with-the-connect-api-integration">Per-user pins with the Connect API Integration<a class="anchor" aria-label="anchor" href="#per-user-pins-with-the-connect-api-integration"></a>
@@ -109,7 +115,7 @@
 <li>Under <em>API Integrations</em>, enable the <strong>Posit Connect</strong> integration.</li>
 <li>Set the maximum role to <strong>Viewer</strong> (sufficient for reading and writing pins).</li>
 </ol>
-<p>With the integration enabled, Connect attaches a per-visitor session token to each request, which [user_pins_board()] exchanges (via <code><a href="https://posit-dev.github.io/connectapi/reference/connect.html" class="external-link">connectapi::connect()</a></code>) for a viewer-scoped API key, so the <a href="https://github.com/posit-dev/connectapi" class="external-link"><code>connectapi</code></a> package is required for this path.</p>
+<p>With the integration enabled, Connect attaches a per-visitor session token to each request, which <code><a href="reference/user_pins_board.html">user_pins_board()</a></code> exchanges (via <code><a href="https://posit-dev.github.io/connectapi/reference/connect.html" class="external-link">connectapi::connect()</a></code>) for a viewer-scoped API key, so the <a href="https://github.com/posit-dev/connectapi" class="external-link"><code>connectapi</code></a> package is required for this path.</p>
 </div>
 </div>
 </div>
@@ -124,7 +130,8 @@
 <div class="license">
 <h2 data-toc-skip>License</h2>
 <ul class="list-unstyled">
-<li>GPL (&gt;= 3)</li>
+<li><a href="LICENSE.html">Full license</a></li>
+<li><small>GPL (&gt;= 3)</small></li>
 </ul>
 </div>
 
@@ -140,6 +147,8 @@
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
 <li>Nicolas Bennett <br><small class="roles"> Author, maintainer </small>   </li>
+<li>Christoph Sax <br><small class="roles"> Author </small>   </li>
+<li> Bristol Myers Squibb <br><small class="roles"> Funder </small>   </li>
 </ul>
 </div>
 
@@ -157,7 +166,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Nicolas Bennett.</p>
+  <p>Developed by Nicolas Bennett, Christoph Sax, Bristol Myers Squibb.</p>
 </div>
 
 <div class="pkgdown-footer-right">
