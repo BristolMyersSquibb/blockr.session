@@ -10,10 +10,13 @@
 [![coverage](https://codecov.io/gh/BristolMyersSquibb/blockr.session/graph/badge.svg?token=SA9116N8LN)](https://app.codecov.io/gh/BristolMyersSquibb/blockr.session)
 <!-- badges: end -->
 
-Project (i.e. board) management provided by blockr.core via the
-`preserve_board` plugin is a simple file upload/download-based
-mechanism. More user-friendly alternatives using the pins package are
-available as `manage_project` plugin.
+blockr.session adds project (i.e. board) persistence to
+[blockr](https://bristolmyerssquibb.github.io/blockr.core/) apps: save,
+restore and manage boards from within a running app. It provides a
+`manage_project()` plugin backed by the
+[pins](https://pins.rstudio.com/) package – a more capable alternative
+to blockr.core’s built-in `preserve_board()`, which offers only simple
+file upload and download.
 
 ## Installation
 
@@ -41,11 +44,19 @@ serve(
 )
 ```
 
-The default storage backend is \[user_pins_board()\]: on Posit Connect
-it resolves per-visitor pin storage from the visitor’s own session token
+The default storage backend is `user_pins_board()`: on Posit Connect it
+resolves per-visitor pin storage from the visitor’s own session token
 (falling back to the application’s Connect credentials), and off Connect
-it falls back to \[pins::board_local()\]. Override it by setting the
-`session_mgmt_backend` \[blockr_option()\].
+it falls back to `pins::board_local()`. Override it by setting the
+`session_mgmt_backend` `blockr.core::blockr_option()`.
+
+## Custom storage backends
+
+Storage is a pluggable S3 contract, not tied to pins.
+`user_pins_board()` is the default backend, but you can implement your
+own (a database, an object store, a REST service) by defining methods
+for the exported rack generics. See `vignette("custom-storage-backend")`
+for a worked, file-based example.
 
 ## Connect storage
 
@@ -56,10 +67,10 @@ to Workflows and History) that lets you set visibility and share with
 other Connect users.
 
 To override the default, set the option to a `pins` board or to a
-function returning one, which `get_session_backend()` calls once per
-session so credentials are picked up at runtime. For example, to use a
-single shared namespace on the publisher’s account instead of
-per-visitor storage:
+function returning one, which blockr.session resolves once per session
+so credentials are picked up at runtime. For example, to use a single
+shared namespace on the publisher’s account instead of per-visitor
+storage:
 
 ``` r
 options(blockr.session_mgmt_backend = pins::board_connect)
@@ -68,7 +79,7 @@ options(blockr.session_mgmt_backend = pins::board_connect)
 ### Deploying to Posit Connect
 
 When deploying to Connect no backend option is needed: the default
-\[user_pins_board()\] picks up Connect credentials from the environment
+`user_pins_board()` picks up Connect credentials from the environment
 automatically.
 
 ### Per-user pins with the Connect API Integration
@@ -84,7 +95,7 @@ each viewer’s pins saved under their *own* account instead, enable the
     writing pins).
 
 With the integration enabled, Connect attaches a per-visitor session
-token to each request, which \[user_pins_board()\] exchanges (via
+token to each request, which `user_pins_board()` exchanges (via
 `connectapi::connect()`) for a viewer-scoped API key, so the
 [`connectapi`](https://github.com/posit-dev/connectapi) package is
 required for this path.

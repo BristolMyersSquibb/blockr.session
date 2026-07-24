@@ -4,14 +4,15 @@
 \name{blockr.session-package}
 \alias{blockr.session}
 \alias{blockr.session-package}
-\title{blockr.session: Session management for blockr}
+\title{blockr.session: Session Management for 'blockr'}
 \description{
-Provides a "preserve_board" module for blockr apps to save and manage projects and restore existing boards.
+Persist, restore and manage 'blockr' boards from within a running app. Provides a 'manage_project' plugin for 'blockr.core' that replaces the built-in file upload and download interface with storage backed by the 'pins' package. On 'Posit Connect' each visitor reads and writes pins under their own account, with board sharing, visibility controls and version history.
 }
 \seealso{
 Useful links:
 \itemize{
   \item \url{https://bristolmyerssquibb.github.io/blockr.session/}
+  \item \url{https://github.com/BristolMyersSquibb/blockr.session}
   \item Report bugs at \url{https://github.com/BristolMyersSquibb/blockr.session/issues}
 }
 
@@ -22,6 +23,12 @@ Useful links:
 Authors:
 \itemize{
   \item Nicolas Bennett \email{nicolas@cynkra.com}
+  \item Christoph Sax \email{christoph@cynkra.com}
+}
+
+Other contributors:
+\itemize{
+  \item  Bristol Myers Squibb [funder]
 }
 
 }
