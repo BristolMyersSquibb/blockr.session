@@ -1,6 +1,6 @@
 prepare_download <- function(sel, backend) {
   if (length(sel) == 1L) {
-    id <- rack_id_from_input(backend, sel[[1]])
+    id <- as_rack_id(sel[[1]], backend)
     return(rack_download(id, backend))
   }
 
@@ -9,7 +9,7 @@ prepare_download <- function(sel, backend) {
 
   for (s in sel) {
     id <- tryCatch(
-      rack_id_from_input(backend, s),
+      as_rack_id(s, backend),
       error = function(e) NULL
     )
     if (is.null(id)) next
@@ -61,7 +61,7 @@ upload_workflows <- function(file_info, backend) {
 
     tryCatch(
       {
-        rid <- rack_id_from_input(backend, list(id = data$id))
+        rid <- as_rack_id(list(id = data$id), backend)
         rack_upload(backend, fpath, rid, name = wf_name)
         uploaded <- uploaded + 1L
       },

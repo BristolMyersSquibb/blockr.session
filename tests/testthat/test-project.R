@@ -818,7 +818,7 @@ test_that("expanding a picker row surfaces that workflow's version history", {
   rack_create(backend, ser(one_block), "other-wf", "Other workflow")
   Sys.sleep(1)
   rack_append(
-    rack_id_from_input(backend, list(id = "other-wf")), backend,
+    as_rack_id(list(id = "other-wf"), backend), backend,
     ser(two_blocks)
   )
 

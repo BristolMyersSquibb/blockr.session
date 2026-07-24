@@ -25,7 +25,7 @@ new_rack_id_pins_connect <- function(user, id, version = NULL) {
 }
 
 #' @export
-rack_id_from_input.pins_board_connect <- function(backend, x, ...) {
+as_rack_id.pins_board_connect <- function(x, backend, ...) {
 
   user <- if (not_null(x$user) && nzchar(x$user)) x$user else backend$account
 

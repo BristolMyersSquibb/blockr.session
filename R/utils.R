@@ -10,10 +10,11 @@ get_session_backend <- function(session = NULL) {
     }
   }
 
-  if (!inherits(val, "pins_board")) {
+  if (!is_rack_backend(val)) {
     blockr_abort(
       paste(
-        "The `session_mgmt_backend` option must be a pins board or a",
+        "The `session_mgmt_backend` option must be a rack storage backend",
+        "(a pins board, or an object inheriting `rack_backend`) or a",
         "function that returns one, got {class(val)[[1L]]}."
       ),
       class = "invalid_session_backend"
@@ -21,6 +22,10 @@ get_session_backend <- function(session = NULL) {
   }
 
   val
+}
+
+is_rack_backend <- function(x) {
+  inherits(x, "rack_backend") || inherits(x, "pins_board")
 }
 
 format_time_ago <- function(time) {

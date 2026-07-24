@@ -66,3 +66,18 @@ test_that("print.rack_record", {
   rec <- new_rack_record("slug", "Display Name")
   expect_output(print(rec), "rack_record: slug")
 })
+
+# as_rack_id ----------------------------------------------------------------
+
+test_that("as_rack_id returns an existing rack_id unchanged", {
+  rid <- new_rack_id("board", version = "v1")
+  expect_identical(as_rack_id(rid), rid)
+})
+
+test_that("as_rack_id coerces a rack_record listing row via the backend", {
+
+  rid <- as_rack_id(new_rack_record("board", "Board"), pins::board_temp())
+
+  expect_s3_class(rid, "rack_id")
+  expect_equal(rid$id, "board")
+})
