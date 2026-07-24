@@ -8,6 +8,14 @@
 \description{
 Provides a "preserve_board" module for blockr apps to save and manage projects and restore existing boards.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://bristolmyerssquibb.github.io/blockr.session/}
+  \item Report bugs at \url{https://github.com/BristolMyersSquibb/blockr.session/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Nicolas Bennett \email{nicolas@cynkra.com}
 
