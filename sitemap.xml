@@ -1,14 +1,16 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
-<url><loc>/404.html</loc></url>
-<url><loc>/authors.html</loc></url>
-<url><loc>/index.html</loc></url>
-<url><loc>/reference/blockr.session-package.html</loc></url>
-<url><loc>/reference/index.html</loc></url>
-<url><loc>/reference/manage_project.html</loc></url>
-<url><loc>/reference/rack-backend.html</loc></url>
-<url><loc>/reference/rack_create.html</loc></url>
-<url><loc>/reference/rack_load.html</loc></url>
-<url><loc>/reference/rack_loader.html</loc></url>
-<url><loc>/reference/user_pins_board.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/404.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/articles/custom-storage-backend.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/articles/index.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/authors.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/index.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/reference/blockr.session-package.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/reference/index.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/reference/manage_project.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/reference/rack_create.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/reference/rack_load.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/reference/rack_loader.html</loc></url>
+<url><loc>https://bristolmyerssquibb.github.io/blockr.session/reference/user_pins_board.html</loc></url>
 </urlset>
 

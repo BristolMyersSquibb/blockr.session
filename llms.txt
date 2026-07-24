@@ -1,0 +1,155 @@
+# blockr.session
+
+Project (i.e. board) management provided by blockr.core via the
+`preserve_board` plugin is a simple file upload/download-based
+mechanism. More user-friendly alternatives using the pins package are
+available as `manage_project` plugin.
+
+## Installation
+
+You can install the development version of blockr.session from
+[GitHub](https://github.com/) with:
+
+``` r
+
+# install.packages("pak")
+pak::pak("BristolMyersSquibb/blockr.session")
+```
+
+## Example
+
+We can start up an app that uses the
+[`manage_project()`](https://bristolmyerssquibb.github.io/blockr.session/reference/manage_project.md)
+plugin by swapping out the default
+[`preserve_board()`](https://bristolmyerssquibb.github.io/blockr.core/reference/preserve_board.html)
+plugin.
+
+``` r
+
+library(blockr.core)
+library(blockr.dock)
+library(blockr.session)
+
+serve(
+  new_dock_board(),
+  plugins = custom_plugins(manage_project())
+)
+```
+
+The default storage backend is \[user_pins_board()\]: on Posit Connect
+it resolves per-visitor pin storage from the visitor’s own session token
+(falling back to the application’s Connect credentials), and off Connect
+it falls back to \[pins::board_local()\]. Override it by setting the
+`session_mgmt_backend` \[blockr_option()\].
+
+## Connect storage
+
+On Posit Connect with the Connect API Integration enabled, each user
+reads and writes pins under their own account out of the box, with no
+backend option to set. The navbar dropdown gains a **Sharing** tab (next
+to Workflows and History) that lets you set visibility and share with
+other Connect users.
+
+To override the default, set the option to a `pins` board or to a
+function returning one, which `get_session_backend()` calls once per
+session so credentials are picked up at runtime. For example, to use a
+single shared namespace on the publisher’s account instead of
+per-visitor storage:
+
+``` r
+
+options(blockr.session_mgmt_backend = pins::board_connect)
+```
+
+### Deploying to Posit Connect
+
+When deploying to Connect no backend option is needed: the default
+\[user_pins_board()\] picks up Connect credentials from the environment
+automatically.
+
+### Per-user pins with the Connect API Integration
+
+Without the integration, every viewer’s pins are stored under the
+application’s own Connect account, a single shared namespace. To have
+each viewer’s pins saved under their *own* account instead, enable the
+**Connect API Integration** for the content:
+
+1.  In Connect, open the content’s **Settings → Access** tab.
+2.  Under *API Integrations*, enable the **Posit Connect** integration.
+3.  Set the maximum role to **Viewer** (sufficient for reading and
+    writing pins).
+
+With the integration enabled, Connect attaches a per-visitor session
+token to each request, which \[user_pins_board()\] exchanges (via
+[`connectapi::connect()`](https://posit-dev.github.io/connectapi/reference/connect.html))
+for a viewer-scoped API key, so the
+[`connectapi`](https://github.com/posit-dev/connectapi) package is
+required for this path.
+
+# Package index
+
+## Board management plugin
+
+The navbar plugin that adds project save, history and restore to a
+board.
+
+- [`manage_project()`](https://bristolmyerssquibb.github.io/blockr.session/reference/manage_project.md)
+  [`manage_project_server()`](https://bristolmyerssquibb.github.io/blockr.session/reference/manage_project.md)
+  [`manage_project_ui()`](https://bristolmyerssquibb.github.io/blockr.session/reference/manage_project.md)
+  : Project management
+
+## Storage backend contract
+
+The generics and constructors a custom rack storage backend implements.
+
+- [`new_rack_id()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`new_rack_record()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_content_hash()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_name()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_rename()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_exists()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_list()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`as_rack_id()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_info()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_download()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_upload()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_delete()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_purge()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_capabilities()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_tags()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_set_tags()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_acl()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_set_acl()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_share()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_unshare()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_shares()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  [`rack_find_users()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack-backend.md)
+  : Rack storage backend contract
+
+## Saving and loading
+
+The high-level save and load API, and the board loader that restores
+from a request URL.
+
+- [`rack_create()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack_create.md)
+  [`rack_append()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack_create.md)
+  : Create or append to a session record on a rack backend
+- [`rack_load()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack_load.md)
+  : Load a session from a rack backend
+- [`rack_loader()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack_loader.md)
+  : Rack-backed board loader
+
+## Default pins backend
+
+The shipped storage backend, resolving per-user pin storage on Posit
+Connect.
+
+- [`user_pins_board()`](https://bristolmyerssquibb.github.io/blockr.session/reference/user_pins_board.md)
+  : Posit Connect storage backend with graceful fallback
+
+# Articles
+
+### All vignettes
+
+- [Implementing a custom storage
+  backend](https://bristolmyerssquibb.github.io/blockr.session/articles/custom-storage-backend.md):
