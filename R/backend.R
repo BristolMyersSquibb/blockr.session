@@ -25,6 +25,15 @@
 #' @return A `pins_board`: a viewer- or application-scoped `board_connect`, or
 #'   `board_local` when no Connect credentials are available.
 #'
+#' @examples
+#' \dontrun{
+#'   # Resolves the backend for the current visitor; call from within a
+#'   # running Shiny app, as it reads the session request for a Connect
+#'   # user session token. It is the default value of the
+#'   # `session_mgmt_backend` blockr option.
+#'   board <- user_pins_board()
+#' }
+#'
 #' @export
 user_pins_board <- function(session = get_session()) {
 

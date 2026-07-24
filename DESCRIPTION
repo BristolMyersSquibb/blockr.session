@@ -1,17 +1,28 @@
 Package: blockr.session
-Title: Session management for blockr
-Version: 0.0.1
+Title: Session Management for 'blockr'
+Version: 0.1.0
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",
              role = c("aut", "cre"),
-             email = "nicolas@cynkra.com")
+             email = "nicolas@cynkra.com"),
+      person(given = "Christoph",
+             family = "Sax",
+             role = "aut",
+             email = "christoph@cynkra.com"),
+      person(family = "Bristol Myers Squibb",
+             role = "fnd")
     )
-Description: Provides a "preserve_board" module for blockr apps to save and
-    manage projects and restore existing boards.
-URL: https://bristolmyerssquibb.github.io/blockr.session/
-BugReports: https://github.com/BristolMyersSquibb/blockr.session/issues
+Description: Persist, restore and manage 'blockr' boards from within a
+    running app. Provides a 'manage_project' plugin for 'blockr.core' that
+    replaces the built-in file upload and download interface with storage
+    backed by the 'pins' package. On 'Posit Connect' each visitor reads and
+    writes pins under their own account, with board sharing, visibility
+    controls and version history.
 License: GPL (>= 3)
+URL: https://bristolmyerssquibb.github.io/blockr.session/,
+    https://github.com/BristolMyersSquibb/blockr.session
+BugReports: https://github.com/BristolMyersSquibb/blockr.session/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:
@@ -37,6 +48,4 @@ Suggests:
     xml2
 VignetteBuilder: quarto
 Config/testthat/edition: 3
-Remotes:
-    BristolMyersSquibb/blockr.core
 Config/roxygen2/version: 8.0.0

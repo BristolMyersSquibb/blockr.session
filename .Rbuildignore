@@ -1,4 +1,5 @@
 ^README\.(Rmd|html)$
+^LICENSE\.md$
 ^\.github$
 ^\.claude$
 ^plans$
@@ -7,3 +8,5 @@
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
+^cran-comments\.md$
+^CRAN-SUBMISSION$

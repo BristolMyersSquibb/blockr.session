@@ -31,3 +31,8 @@ Enhanced session management with navbar-compatible UI. Provides a
 \code{\link[blockr.core:preserve_board]{blockr.core::preserve_board()}} plugin with full navbar layout including
 workflows, version history, and editable title.
 }
+\examples{
+plg <- manage_project()
+blockr.core::is_plugin(plg)
+
+}
