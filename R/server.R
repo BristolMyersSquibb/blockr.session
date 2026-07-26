@@ -621,6 +621,35 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      # The row buttons' second half: they announce a selection and ask, and
+      # the click happens here, where the selection is already applied. An
+      # observer runs after every input in the message has landed, so this
+      # cannot see a stale (or absent) selection the way a timed click could.
+      #
+      # Guarded on a non-empty selection so a stray trigger cannot fire a
+      # download that the handler would only abort.
+      observeEvent(
+        input$wf_download_go,
+        {
+          req(length(normalize_js_input(input$wf_selection)) > 0L)
+          session$sendCustomMessage(
+            "blockr-fire-download",
+            list(id = session$ns("download_workflows"))
+          )
+        }
+      )
+
+      observeEvent(
+        input$ver_download_go,
+        {
+          req(length(normalize_js_input(input$ver_selection)) > 0L)
+          session$sendCustomMessage(
+            "blockr-fire-download",
+            list(id = session$ns("download_versions"))
+          )
+        }
+      )
+
       # DOWNLOAD workflows
       output$download_workflows <- downloadHandler(
         filename = function() {
@@ -910,6 +939,15 @@ manage_project_server <- function(id, board, ...) {
       # once instead of two with the sharing tab flashing in a beat later.
       outputOptions(output, "sharing_tab", suspendWhenHidden = FALSE)
       outputOptions(output, "sharing_panel", suspendWhenHidden = FALSE)
+
+      # The download buttons live in a `display: none` div -- the visible
+      # controls are the per-row icons, which set a selection and then click
+      # these. Shiny SUSPENDS hidden outputs, and for a downloadHandler that
+      # means its href is never populated: the click lands on a dead element
+      # and nothing happens, with no error anywhere to explain it.
+      outputOptions(output, "download_workflows", suspendWhenHidden = FALSE)
+      outputOptions(output, "download_versions", suspendWhenHidden = FALSE)
+      outputOptions(output, "download_selected", suspendWhenHidden = FALSE)
 
       output$sharing_controls <- renderUI({
         req(identical(input$visibility_select, "acl"))
@@ -1570,17 +1608,21 @@ workflow_modal_row <- function(wf, selected, backend, ns, expanded = FALSE) {
         tags$button(
           class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
           title = "Download",
+          # Announce the selection and ASK; the server clicks the hidden link
+          # back once it has applied it. Both inputs are set in the same tick,
+          # and Shiny applies every input in a message before running any
+          # observer, so the trigger cannot outrun the selection -- which a
+          # fixed setTimeout could, and did, whenever the round trip was
+          # slower than the guess.
           onclick = sprintf(
             "Shiny.setInputValue('%s', [{id: '%s', name: '%s',
               user: '%s'}], {priority: 'event'});
-              setTimeout(function() {
-                document.getElementById('%s').click();
-              }, 100);",
+             Shiny.setInputValue('%s', Math.random(), {priority: 'event'});",
             ns("wf_selection"),
             wf$id,
             wf$name,
             coal(wf$user, ""),
-            ns("download_workflows")
+            ns("wf_download_go")
           ),
           bsicons::bs_icon("download")
         ),
@@ -1875,15 +1917,15 @@ version_subrow <- function(wf, v, i, is_active, active_version, backend, ns) {
         tags$button(
           class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
           title = "Download",
+          # Same two-step as the workflow row above: announce, then let the
+          # server fire the download once it holds the selection.
           onclick = sprintf(
             "Shiny.setInputValue('%s',
               [{id: '%s', version: '%s', user: '%s'}],
               {priority: 'event'});
-              setTimeout(function() {
-                document.getElementById('%s').click();
-              }, 100);",
+             Shiny.setInputValue('%s', Math.random(), {priority: 'event'});",
             ns("ver_selection"), wf$id, v$version, user,
-            ns("download_versions")
+            ns("ver_download_go")
           ),
           bsicons::bs_icon("download")
         ),

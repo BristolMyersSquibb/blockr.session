@@ -242,3 +242,17 @@ document.addEventListener('hidden.bs.modal', function(event) {
     );
   }
 });
+
+// Fire a hidden downloadHandler once the SERVER has the selection it needs.
+//
+// The row buttons used to set their selection and then click the hidden link
+// after a fixed 100ms, which is a guess about the round trip: when the server
+// is slower than that -- routine under real latency, worse when the R process
+// is busy -- the download request arrived before the selection did, the
+// handler's req() aborted, and the click did nothing at all with no error to
+// explain it. Now the row button only announces the selection; the server
+// clicks back here once it has actually applied it.
+Shiny.addCustomMessageHandler('blockr-fire-download', function(msg) {
+  var el = document.getElementById(msg.id);
+  if (el) el.click();
+});
