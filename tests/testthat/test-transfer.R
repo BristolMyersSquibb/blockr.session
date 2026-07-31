@@ -190,7 +190,14 @@ test_that("upload_workflows keys a single file on its own board id", {
   boards <- rack_list(backend)
   expect_length(boards, 1L)
   expect_equal(boards[[1L]]$id, "single-board-id")
-  expect_equal(boards[[1L]]$name, "my_workflow")
+
+  # The upload keys on the payload's id and takes the NAME from the filename, so
+  # this is the one route by which the two diverge. A file-board listing labels
+  # by id; the filename survives as the stored name and is what the board opens
+  # under. A download names the file after the record, so the round trip agrees.
+  expect_equal(boards[[1L]]$name, "single-board-id")
+  expect_equal(rack_name(new_rack_id_pins("single-board-id"), backend),
+               "my_workflow")
 })
 
 test_that("upload_workflows handles multiple files", {
@@ -216,9 +223,9 @@ test_that("upload_workflows handles multiple files", {
   expect_equal(result$uploaded, 2L)
 
   boards <- rack_list(backend)
-  names <- chr_xtr(boards, "name")
-  expect_true("wf_one" %in% names)
-  expect_true("wf_two" %in% names)
+  expect_setequal(chr_xtr(boards, "id"), c("wf-one-id", "wf-two-id"))
+  expect_equal(rack_name(new_rack_id_pins("wf-one-id"), backend), "wf_one")
+  expect_equal(rack_name(new_rack_id_pins("wf-two-id"), backend), "wf_two")
 })
 
 test_that("upload_workflows skips a board payload without an id", {

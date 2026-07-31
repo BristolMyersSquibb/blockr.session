@@ -189,8 +189,12 @@ test_that("distinct boards with the same name stay distinct (no merge)", {
 
   records <- rack_list(backend)
   expect_length(records, 2L)
-  expect_equal(chr_xtr(records, "name"),
-               c("Quarterly report", "Quarterly report"))
+  expect_setequal(chr_xtr(records, "id"),
+                  c("egoistic_lowchen", "crass_gecko"))
+  expect_equal(rack_name(new_rack_id_pins("egoistic_lowchen"), backend),
+               "Quarterly report")
+  expect_equal(rack_name(new_rack_id_pins("crass_gecko"), backend),
+               "Quarterly report")
 })
 
 test_that("titles that sanitize alike stay distinct (no collapse)", {
@@ -206,8 +210,9 @@ test_that("titles that sanitize alike stay distinct (no collapse)", {
 
   records <- rack_list(backend)
   expect_length(records, 2L)
-  expect_setequal(chr_xtr(records, "name"),
-                  c("My Workflow!", "My Workflow?"))
+  expect_setequal(chr_xtr(records, "id"), c("id_one", "id_two"))
+  expect_equal(rack_name(new_rack_id_pins("id_one"), backend), "My Workflow!")
+  expect_equal(rack_name(new_rack_id_pins("id_two"), backend), "My Workflow?")
 })
 
 test_that("rack_append adds a version and preserves the name", {
@@ -290,50 +295,26 @@ test_that("rack_create persists and rack_list finds it as a record", {
   expect_length(boards, 1L)
   expect_s3_class(boards[[1L]], "rack_record")
   expect_equal(boards[[1L]]$id, "test-board")
-  expect_equal(boards[[1L]]$name, "Test Board")
+
+  # A file-board listing reads no metadata, so it labels a record with its id.
+  # The stored name is still there and still authoritative -- rack_name() reads
+  # it -- it just does not cost a per-pin round trip to draw the list.
+  expect_equal(boards[[1L]]$name, "test-board")
+  expect_equal(rack_name(new_rack_id_pins("test-board"), backend), "Test Board")
 })
 
-test_that("file-board rack_list skips unchanged pin directories (#85)", {
+# The #85 tests that lived here pinned down a per-directory metadata cache:
+# rack_list read pin metadata and the cache existed to avoid re-reading it. The
+# listing no longer reads metadata at all, so there is nothing left to cache and
+# nothing left to invalidate. What replaces them is the stronger claim the cache
+# was only ever approximating -- that listing a file board touches no pin.
+
+test_that("file-board rack_list reads no pin metadata (#85)", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  local_pin_cache$reset()
-  withr::defer(local_pin_cache$reset())
 
   rack_create(backend, list(blocks = list()), id = "alpha", name = "Alpha")
   rack_create(backend, list(blocks = list()), id = "beta", name = "Beta")
-
-  rack_list(backend)   # warms the per-directory cache
-
-  walked <- 0L
-  real_pin_meta <- pins::pin_meta
-  local_mocked_bindings(
-    pin_meta = function(...) {
-      walked <<- walked + 1L
-      real_pin_meta(...)
-    },
-    .package = "pins"
-  )
-
-  records <- rack_list(backend)
-
-  expect_equal(walked, 0L)
-  expect_length(records, 2L)
-  expect_setequal(chr_xtr(records, "name"), c("Alpha", "Beta"))
-})
-
-test_that("file-board rack_list re-walks only the changed pin (#85)", {
-
-  backend <- pins::board_temp(versioned = TRUE)
-  local_pin_cache$reset()
-  withr::defer(local_pin_cache$reset())
-
-  rack_create(backend, list(blocks = list()), id = "alpha", name = "Alpha")
-  rack_create(backend, list(blocks = list()), id = "beta", name = "Beta")
-
-  rack_list(backend)   # warms the cache for both pins
-
-  Sys.sleep(1.1)
-  rack_rename(new_rack_id_pins("alpha"), backend, "Alpha renamed")
 
   walked <- character()
   real_pin_meta <- pins::pin_meta
@@ -347,18 +328,14 @@ test_that("file-board rack_list re-walks only the changed pin (#85)", {
 
   records <- rack_list(backend)
 
-  expect_equal(walked, "alpha")
-
-  nm <- set_names(chr_xtr(records, "name"), chr_xtr(records, "id"))
-  expect_equal(nm[["alpha"]], "Alpha renamed")
-  expect_equal(nm[["beta"]], "Beta")
+  expect_equal(walked, character())
+  expect_setequal(chr_xtr(records, "id"), c("alpha", "beta"))
+  expect_setequal(chr_xtr(records, "name"), c("alpha", "beta"))
 })
 
-test_that("file-board rack_list tracks pins added and removed (#85)", {
+test_that("file-board rack_list tracks pins added and removed", {
 
   backend <- pins::board_temp(versioned = TRUE)
-  local_pin_cache$reset()
-  withr::defer(local_pin_cache$reset())
 
   rack_create(backend, list(blocks = list()), id = "alpha", name = "Alpha")
   rack_create(backend, list(blocks = list()), id = "beta", name = "Beta")
@@ -369,6 +346,31 @@ test_that("file-board rack_list tracks pins added and removed (#85)", {
   rack_purge(new_rack_id_pins("alpha"), backend)
 
   expect_setequal(chr_xtr(rack_list(backend), "id"), c("beta", "gamma"))
+})
+
+test_that("file-board rack_list sorts most recently saved first", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  rack_create(backend, list(blocks = list()), id = "older", name = "Older")
+  Sys.sleep(1.1)
+  rack_create(backend, list(blocks = list()), id = "newer", name = "Newer")
+
+  records <- rack_list(backend)
+
+  expect_equal(chr_xtr(records, "id"), c("newer", "older"))
+  expect_s3_class(records[[1L]]$saved, "POSIXct")
+
+  # a save on the older pin moves it to the front, since a pin directory's
+  # mtime is exactly its last save
+  Sys.sleep(1.1)
+  rack_append(new_rack_id_pins("older"), backend, list(blocks = list(a = 1)))
+
+  expect_equal(chr_xtr(rack_list(backend), "id"), c("older", "newer"))
+})
+
+test_that("file-board rack_list is empty on an empty board", {
+  expect_equal(rack_list(pins::board_temp(versioned = TRUE)), list())
 })
 
 test_that("a content hash is stored per version, read via rack_content_hash", {
@@ -572,8 +574,11 @@ test_that("rack_load errors on pin without blockr tags", {
   )
 })
 
-test_that("rack_list filters out non-blockr pins", {
+test_that("a file-board listing defers the blockr check to load time", {
 
+  # The listing no longer inspects pins, so a foreign pin in the directory does
+  # appear in it -- and is refused the moment anyone opens it. Same contract the
+  # Connect backend has always had: list cheaply, validate on load.
   backend <- pins::board_temp(versioned = TRUE)
 
   rack_create(backend, list(blocks = list()), id = "blockr-board",
@@ -586,7 +591,12 @@ test_that("rack_list filters out non-blockr pins", {
   ids <- chr_xtr(rack_list(backend), "id")
 
   expect_true("blockr-board" %in% ids)
-  expect_false("other-pin" %in% ids)
+  expect_true("other-pin" %in% ids)
+
+  expect_error(
+    rack_load(new_rack_id_pins("other-pin"), backend),
+    class = "rack_load_invalid_tags"
+  )
 })
 
 test_that("rack_delete removes specific version", {
