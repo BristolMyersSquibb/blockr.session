@@ -106,11 +106,12 @@ connect_list_by_tag <- function(backend, tag_id) {
 # Without a configured tag the listing shows every pin and defers the blockr
 # membership check to load time. Whether an item is a pin is already in the
 # bulk response, so no pin is inspected -- a non-blockr pin is filtered out
-# only when someone tries to open it.
+# only when someone tries to open it. `include=owner` carries each owner's
+# username along, so the whole listing costs one request whatever the pin count.
 connect_list_all_pins <- function(backend) {
 
   items <- tryCatch(
-    connect_api(backend, "GET /content"),
+    connect_api(backend, "GET /content", query = list(include = "owner")),
     error = function(e) NULL
   )
 
@@ -130,7 +131,7 @@ connect_pin_records <- function(backend, items) {
     records[[length(records) + 1L]] <- new_rack_record(
       id = item$name,
       name = connect_item_title(item),
-      user = connect_owner_cache$lookup(backend, item$owner_guid),
+      user = connect_item_owner(backend, item),
       saved = connect_item_saved(item)
     )
   }
@@ -167,9 +168,24 @@ connect_item_saved <- function(item) {
   connect_parse_time(stamp)
 }
 
-# A pin's owner is intrinsic to the content and identical for every viewer, so
-# the guid -> username resolution memoizes process-wide, keyed by server and
-# owner guid: an owner is resolved once however many of their pins are listed.
+# `[[` rather than `$`: an item carrying only owner_guid (the tag listing, or a
+# Connect too old for include=owner) would partial-match that guid as `$owner`.
+connect_item_owner <- function(backend, item) {
+
+  name <- item[["owner"]][["username"]]
+
+  if (not_null(name) && nzchar(name)) {
+    return(name)
+  }
+
+  connect_owner_cache$lookup(backend, item$owner_guid)
+}
+
+# The tag listing takes no `include`, so its items arrive with a guid and no
+# owner. A pin's owner is intrinsic to the content and identical for every
+# viewer, so the guid -> username resolution memoizes process-wide, keyed by
+# server and owner guid: an owner is resolved once however many of their pins
+# are listed.
 connect_owner_cache <- local({
 
   owners <- list()

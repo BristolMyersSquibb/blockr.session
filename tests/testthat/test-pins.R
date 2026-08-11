@@ -579,6 +579,40 @@ test_that("rack_list on Connect lists every pin without a per-pin probe", {
   expect_equal(result[[1L]]$saved, as.POSIXct("2020-02-01", tz = "UTC"))
 })
 
+test_that("rack_list on Connect resolves owners from the bulk listing", {
+
+  board <- mock_board_connect()
+  connect_owner_cache$reset()
+  withr::defer(connect_owner_cache$reset())
+
+  routes <- character()
+  includes <- character()
+
+  local_mocked_bindings(
+    connect_api = function(board, route, ..., query = NULL) {
+      routes[[length(routes) + 1L]] <<- route
+      includes[[length(includes) + 1L]] <<- coal(query$include, NA_character_)
+      list(
+        list(name = "wf-a", title = "WF A", content_category = "pin",
+             owner_guid = "guid-a", owner = list(username = "owner-a"),
+             last_deployed_time = "2020-03-01T00:00:00Z"),
+        list(name = "wf-b", title = "WF B", content_category = "pin",
+             owner_guid = "guid-b", owner = list(username = "owner-b"),
+             last_deployed_time = "2020-02-01T00:00:00Z"),
+        list(name = "wf-c", title = "WF C", content_category = "pin",
+             owner_guid = "guid-c", owner = list(username = "owner-c"),
+             last_deployed_time = "2020-01-01T00:00:00Z")
+      )
+    }
+  )
+
+  result <- rack_list(board)
+
+  expect_equal(routes, "GET /content")
+  expect_equal(includes, "owner")
+  expect_equal(chr_xtr(result, "user"), c("owner-a", "owner-b", "owner-c"))
+})
+
 test_that("rack_list on Connect skips non-pin content", {
 
   board <- mock_board_connect()
