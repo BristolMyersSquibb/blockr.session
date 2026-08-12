@@ -84,19 +84,28 @@ rack_rename.rack_id_pins_connect <- function(id, backend, name, ...) {
 #' @export
 rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
 
-  tag_id <- connect_tag_id(backend)
+  spec <- connect_tag_spec()
 
-  if (not_null(tag_id)) {
-    return(connect_list_by_tag(backend, tag_id))
+  if (not_null(spec)) {
+    return(connect_list_by_tag(backend, spec))
   }
 
   connect_list_all_pins(backend)
 }
 
-connect_list_by_tag <- function(backend, tag_id) {
+# Search resolves the tag from the configured name or Category/Name path itself
+# and carries owners inline, so a tagged listing costs one paged request.
+# GET /tags/{id}/content instead needs the id resolved first and ignores
+# include=owner, leaving a GET /users call per owner. The quotes matter: an
+# unquoted space would end the filter value and start a search term, silently
+# matching nothing.
+connect_list_by_tag <- function(backend, spec) {
 
   items <- tryCatch(
-    connect_api(backend, "GET /tags/{tag_id}/content"),
+    connect_api_paged(
+      backend, "GET /search/content",
+      query = list(q = paste0("tag:\"", spec, "\""), include = "owner")
+    ),
     error = function(e) NULL
   )
 
@@ -168,8 +177,8 @@ connect_item_saved <- function(item) {
   connect_parse_time(stamp)
 }
 
-# `[[` rather than `$`: an item carrying only owner_guid (the tag listing, or a
-# Connect too old for include=owner) would partial-match that guid as `$owner`.
+# `[[` rather than `$`: an item carrying only owner_guid would partial-match
+# that guid as `$owner`.
 connect_item_owner <- function(backend, item) {
 
   name <- item[["owner"]][["username"]]
@@ -181,11 +190,11 @@ connect_item_owner <- function(backend, item) {
   connect_owner_cache$lookup(backend, item$owner_guid)
 }
 
-# The tag listing takes no `include`, so its items arrive with a guid and no
-# owner. A pin's owner is intrinsic to the content and identical for every
-# viewer, so the guid -> username resolution memoizes process-wide, keyed by
-# server and owner guid: an owner is resolved once however many of their pins
-# are listed.
+# Fallback for an item that arrives carrying a guid but no owner, the field
+# being nullable. A pin's owner is intrinsic to the content and identical for
+# every viewer, so the guid -> username resolution memoizes process-wide, keyed
+# by server and owner guid: an owner is resolved once however many of their
+# pins are listed.
 connect_owner_cache <- local({
 
   owners <- list()
@@ -224,11 +233,23 @@ connect_owner_name <- function(backend, guid) {
 
 # Connect native tags -------------------------------------------------------
 
-connect_tag_id <- function(backend) {
+connect_tag_spec <- function() {
 
   spec <- blockr_option("session_connect_tag", NULL)
 
   if (is.null(spec) || !is_string(spec) || !nzchar(spec)) {
+    return(NULL)
+  }
+
+  spec
+}
+
+# Applying a tag on upload needs its id, which only the tag listing carries.
+connect_tag_id <- function(backend) {
+
+  spec <- connect_tag_spec()
+
+  if (is.null(spec)) {
     return(NULL)
   }
 

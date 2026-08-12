@@ -84,28 +84,40 @@ test_that("rack_list filters server-side by tag when configured", {
   board <- mock_board_connect()
   connect_owner_cache$reset()
   withr::defer(connect_owner_cache$reset())
-  withr::local_options(blockr.session_connect_tag = "blockr")
+  withr::local_options(blockr.session_connect_tag = "test/test2")
+
+  record_search <- function() {
+    rack_create(
+      board_a, blockr_test_session,
+      id = "blockr-fixture-tagged", name = "blockr-fixture-tagged"
+    )
+    content <- connect_content_find(board_a, "blockr-fixture-tagged")
+    tags <- connect_api(board_a, "GET /tags")
+    child <- Find(function(t) not_null(t$parent_id), tags)
+
+    connect_add_tag(board_a, content$guid, child$id)
+    connect_api(
+      board_a, "GET /search/content",
+      query = list(
+        q = "tag:\"test/test2\"", include = "owner",
+        page_number = 1L, page_size = 500L
+      )
+    )
+  }
+  envelope <- connect_fixture(
+    "search_content_tagged",
+    record_search,
+    pin_cleanup(board_a, "blockr-fixture-tagged")
+  )
 
   routes <- character()
+  queries <- list()
 
   local_mocked_bindings(
-    connect_api = function(board, route, ...) {
+    connect_api = function(board, route, ..., query = NULL) {
       routes[[length(routes) + 1L]] <<- route
-      if (identical(route, "GET /tags")) {
-        return(list(list(id = 5, name = "blockr", parent_id = NULL)))
-      }
-      if (grepl("GET /tags/", route, fixed = TRUE)) {
-        return(
-          list(
-            list(name = "wf-a", title = "WF A", content_category = "pin",
-                 owner_guid = "g", last_deployed_time = "2020-01-01T00:00:00Z")
-          )
-        )
-      }
-      if (grepl("GET /users", route, fixed = TRUE)) {
-        return(list(username = "user_a"))
-      }
-      list()
+      queries[[length(queries) + 1L]] <<- list(query)
+      envelope
     }
   )
   local_mocked_bindings(
@@ -116,10 +128,12 @@ test_that("rack_list filters server-side by tag when configured", {
 
   result <- rack_list(board)
 
+  expect_equal(routes, "GET /search/content")
+  expect_equal(queries[[1L]][[1L]]$q, "tag:\"test/test2\"")
+  expect_equal(queries[[1L]][[1L]]$include, "owner")
   expect_length(result, 1L)
-  expect_equal(result[[1L]]$id, "wf-a")
+  expect_equal(result[[1L]]$id, "blockr-fixture-tagged")
   expect_equal(result[[1L]]$user, "user_a")
-  expect_true(any(grepl("GET /tags/", routes, fixed = TRUE)))
 })
 
 # Tag on upload -------------------------------------------------------------

@@ -34,8 +34,10 @@ application's own account.
 
 Set the \code{session_connect_tag} \code{\link[blockr.core:blockr_option]{blockr.core::blockr_option()}} to an existing
 Connect tag's name (or a \code{"Category/Name"} path) to have the workflow listing
-filter server-side by that native tag; saves then apply it. Unset, the
-listing returns every pin and checks blockr membership only on load.
+filter server-side by that native tag; saves then apply it. A top-level tag
+is a category: naming one lists everything tagged beneath it, but saves
+cannot apply it, as Connect assigns only nested tags. Unset, the listing
+returns every pin and checks blockr membership only on load.
 }
 \examples{
 \dontrun{
