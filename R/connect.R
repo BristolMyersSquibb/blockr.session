@@ -536,6 +536,13 @@ connect_api <- function(board, route, ..., body = NULL, query = NULL,
   )
 
   resp <- httr2::req_perform(req)
+
+  # A write endpoint may answer 200 with an empty text/plain body, which
+  # resp_body_json() rejects -- reporting a failure for a call that succeeded.
+  if (!httr2::resp_has_body(resp)) {
+    return(NULL)
+  }
+
   httr2::resp_body_json(resp)
 }
 

@@ -206,6 +206,23 @@ test_that("rack_upload does not tag when no tag is configured", {
   expect_false(posted)
 })
 
+test_that("a tag write answering with an empty body is not a failure", {
+
+  board <- mock_board_connect(account = "user_a")
+  withr::local_options(blockr.session_connect_tag = "blockr")
+
+  local_mocked_bindings(
+    req_perform = function(req, ...) httr2::response(status_code = 200L),
+    .package = "httr2"
+  )
+  local_mocked_bindings(
+    connect_content_find = function(board, name) list(guid = "g"),
+    connect_resolve_tag = function(backend, spec) "9"
+  )
+
+  expect_no_warning(connect_apply_tag(board, "wf"))
+})
+
 test_that("a failed tag write does not fail the upload", {
 
   board <- mock_board_connect(account = "user_a")
