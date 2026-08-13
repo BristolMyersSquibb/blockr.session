@@ -2,6 +2,8 @@
 
 ## blockr.session 0.1.0
 
+CRAN release: 2026-08-04
+
 - Initial CRAN release.
 
 - [`manage_project()`](https://bristolmyerssquibb.github.io/blockr.session/reference/manage_project.md)
