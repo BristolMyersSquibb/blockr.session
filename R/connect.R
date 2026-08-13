@@ -84,19 +84,28 @@ rack_rename.rack_id_pins_connect <- function(id, backend, name, ...) {
 #' @export
 rack_list.pins_board_connect <- function(backend, tags = NULL, ...) {
 
-  tag_id <- connect_tag_id(backend)
+  spec <- connect_tag_spec()
 
-  if (not_null(tag_id)) {
-    return(connect_list_by_tag(backend, tag_id))
+  if (not_null(spec)) {
+    return(connect_list_by_tag(backend, spec))
   }
 
   connect_list_all_pins(backend)
 }
 
-connect_list_by_tag <- function(backend, tag_id) {
+# Search resolves the tag from the configured name or Category/Name path itself
+# and carries owners inline, so a tagged listing costs one paged request.
+# GET /tags/{id}/content instead needs the id resolved first and ignores
+# include=owner, leaving a GET /users call per owner. The quotes matter: an
+# unquoted space would end the filter value and start a search term, silently
+# matching nothing.
+connect_list_by_tag <- function(backend, spec) {
 
   items <- tryCatch(
-    connect_api(backend, "GET /tags/{tag_id}/content"),
+    connect_api_paged(
+      backend, "GET /search/content",
+      query = list(q = paste0("tag:\"", spec, "\""), include = "owner")
+    ),
     error = function(e) NULL
   )
 
@@ -106,11 +115,12 @@ connect_list_by_tag <- function(backend, tag_id) {
 # Without a configured tag the listing shows every pin and defers the blockr
 # membership check to load time. Whether an item is a pin is already in the
 # bulk response, so no pin is inspected -- a non-blockr pin is filtered out
-# only when someone tries to open it.
+# only when someone tries to open it. `include=owner` carries each owner's
+# username along, so the whole listing costs one request whatever the pin count.
 connect_list_all_pins <- function(backend) {
 
   items <- tryCatch(
-    connect_api(backend, "GET /content"),
+    connect_api(backend, "GET /content", query = list(include = "owner")),
     error = function(e) NULL
   )
 
@@ -130,7 +140,7 @@ connect_pin_records <- function(backend, items) {
     records[[length(records) + 1L]] <- new_rack_record(
       id = item$name,
       name = connect_item_title(item),
-      user = connect_owner_cache$lookup(backend, item$owner_guid),
+      user = connect_item_owner(backend, item),
       saved = connect_item_saved(item)
     )
   }
@@ -167,9 +177,24 @@ connect_item_saved <- function(item) {
   connect_parse_time(stamp)
 }
 
-# A pin's owner is intrinsic to the content and identical for every viewer, so
-# the guid -> username resolution memoizes process-wide, keyed by server and
-# owner guid: an owner is resolved once however many of their pins are listed.
+# `[[` rather than `$`: an item carrying only owner_guid would partial-match
+# that guid as `$owner`.
+connect_item_owner <- function(backend, item) {
+
+  name <- item[["owner"]][["username"]]
+
+  if (not_null(name) && nzchar(name)) {
+    return(name)
+  }
+
+  connect_owner_cache$lookup(backend, item$owner_guid)
+}
+
+# Fallback for an item that arrives carrying a guid but no owner, the field
+# being nullable. A pin's owner is intrinsic to the content and identical for
+# every viewer, so the guid -> username resolution memoizes process-wide, keyed
+# by server and owner guid: an owner is resolved once however many of their
+# pins are listed.
 connect_owner_cache <- local({
 
   owners <- list()
@@ -208,11 +233,23 @@ connect_owner_name <- function(backend, guid) {
 
 # Connect native tags -------------------------------------------------------
 
-connect_tag_id <- function(backend) {
+connect_tag_spec <- function() {
 
   spec <- blockr_option("session_connect_tag", NULL)
 
   if (is.null(spec) || !is_string(spec) || !nzchar(spec)) {
+    return(NULL)
+  }
+
+  spec
+}
+
+# Applying a tag on upload needs its id, which only the tag listing carries.
+connect_tag_id <- function(backend) {
+
+  spec <- connect_tag_spec()
+
+  if (is.null(spec)) {
     return(NULL)
   }
 
@@ -499,6 +536,13 @@ connect_api <- function(board, route, ..., body = NULL, query = NULL,
   )
 
   resp <- httr2::req_perform(req)
+
+  # A write endpoint may answer 200 with an empty text/plain body, which
+  # resp_body_json() rejects -- reporting a failure for a call that succeeded.
+  if (!httr2::resp_has_body(resp)) {
+    return(NULL)
+  }
+
   httr2::resp_body_json(resp)
 }
 
