@@ -147,10 +147,6 @@ reset_board_name <- function(board, name) {
   board
 }
 
-valid_rack_id <- function(x) {
-  is_string(x) && grepl("^[A-Za-z0-9_-]+$", x)
-}
-
 # the query keys rack_loader() interprets; everything else in the URL is
 # preserved across New and save/navigate so app-level params survive.
 session_query_keys <- c("id", "board_name", "user", "version", "new")
