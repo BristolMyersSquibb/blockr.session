@@ -1140,6 +1140,12 @@ test_that("first save mints the chosen id, not the board id (#81)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
+  modal_closed <- FALSE
+  local_mocked_bindings(
+    removeModal = function(session) modal_closed <<- TRUE,
+    .package = "blockr.session"
+  )
+
   test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
   testServer(
@@ -1155,11 +1161,22 @@ test_that("first save mints the chosen id, not the board id (#81)", {
 
   expect_true("chosen-id" %in% pins::pin_list(backend))
   expect_false("auto-slug" %in% pins::pin_list(backend))
+  expect_true(modal_closed)
 })
 
-test_that("the id chooser rejects an invalid id (#81)", {
+test_that("a backend-rejected id keeps the id chooser open (#101)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
+
+  modal_closed <- FALSE
+  reported <- character()
+  local_mocked_bindings(
+    removeModal = function(session) modal_closed <<- TRUE,
+    notify = function(..., type = "message", glue = TRUE, session = NULL) {
+      reported <<- c(reported, paste0(...))
+    },
+    .package = "blockr.session"
+  )
 
   test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
@@ -1167,7 +1184,7 @@ test_that("the id chooser rejects an invalid id (#81)", {
     manage_project_server,
     {
       session$setInputs(save_btn = 1)
-      session$setInputs(rack_id_input = "no spaces!", rack_id_confirm = 1)
+      session$setInputs(rack_id_input = "no/slashes", rack_id_confirm = 1)
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "invalid-test")
@@ -1175,13 +1192,25 @@ test_that("the id chooser rejects an invalid id (#81)", {
   )
 
   expect_length(pins::pin_list(backend), 0L)
+  expect_false(modal_closed)
+  expect_match(paste(reported, collapse = " "), "must not contain slashes")
 })
 
-test_that("the id chooser refuses to overwrite an existing id (#81)", {
+test_that("a colliding id is caught by the write, not a pre-check (#101)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
   rack_create(backend, list(blocks = list()), id = "taken", name = "taken")
+
+  modal_closed <- FALSE
+  reported <- character()
+  local_mocked_bindings(
+    removeModal = function(session) modal_closed <<- TRUE,
+    notify = function(..., type = "message", glue = TRUE, session = NULL) {
+      reported <<- c(reported, paste0(...))
+    },
+    .package = "blockr.session"
+  )
 
   test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
 
@@ -1198,4 +1227,40 @@ test_that("the id chooser refuses to overwrite an existing id (#81)", {
 
   expect_equal(pins::pin_list(backend), "taken")
   expect_equal(nrow(pins::pin_versions(backend, "taken")), 1L)
+  expect_false(modal_closed)
+  expect_match(
+    paste(reported, collapse = " "),
+    "already exists; use rack_append"
+  )
+})
+
+test_that("a blank id attempts no write (#101)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  attempted <- FALSE
+  local_mocked_bindings(
+    rack_create = function(...) {
+      attempted <<- TRUE
+      NULL
+    },
+    .package = "blockr.session"
+  )
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    {
+      session$setInputs(save_btn = 1)
+      session$setInputs(rack_id_input = "   ", rack_id_confirm = 1)
+      session$setInputs(rack_id_input = "", rack_id_confirm = 2)
+    },
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "blank-test")
+    )
+  )
+
+  expect_false(attempted)
+  expect_length(pins::pin_list(backend), 0L)
 })

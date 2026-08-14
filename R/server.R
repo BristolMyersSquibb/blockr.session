@@ -175,32 +175,7 @@ manage_project_server <- function(id, board, ...) {
           new_id <- trimws(coal(input$rack_id_input, ""))
           mode <- pending_save_mode()
 
-          if (!valid_rack_id(new_id)) {
-            notify(
-              paste(
-                "Workflow ID may contain only letters, numbers, hyphens",
-                "and underscores."
-              ),
-              type = "error",
-              glue = FALSE,
-              session = session
-            )
-            return()
-          }
-
-          rid <- as_rack_id(list(id = new_id), backend)
-
-          record_exists <- isTRUE(
-            tryCatch(rack_exists(rid, backend), error = function(e) FALSE)
-          )
-
-          if (record_exists) {
-            notify(
-              sprintf("A workflow named %s already exists.", new_id),
-              type = "error",
-              glue = FALSE,
-              session = session
-            )
+          if (!nzchar(new_id)) {
             return()
           }
 
@@ -1423,7 +1398,7 @@ show_rack_id_modal <- function(session, default) {
       textInput(ns("rack_id_input"), "Workflow ID", value = default),
       tags$p(
         class = "blockr-rack-id-hint",
-        "Letters, numbers, hyphens and underscores. Must be unique."
+        "Must be unique."
       ),
       footer = tagList(
         modalButton("Cancel"),
