@@ -103,9 +103,14 @@ manage_project_server <- function(id, board, ...) {
             as_rack_id(list(id = board$board_id), backend)
           )
 
-          exists <- isTRUE(
-            tryCatch(rack_exists(target, backend), error = function(e) FALSE)
+          exists <- tryCatch(
+            rack_exists(target, backend),
+            error = cnd_to_notif(type = "error")
           )
+
+          if (is.null(exists)) {
+            return()
+          }
 
           if (!exists) {
             pending_save_mode("create")

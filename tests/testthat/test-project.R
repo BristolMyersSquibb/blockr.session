@@ -1234,6 +1234,40 @@ test_that("a colliding id is caught by the write, not a pre-check (#101)", {
   )
 })
 
+test_that("a failed existence probe reports and opens no chooser (#112)", {
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  rack_create(backend, list(blocks = list()), id = "probe-test", name = "Probe")
+
+  chooser_opened <- FALSE
+  reported <- character()
+  local_mocked_bindings(
+    rack_exists = function(id, backend, ...) {
+      stop("Connect is unreachable")
+    },
+    show_rack_id_modal = function(...) chooser_opened <<- TRUE,
+    notify = function(..., type = "message", glue = TRUE, session = NULL) {
+      reported <<- c(reported, paste0(...))
+    },
+    .package = "blockr.session"
+  )
+
+  test_board <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    session$setInputs(save_btn = 1),
+    args = list(
+      board = reactiveValues(board = test_board, board_id = "probe-test")
+    )
+  )
+
+  expect_false(chooser_opened)
+  expect_match(paste(reported, collapse = " "), "Connect is unreachable")
+  expect_equal(nrow(pins::pin_versions(backend, "probe-test")), 1L)
+})
+
 test_that("a blank id attempts no write (#101)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
