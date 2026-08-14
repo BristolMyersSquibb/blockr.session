@@ -9,7 +9,7 @@ new_rack_id_pins_connect <- function(user, id, version = NULL) {
     )
   }
 
-  if (not_null(version) && !is_version_string(version)) {
+  if (not_null(version) && (!is_string(version) || !nzchar(version))) {
     blockr_abort(
       "rack_id_pins_connect version must be a non-empty string.",
       class = "rack_id_pins_connect_invalid_version"

@@ -2,7 +2,7 @@
 
 new_rack_id_pins <- function(id, version = NULL) {
 
-  if (not_null(version) && !is_version_string(version)) {
+  if (not_null(version) && (!is_string(version) || !nzchar(version))) {
     blockr_abort(
       "rack_id_pins version must be a non-empty string.",
       class = "rack_id_pins_invalid_version"
@@ -10,10 +10,6 @@ new_rack_id_pins <- function(id, version = NULL) {
   }
 
   new_rack_id(id, version = version, class = "rack_id_pins")
-}
-
-is_version_string <- function(x) {
-  is_string(x) && !is.na(x) && nzchar(x)
 }
 
 #' @export

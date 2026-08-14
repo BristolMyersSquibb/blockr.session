@@ -23,7 +23,7 @@ test_that("new_rack_id_pins rejects empty version", {
 test_that("new_rack_id_pins rejects an NA version", {
   expect_error(
     new_rack_id_pins("my_board", NA_character_),
-    class = "rack_id_pins_invalid_version"
+    class = "rack_id_invalid_version"
   )
 })
 
@@ -54,7 +54,7 @@ test_that("new_rack_id_pins_connect rejects empty user", {
 test_that("new_rack_id_pins_connect rejects an NA version", {
   expect_error(
     new_rack_id_pins_connect("alice", "my_board", NA_character_),
-    class = "rack_id_pins_connect_invalid_version"
+    class = "rack_id_invalid_version"
   )
 })
 

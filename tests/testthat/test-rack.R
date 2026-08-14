@@ -14,6 +14,21 @@ test_that("new_rack_id rejects non-string", {
   )
 })
 
+test_that("new_rack_id rejects an NA version whatever its type", {
+
+  expect_error(
+    new_rack_id("board", version = NA_character_),
+    class = "rack_id_invalid_version"
+  )
+
+  # A backend numbering versions off a counter carries integers, so the guard
+  # cannot key on the string spelling of an unresolved version.
+  expect_error(
+    new_rack_id("board", version = NA_integer_),
+    class = "rack_id_invalid_version"
+  )
+})
+
 test_that("new_rack_id stores id, version and user", {
   id <- new_rack_id("board", version = "v1", user = "alice")
   expect_equal(id$id, "board")
