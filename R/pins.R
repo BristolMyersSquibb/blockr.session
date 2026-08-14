@@ -2,7 +2,7 @@
 
 new_rack_id_pins <- function(id, version = NULL) {
 
-  if (not_null(version) && (!is_string(version) || !nzchar(version))) {
+  if (not_null(version) && !is_version_string(version)) {
     blockr_abort(
       "rack_id_pins version must be a non-empty string.",
       class = "rack_id_pins_invalid_version"
@@ -10,6 +10,10 @@ new_rack_id_pins <- function(id, version = NULL) {
   }
 
   new_rack_id(id, version = version, class = "rack_id_pins")
+}
+
+is_version_string <- function(x) {
+  is_string(x) && !is.na(x) && nzchar(x)
 }
 
 #' @export
@@ -112,7 +116,7 @@ rack_rename.rack_id_pins <- function(id, backend, name, ...) {
     tags = unique(c(meta$tags, blockr_session_tags()))
   )
 
-  new_rack_id_pins(id$id, version = rack_info(id, backend)$version[1L])
+  new_rack_id_pins(id$id, version = latest_version(id, backend))
 }
 
 # rack_exists ---------------------------------------------------------------
@@ -307,6 +311,17 @@ rack_info.rack_id_pins <- function(id, backend, ...) {
   )
 }
 
+latest_version <- function(id, backend) {
+
+  info <- rack_info(id, backend)
+
+  if (nrow(info) == 0L) {
+    return(NULL)
+  }
+
+  info$version[1L]
+}
+
 # rack_download -------------------------------------------------------------
 
 #' @export
@@ -381,7 +396,7 @@ rack_upload.pins_board <- function(backend, path, id, name = NULL,
     tags = blockr_session_tags()
   )
 
-  new_rack_id_pins(id$id, version = rack_info(id, backend)$version[1L])
+  new_rack_id_pins(id$id, version = latest_version(id, backend))
 }
 
 # rack_delete ---------------------------------------------------------------

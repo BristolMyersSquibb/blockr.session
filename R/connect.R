@@ -9,7 +9,7 @@ new_rack_id_pins_connect <- function(user, id, version = NULL) {
     )
   }
 
-  if (not_null(version) && (!is_string(version) || !nzchar(version))) {
+  if (not_null(version) && !is_version_string(version)) {
     blockr_abort(
       "rack_id_pins_connect version must be a non-empty string.",
       class = "rack_id_pins_connect_invalid_version"
@@ -403,7 +403,7 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
   new_rack_id_pins_connect(
     user = backend$account,
     id = slug,
-    version = rack_info(base, backend)$version[1L]
+    version = latest_version(base, backend)
   )
 }
 
