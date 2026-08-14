@@ -112,7 +112,7 @@ rack_rename.rack_id_pins <- function(id, backend, name, ...) {
     tags = unique(c(meta$tags, blockr_session_tags()))
   )
 
-  new_rack_id_pins(id$id, version = rack_info(id, backend)$version[1L])
+  new_rack_id_pins(id$id, version = latest_version(id, backend))
 }
 
 # rack_exists ---------------------------------------------------------------
@@ -307,6 +307,17 @@ rack_info.rack_id_pins <- function(id, backend, ...) {
   )
 }
 
+latest_version <- function(id, backend) {
+
+  info <- rack_info(id, backend)
+
+  if (nrow(info) == 0L) {
+    return(NULL)
+  }
+
+  info$version[1L]
+}
+
 # rack_download -------------------------------------------------------------
 
 #' @export
@@ -381,7 +392,7 @@ rack_upload.pins_board <- function(backend, path, id, name = NULL,
     tags = blockr_session_tags()
   )
 
-  new_rack_id_pins(id$id, version = rack_info(id, backend)$version[1L])
+  new_rack_id_pins(id$id, version = latest_version(id, backend))
 }
 
 # rack_delete ---------------------------------------------------------------

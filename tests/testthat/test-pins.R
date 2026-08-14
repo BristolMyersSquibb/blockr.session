@@ -20,6 +20,13 @@ test_that("new_rack_id_pins rejects empty version", {
   )
 })
 
+test_that("new_rack_id_pins rejects an NA version", {
+  expect_error(
+    new_rack_id_pins("my_board", NA_character_),
+    class = "rack_id_invalid_version"
+  )
+})
+
 test_that("new_rack_id_pins_connect basic construction", {
 
   id <- new_rack_id_pins_connect("alice", "my_board")
@@ -41,6 +48,13 @@ test_that("new_rack_id_pins_connect rejects empty user", {
   expect_error(
     new_rack_id_pins_connect("", "my_board"),
     class = "rack_id_pins_connect_invalid_user"
+  )
+})
+
+test_that("new_rack_id_pins_connect rejects an NA version", {
+  expect_error(
+    new_rack_id_pins_connect("alice", "my_board", NA_character_),
+    class = "rack_id_invalid_version"
   )
 })
 
@@ -212,6 +226,42 @@ test_that("rack_append adds a version and preserves the name", {
   expect_equal(rack_name(new_rack_id_pins("board-x"), backend), "Original")
 })
 
+test_that("rack_append reports no version when the lookup fails after upload", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  rack_create(backend, list(blocks = list(a = 1)), id = "wf", name = "WF")
+
+  # The pin_upload call consults pin_versions itself to prune, so the failure
+  # has to be armed by the write rather than mocked in up front.
+  uploaded <- FALSE
+  real_upload <- pins::pin_upload
+  real_versions <- pins::pin_versions
+
+  local_mocked_bindings(
+    pin_upload = function(...) {
+      out <- real_upload(...)
+      uploaded <<- TRUE
+      out
+    },
+    pin_versions = function(...) {
+      if (uploaded) {
+        stop("Posit Connect API failed [502]")
+      }
+      real_versions(...)
+    },
+    .package = "pins"
+  )
+
+  Sys.sleep(1.1)
+  res <- suppressWarnings(
+    rack_append(new_rack_id_pins("wf"), backend, list(blocks = list(a = 2)))
+  )
+
+  expect_null(res$version)
+  expect_equal(board_query_string(res, backend), "?id=wf")
+})
+
 test_that("rack_append errors when the record does not exist", {
 
   # rack_append only appends; creating a missing record is rack_create's job.
@@ -371,6 +421,39 @@ test_that("rack_rename writes the name without changing identity", {
   expect_equal(res$id, "stable-id")
   expect_equal(pins::pin_list(backend), "stable-id")
   expect_equal(rack_name(new_rack_id_pins("stable-id"), backend), "After")
+})
+
+test_that("rack_rename reports no version when the lookup fails after upload", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  rack_create(backend, list(blocks = list()), id = "stable-id", name = "Before")
+
+  uploaded <- FALSE
+  real_upload <- pins::pin_upload
+  real_versions <- pins::pin_versions
+
+  local_mocked_bindings(
+    pin_upload = function(...) {
+      out <- real_upload(...)
+      uploaded <<- TRUE
+      out
+    },
+    pin_versions = function(...) {
+      if (uploaded) {
+        stop("Posit Connect API failed [502]")
+      }
+      real_versions(...)
+    },
+    .package = "pins"
+  )
+
+  Sys.sleep(1.1)
+  res <- suppressWarnings(
+    rack_rename(new_rack_id_pins("stable-id"), backend, "After")
+  )
+
+  expect_null(res$version)
 })
 
 test_that("rack_rename errors when the record has no versions", {
@@ -1094,6 +1177,30 @@ test_that("rack_create on Connect uploads to the owner-qualified slug", {
   expect_equal(result$id, "my_new_board")
   expect_equal(result$version, versions$version[1L])
   expect_equal(uploaded_name, "user_a/my_new_board")
+})
+
+test_that("rack_create on Connect reports no version when the lookup fails", {
+
+  board <- mock_board_connect(account = "user_a")
+
+  local_mocked_bindings(
+    pin_upload = function(...) invisible(),
+    pin_exists = function(...) FALSE,
+    pin_versions = function(...) stop("Posit Connect API failed [502]"),
+    .package = "pins"
+  )
+  local_mocked_bindings(
+    connect_content_find = function(board, name) list(guid = "g"),
+    connect_api = function(...) list()
+  )
+
+  res <- suppressWarnings(
+    rack_create(board, blockr_test_session, id = "my_new_board",
+                name = "my_new_board")
+  )
+
+  expect_null(res$version)
+  expect_equal(board_query_string(res, board), "?id=my_new_board")
 })
 
 test_that("rack_create on Connect sets the content title to the name", {

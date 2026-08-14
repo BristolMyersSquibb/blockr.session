@@ -108,6 +108,13 @@ new_rack_id <- function(id, version = NULL, user = NULL, ...,
     )
   }
 
+  if (anyNA(version)) {
+    blockr_abort(
+      "rack id version must not be NA.",
+      class = "rack_id_invalid_version"
+    )
+  }
+
   structure(
     list(id = id, version = version, user = user, ...),
     class = c(class, "rack_id")

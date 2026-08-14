@@ -403,7 +403,7 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
   new_rack_id_pins_connect(
     user = backend$account,
     id = slug,
-    version = rack_info(base, backend)$version[1L]
+    version = latest_version(base, backend)
   )
 }
 
