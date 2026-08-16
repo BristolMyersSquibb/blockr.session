@@ -32,6 +32,12 @@
 #' - `tags`: `rack_tags()` and `rack_set_tags()` are implemented.
 #' - `metadata`: a display name (`rack_name()`, `rack_rename()`) and a content
 #'   hash (`rack_content_hash()`) are stored alongside the payload.
+#' - `snapshot`: unsaved work can be parked for crash recovery via
+#'   `rack_snapshot()` and enumerated via `rack_snapshot_list()`. A snapshot is
+#'   a private, unversioned record that overwrites in place, is invisible to
+#'   `rack_list()`, and is read back with [rack_load()] and dropped with
+#'   `rack_purge()` like any other record. Backends that cannot isolate one
+#'   visitor's snapshots from another's report `FALSE`.
 #' - `sharing`: `rack_share()`, `rack_unshare()` and `rack_shares()` are
 #'   implemented.
 #' - `visibility`: `rack_acl()` and `rack_set_acl()` are implemented.
@@ -55,6 +61,8 @@
 #'   (`id`, and optionally `version` and `user`) or a `rack_record` -- turned
 #'   into the backend's own `rack_id` subclass.
 #' @param path Path to the local file to upload as a new version.
+#' @param data For `rack_snapshot()`, the serialized board state to park as
+#'   this record's snapshot, replacing whatever it held before.
 #' @param name Display name for the record, written to the backend's native
 #'   name field and never used as the storage key; `NULL` keeps the current
 #'   name.
@@ -79,9 +87,12 @@
 #' respectively. `rack_capabilities()` returns the named list of flags above.
 #' `rack_list()` returns a list of `rack_record`s and `rack_info()` a data
 #' frame of versions (columns `version`, `created`, `ref`, newest first).
-#' `as_rack_id()`, `rack_upload()` and `rack_rename()` return a `rack_id`;
-#' `rack_download()` a local file path; `rack_name()` a string; `rack_exists()`
-#' a scalar logical; `rack_content_hash()` the stored payload hash;
+#' A `rack_snapshot_list()` call returns a list of `rack_record`s carrying
+#' each snapshot's pool, board id, board name and content hash.
+#' `as_rack_id()`, `rack_upload()`, `rack_snapshot()` and `rack_rename()`
+#' return a `rack_id`; `rack_download()` a local file path; `rack_name()` a
+#' string; `rack_exists()` a scalar logical; `rack_content_hash()` the stored
+#' payload hash;
 #' `rack_tags()`, `rack_acl()` and `rack_shares()` the stored tags, access
 #' level and shares. The mutators (`rack_set_tags()`, `rack_set_acl()`,
 #' `rack_share()`, `rack_unshare()`, `rack_delete()`, `rack_purge()`) return

@@ -16,6 +16,7 @@ manage_project_server <- function(id, board, ...) {
       refresh_trigger <- reactiveVal(0)
       save_status <- reactiveVal("Not saved")
       pending_save_mode <- reactiveVal(NULL)
+      save_event <- reactiveVal(0)
 
       serialize_now <- function(id = board$board_id) {
         do.call(
@@ -152,6 +153,7 @@ manage_project_server <- function(id, board, ...) {
           )
           save_status("Just now")
           refresh_trigger(refresh_trigger() + 1)
+          save_event(save_event() + 1)
 
           saved <- as_rack_id(
             list(id = res$id, user = res$user),
@@ -216,6 +218,7 @@ manage_project_server <- function(id, board, ...) {
           }
 
           save_status("Just now")
+          save_event(save_event() + 1)
           new_url <- board_query_string(saved, backend, keep = current_query())
           prev_query(new_url)
           updateQueryString(new_url, mode = "replace", session = session)
@@ -1128,6 +1131,15 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      snapshot_writer(
+        board, backend, current_id, save_event, serialize_now, current_query,
+        session
+      )
+
+      snapshot_recovery(
+        input, output, backend, current_id, current_query, session
+      )
+
       # core's preserve_board validator requires a reactive return; this plugin
       # resolves boards at the request phase, so nothing flows back through it.
       reactiveVal()
@@ -1176,6 +1188,22 @@ rack_loader <- function() {
 
     if (not_null(fresh) && nzchar(fresh)) {
       return(new_rack_board(default, fresh))
+    }
+
+    recover <- recovery_key(search)
+
+    if (not_null(recover)) {
+
+      recovered <- load_snapshot(
+        recover,
+        get_session_backend(
+          if (is.null(session)) list(request = request) else session
+        )
+      )
+
+      if (not_null(recovered)) {
+        return(recovered)
+      }
     }
 
     handle <- coal(query$id, query$board_name, fail_all = FALSE)
@@ -1289,17 +1317,14 @@ workflow_item <- function(wf, backend, ns) {
 
 navigate_to_board <- function(id, backend, session) {
 
-  updateQueryString(
+  reload_with_query(
     board_query_string(
       id,
       backend,
       keep = isolate(session$clientData$url_search)
     ),
-    mode = "replace",
-    session = session
+    session
   )
-
-  session$reload()
 }
 
 save_controls <- function(ns, saved) {

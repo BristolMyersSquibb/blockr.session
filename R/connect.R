@@ -137,6 +137,12 @@ connect_pin_records <- function(backend, items) {
       next
     }
 
+    # The Connect listing carries no pin tags, so recovery snapshots are held
+    # out of the workflow menu by their reserved name prefix instead
+    if (is_snapshot_name(item$name)) {
+      next
+    }
+
     records[[length(records) + 1L]] <- new_rack_record(
       id = item$name,
       name = connect_item_title(item),
@@ -420,6 +426,7 @@ rack_capabilities.pins_board_connect <- function(backend, ...) {
     versioning = TRUE,
     tags = TRUE,
     metadata = TRUE,
+    snapshot = has_api,
     sharing = has_api,
     visibility = has_api,
     user_discovery = has_api

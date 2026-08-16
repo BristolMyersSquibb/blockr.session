@@ -1,3 +1,11 @@
+# blockr.session (development version)
+
+* Setting the `session_autosave` blockr option to an interval in seconds turns
+  on crash recovery: a board with unsaved changes is parked as a private
+  snapshot on the configured backend, and a later session offers to restore it.
+  Snapshots never touch a workflow's version history and stay out of the
+  workflow listing. Retention is governed by `session_snapshot_ttl`.
+
 # blockr.session 0.1.0
 
 * Initial CRAN release.

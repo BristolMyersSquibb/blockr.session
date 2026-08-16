@@ -433,6 +433,7 @@ rack_capabilities.pins_board <- function(backend, ...) {
     versioning = TRUE,
     tags = TRUE,
     metadata = TRUE,
+    snapshot = TRUE,
     sharing = FALSE,
     visibility = FALSE,
     user_discovery = FALSE
