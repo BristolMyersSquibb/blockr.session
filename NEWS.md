@@ -1,4 +1,4 @@
-# blockr.session (development version)
+# blockr.session 0.1.1
 
 * Setting the `session_autosave` blockr option to an interval in seconds turns
   on crash recovery: a board with unsaved changes is parked as a private
