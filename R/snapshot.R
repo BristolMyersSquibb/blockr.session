@@ -158,8 +158,9 @@ snapshot_enabled <- function(backend) {
   not_null(snapshot_interval()) && snapshot_capable(backend)
 }
 
-snapshot_writer <- function(board, backend, current_id, saved, serialize_now,
-                            current_query, session = get_session()) {
+snapshot_writer <- function(board, backend, current_id, save_event,
+                            serialize_now, current_query, status,
+                            session = get_session()) {
 
   if (!snapshot_enabled(backend)) {
     return(invisible(NULL))
@@ -173,9 +174,10 @@ snapshot_writer <- function(board, backend, current_id, saved, serialize_now,
   state$slot <- NULL
   state$data <- NULL
   state$meta <- NULL
+  state$status <- status
 
   observeEvent(
-    saved(),
+    save_event(),
     {
       drop_session_slot(state, backend)
       state$held <- snapshot_hash(serialize_now)
@@ -250,6 +252,9 @@ load_snapshot <- function(key, backend) {
   tryCatch(blockr_deser(payload), error = function(e) NULL)
 }
 
+# A `recover` handle carrying a key restores that snapshot; the bare parameter
+# opens the list instead, so the prompt is somewhere the user navigates to
+# rather than a modal that greets every load until the drafts are cleared.
 recovery_key <- function(query) {
 
   key <- parseQueryString(coal(query, ""))[["recover"]]
@@ -259,6 +264,13 @@ recovery_key <- function(query) {
   }
 
   key
+}
+
+recovery_menu_requested <- function(query) {
+
+  parsed <- parseQueryString(coal(query, ""))
+
+  "recover" %in% names(parsed) && !nzchar(coal(parsed$recover, ""))
 }
 
 take_snapshot <- function(state, board, backend, rid, serialize_now) {
@@ -301,6 +313,11 @@ take_snapshot <- function(state, board, backend, rid, serialize_now) {
     }
   )
 
+  # the status text carries this rather than a notification: a tick that keeps
+  # failing would otherwise raise one toast per interval. Setting a reactiveVal
+  # to the value it already holds is a no-op, so the message lands once.
+  set_snapshot_status(state, if (ok) "Saved as draft" else "Autosave failed")
+
   if (!ok) {
     return(invisible(NULL))
   }
@@ -319,6 +336,17 @@ take_snapshot <- function(state, board, backend, rid, serialize_now) {
 
 has_content <- function(board) {
   has_length(board_block_ids(board))
+}
+
+set_snapshot_status <- function(state, text) {
+
+  if (is.null(state$status)) {
+    return(invisible(NULL))
+  }
+
+  state$status(text)
+
+  invisible(NULL)
 }
 
 snapshot_board_name <- function(board) {
@@ -351,6 +379,12 @@ drop_session_slot <- function(state, backend) {
 
 # The pins package carries no metadata-only edit, so the end stamp re-uploads
 # the payload the loop last wrote, which is held in memory for exactly this.
+#
+# A pin version is named `<created-to-the-second>-<hash of the payload>`, and
+# the stamp changes only metadata, so a session ending in the same second as
+# its last snapshot write collides and `pin_store()` refuses it. That is left
+# to fail: the stamp only shortens retention, so losing it costs nothing but
+# the snapshot waiting for the TTL instead of the grace.
 stamp_session_end <- function(state, backend) {
 
   if (is.null(state$slot) || is.null(state$data)) {
@@ -431,21 +465,30 @@ snapshot_recovery <- function(input, output, backend, current_id,
 
   observeEvent(
     TRUE,
-    offers(
-      snapshot_offers(
+    {
+      found <- snapshot_offers(
         snapshot_sweep(backend),
         current_id(),
         backend,
         recovery_key(current_query())
       )
-    ),
+
+      offers(found)
+
+      if (has_length(found) && recovery_menu_requested(current_query())) {
+        showModal(recovery_modal(session$ns), session)
+      }
+    },
     once = TRUE
   )
 
+  output$recovery_notice <- renderUI(
+    recovery_notice(session$ns, offers())
+  )
+
   observeEvent(
-    offers(),
-    if (length(offers())) showModal(recovery_modal(session$ns), session),
-    once = TRUE
+    input$snapshot_menu,
+    showModal(recovery_modal(session$ns), session)
   )
 
   output$snapshot_offers <- renderUI(
@@ -511,6 +554,22 @@ recovery_query <- function(rec, keep) {
   }
 
   build_query_string(c(params, drop_session_query(keep)))
+}
+
+recovery_notice <- function(ns, offers) {
+
+  if (!has_length(offers)) {
+    return(NULL)
+  }
+
+  tags$button(
+    type = "button",
+    class = "btn btn-sm blockr-snapshot-notice",
+    title = "Unsaved work from an earlier session",
+    onclick = shiny_input_js(ns("snapshot_menu"), "open"),
+    bsicons::bs_icon("clock-history"),
+    sprintf(" %d draft%s", length(offers), if (length(offers) > 1L) "s" else "")
+  )
 }
 
 recovery_modal <- function(ns) {

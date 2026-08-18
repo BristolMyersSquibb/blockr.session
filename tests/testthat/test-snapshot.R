@@ -2,6 +2,8 @@ snapshot_board <- function(...) {
   new_board(blocks = c(a = new_dataset_block("iris"), ...))
 }
 
+notice_text <- function(x) paste(as.character(x), collapse = " ")
+
 snapshot_pins <- function(backend) {
   grep(paste0("^", snapshot_prefix()), pins::pin_list(backend), value = TRUE)
 }
@@ -455,6 +457,237 @@ test_that("a rack offer carries its record id into the recovery URL", {
   expect_match(query, "recover=blockr-snapshot-r-wf", fixed = TRUE)
   expect_match(query, "id=wf", fixed = TRUE)
   expect_match(query, "other=keep", fixed = TRUE)
+})
+
+test_that("parking a draft says so, and a failure says that instead", {
+
+  backend <- local_snapshot_backend()
+
+  toasts <- 0L
+  breaks <- FALSE
+
+  # mocks belong out here: local_mocked_bindings() called inside a testServer
+  # block does not unwind with it and would stay installed for later tests
+  local_mocked_bindings(
+    notify = function(...) {
+      toasts <<- toasts + 1L
+      invisible(NULL)
+    },
+    rack_snapshot = function(backend, id, data, ...) {
+      if (breaks) {
+        stop("backend down")
+      }
+      rack_snapshot.pins_board(backend, id, data, ...)
+    },
+    .package = "blockr.session"
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$flushReact()
+
+      board$board <- snapshot_board(b = new_subset_block())
+      session$elapse(30 * 1000)
+
+      expect_equal(output$save_status, "Saved as draft")
+
+      breaks <<- TRUE
+
+      board$board <- snapshot_board(b = new_subset_block(),
+                                    c = new_subset_block())
+      session$elapse(30 * 1000)
+
+      expect_equal(output$save_status, "Autosave failed")
+
+      # a tick that keeps failing must not raise one toast per interval
+      session$elapse(30 * 1000)
+      session$elapse(30 * 1000)
+
+      expect_identical(toasts, 0L)
+    },
+    args = list(
+      board = reactiveValues(board = snapshot_board(), board_id = "status")
+    )
+  )
+})
+
+test_that("a failed write leaves the hash unadvanced, so a tick retries", {
+
+  backend <- local_snapshot_backend()
+
+  fail <- TRUE
+
+  local_mocked_bindings(
+    rack_snapshot = function(backend, id, data, ...) {
+      if (fail) {
+        stop("backend down")
+      }
+      rack_snapshot.pins_board(backend, id, data, ...)
+    },
+    .package = "blockr.session"
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$flushReact()
+
+      board$board <- snapshot_board(b = new_subset_block())
+      session$elapse(30 * 1000)
+
+      expect_length(snapshot_pins(backend), 0L)
+
+      fail <<- FALSE
+      session$elapse(30 * 1000)
+
+      expect_length(snapshot_pins(backend), 1L)
+    },
+    args = list(
+      board = reactiveValues(board = snapshot_board(), board_id = "retry")
+    )
+  )
+})
+
+test_that("a session that ends stamps its snapshot instead of dropping it", {
+
+  backend <- local_snapshot_backend()
+
+  testServer(
+    manage_project_server,
+    {
+      session$flushReact()
+
+      board$board <- snapshot_board(b = new_subset_block())
+      session$elapse(30 * 1000)
+
+      expect_length(snapshot_pins(backend), 1L)
+
+      # a pin version is named to the second and the stamp rewrites the same
+      # payload, so ending within the same second as the write collides
+      Sys.sleep(1.1)
+
+      # testServer leaves the session open, so the ended callbacks that carry
+      # the stamp only run once the session is actually closed
+      session$close()
+    },
+    args = list(
+      board = reactiveValues(board = snapshot_board(), board_id = "ending")
+    )
+  )
+
+  stamped <- rack_snapshot_list(backend)
+
+  expect_length(stamped, 1L)
+  expect_false(is.null(stamped[[1L]]$ended))
+  expect_length(snapshot_pins(backend), 1L)
+})
+
+test_that("the recovery list opens on the bare handle, not on every load", {
+
+  backend <- local_snapshot_backend()
+
+  slot <- as_snapshot_id(snapshot_pin_name("waiting", "session"), backend)
+
+  rack_snapshot(backend, slot, list(x = 1), meta = list(pool = "session"))
+
+  modals <- 0L
+  local_mocked_bindings(
+    showModal = function(...) {
+      modals <<- modals + 1L
+      invisible(NULL)
+    },
+    .package = "blockr.session"
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$flushReact()
+
+      expect_identical(modals, 0L)
+      expect_match(notice_text(output$recovery_notice), "1 draft")
+
+      session$setInputs(snapshot_menu = "open")
+
+      expect_identical(modals, 1L)
+    },
+    args = list(
+      board = reactiveValues(board = snapshot_board(), board_id = "quiet-load")
+    )
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      prev_query("?recover")
+      session$flushReact()
+
+      expect_identical(modals, 2L)
+    },
+    args = list(
+      board = reactiveValues(board = snapshot_board(), board_id = "asked")
+    )
+  )
+})
+
+test_that("the notice disappears once every draft is dealt with", {
+
+  backend <- local_snapshot_backend()
+
+  slot <- as_snapshot_id(snapshot_pin_name("only", "session"), backend)
+
+  rack_snapshot(backend, slot, list(x = 1), meta = list(pool = "session"))
+
+  testServer(
+    manage_project_server,
+    {
+      session$flushReact()
+
+      expect_match(notice_text(output$recovery_notice), "1 draft")
+
+      session$setInputs(snapshot_discard = slot$id)
+
+      expect_null(output$recovery_notice)
+    },
+    args = list(
+      board = reactiveValues(board = snapshot_board(), board_id = "cleared")
+    )
+  )
+})
+
+test_that("the Connect workflow listing holds snapshots back", {
+
+  backend <- mock_board_connect()
+
+  items <- list(
+    list(
+      content_category = "pin",
+      name = "a-workflow",
+      title = "A workflow",
+      last_deployed_time = "2026-08-16T10:00:00Z",
+      owner = list(username = "user_a")
+    ),
+    list(
+      content_category = "pin",
+      name = snapshot_pin_name("secret", "session"),
+      title = "blockr snapshot: secret",
+      last_deployed_time = "2026-08-16T11:00:00Z",
+      owner = list(username = "user_a")
+    ),
+    list(
+      content_category = "pin",
+      name = snapshot_pin_name("a-workflow", "rack"),
+      title = "blockr snapshot: A workflow",
+      last_deployed_time = "2026-08-16T11:30:00Z",
+      owner = list(username = "user_a")
+    )
+  )
+
+  records <- connect_pin_records(backend, items)
+
+  expect_length(records, 1L)
+  expect_identical(records[[1L]]$id, "a-workflow")
 })
 
 test_that("a recovering session adopts the slot it was offered", {

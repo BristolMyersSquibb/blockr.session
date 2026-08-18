@@ -1133,7 +1133,7 @@ manage_project_server <- function(id, board, ...) {
 
       snapshot_writer(
         board, backend, current_id, save_event, serialize_now, current_query,
-        session
+        save_status, session
       )
 
       snapshot_recovery(
