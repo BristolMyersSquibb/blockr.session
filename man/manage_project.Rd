@@ -36,23 +36,20 @@ workflows, version history, and editable title.
 Set the \code{session_autosave} \code{\link[blockr.core:blockr_option]{blockr.core::blockr_option()}} to an interval in
 seconds to have unsaved work parked for recovery. On each tick the board is
 serialized and, when it differs from what was last parked, written to the
-configured backend as a \emph{snapshot}: a private, unversioned record that
-overwrites in place, stays out of the workflow listing and never adds to a
-workflow's version history. An idle board costs one local serialization per
-tick and no backend traffic at all.
+configured backend as a \emph{draft} (see \code{\link[=rack_create]{rack_create()}}): an ordinary record at
+a reserved id, which overwrites in place rather than keeping a history and
+is held out of the workflow listing. An idle board costs one local
+serialization per tick and no backend traffic at all.
 
-Recovery is what a snapshot is for, so nothing is published by it: a save
+Recovery is what a draft is for, so nothing is published by it: a save
 remains the only way work reaches a record other people can load. A session
 holding a loaded record parks under that record, one slot reused; a board
-with no record yet parks under an opaque per-session key. Saving clears the
+with no record yet parks under an opaque per-session id. Saving clears the
 latter. A later session lists what is left and offers each entry for restore
-or discard, leaving anything untouched available next time. Snapshots are
-swept once they pass the \code{session_snapshot_ttl} option's retention (in days,
-seven by default), or shortly after the session that owned one ended
-cleanly. Backends that cannot keep one visitor's snapshots apart from
-another's report \code{snapshot = FALSE} from \code{\link[=rack_capabilities]{rack_capabilities()}} and are never
-written to; on Posit Connect that means autosave is on only where the
-visitor's own credentials are available.
+or discard, leaving anything untouched available next time; the offer is
+reached from the navbar or by loading the app with a bare \code{recover} query
+parameter. Drafts are swept once they pass the \code{session_snapshot_ttl}
+option's retention, in days, seven by default.
 }
 
 \examples{

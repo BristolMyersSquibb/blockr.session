@@ -32,12 +32,6 @@
 #' - `tags`: `rack_tags()` and `rack_set_tags()` are implemented.
 #' - `metadata`: a display name (`rack_name()`, `rack_rename()`) and a content
 #'   hash (`rack_content_hash()`) are stored alongside the payload.
-#' - `snapshot`: unsaved work can be parked for crash recovery via
-#'   `rack_snapshot()` and enumerated via `rack_snapshot_list()`. A snapshot is
-#'   a private, unversioned record that overwrites in place, is invisible to
-#'   `rack_list()`, and is read back with [rack_load()] and dropped with
-#'   `rack_purge()` like any other record. Backends that cannot isolate one
-#'   visitor's snapshots from another's report `FALSE`.
 #' - `sharing`: `rack_share()`, `rack_unshare()` and `rack_shares()` are
 #'   implemented.
 #' - `visibility`: `rack_acl()` and `rack_set_acl()` are implemented.
@@ -61,8 +55,6 @@
 #'   (`id`, and optionally `version` and `user`) or a `rack_record` -- turned
 #'   into the backend's own `rack_id` subclass.
 #' @param path Path to the local file to upload as a new version.
-#' @param data For `rack_snapshot()`, the serialized board state to park as
-#'   this record's snapshot, replacing whatever it held before.
 #' @param name Display name for the record, written to the backend's native
 #'   name field and never used as the storage key; `NULL` keeps the current
 #'   name.
@@ -87,12 +79,9 @@
 #' respectively. `rack_capabilities()` returns the named list of flags above.
 #' `rack_list()` returns a list of `rack_record`s and `rack_info()` a data
 #' frame of versions (columns `version`, `created`, `ref`, newest first).
-#' A `rack_snapshot_list()` call returns a list of `rack_record`s carrying
-#' each snapshot's pool, board id, board name and content hash.
-#' `as_rack_id()`, `rack_upload()`, `rack_snapshot()` and `rack_rename()`
-#' return a `rack_id`; `rack_download()` a local file path; `rack_name()` a
-#' string; `rack_exists()` a scalar logical; `rack_content_hash()` the stored
-#' payload hash;
+#' `as_rack_id()`, `rack_upload()` and `rack_rename()` return a `rack_id`;
+#' `rack_download()` a local file path; `rack_name()` a string; `rack_exists()`
+#' a scalar logical; `rack_content_hash()` the stored payload hash;
 #' `rack_tags()`, `rack_acl()` and `rack_shares()` the stored tags, access
 #' level and shares. The mutators (`rack_set_tags()`, `rack_set_acl()`,
 #' `rack_share()`, `rack_unshare()`, `rack_delete()`, `rack_purge()`) return
@@ -275,7 +264,24 @@ rack_load <- function(id, backend, ...) {
 #' the existing record identified by `id`, erroring (class
 #' `rack_append_missing`) if there is none, and never touches the name. Together
 #' they replace the former `rack_save()`, separating insert from append. To
-#' change a record's name, use `rack_rename()`.
+#' change a record's name, use `rack_rename()`. `rack_records()` lists what a
+#' backend holds, of one kind at a time.
+#'
+#' @section Drafts:
+#' A *draft* is unsaved work parked for crash recovery. It is an ordinary rack
+#' record in every respect a backend can see -- same store, same tags, read
+#' with [rack_load()] and dropped with `rack_purge()` -- and all that sets it
+#' apart is a reserved id, minted by `rack_create(draft = )` and matched by
+#' `rack_records(draft = )`. Nothing below this API knows drafts exist, so a
+#' backend needs no snapshot support of its own.
+#'
+#' Passing `draft` also relaxes what `rack_create()` does, because a draft is a
+#' single slot rather than a history: the id-already-taken check is skipped, so
+#' a repeated write overwrites, and the write is unversioned. Two kinds are
+#' minted -- `"record"` for the draft that follows a saved workflow, keyed on
+#' that workflow's id, and `"session"` for a board with no record yet, keyed on
+#' an opaque per-session id. With `draft = FALSE` the reserved namespace is
+#' refused instead, so a user cannot save a record into it.
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param data An R object to serialise and store (typically the session list
@@ -284,26 +290,35 @@ rack_load <- function(id, backend, ...) {
 #'   (typically the board id); errors if it already names a record. For
 #'   `rack_append()`, the `rack_id` of the record to add a version to.
 #' @param name Character scalar. The display name for the new record.
-#' @param ... Additional arguments forwarded to [rack_upload()].
+#' @param draft The kind of record: `FALSE` for one the user saved, or
+#'   `"record"` / `"session"` for a draft. A `rack_records()` call
+#'   additionally accepts `TRUE`, matching a draft of either kind.
+#' @param ... Additional arguments forwarded to [rack_upload()] or, for
+#'   `rack_records()`, to [rack_list()].
 #'
-#' @return A `rack_id` object identifying the newly created version.
+#' @return `rack_create()` and `rack_append()` return a `rack_id` object
+#'   identifying the newly created version, `rack_records()` a list of
+#'   `rack_record`s.
 #'
 #' @seealso [rack_load()] for the complementary load function, `rack_rename()`
-#'   to change a record's name, [rack_upload()] for the underlying generic.
+#'   to change a record's name, [rack_upload()] and [rack_list()] for the
+#'   underlying generics.
 #'
 #' @export
-rack_create <- function(backend, data, id, name, ...) {
+rack_create <- function(backend, data, id, name, draft = FALSE, ...) {
 
-  rid <- as_rack_id(list(id = id), backend)
+  rid <- as_rack_id(list(id = draft_record_id(id, draft)), backend)
 
-  if (rack_exists(rid, backend)) {
+  if (isFALSE(draft) && rack_exists(rid, backend)) {
     blockr_abort(
       "A rack record with id {id} already exists; use rack_append().",
       class = "rack_create_exists"
     )
   }
 
-  upload_serialized(backend, rid, data, name = name, ...)
+  upload_serialized(
+    backend, rid, data, name = name, versioned = isFALSE(draft), ...
+  )
 }
 
 #' @rdname rack_create
@@ -317,7 +332,64 @@ rack_append <- function(id, backend, data, ...) {
     )
   }
 
-  upload_serialized(backend, id, data, ...)
+  upload_serialized(backend, id, data, versioned = TRUE, ...)
+}
+
+#' @rdname rack_create
+#' @export
+rack_records <- function(backend, draft = FALSE, ...) {
+
+  records <- rack_list(backend, ...)
+
+  records[is_draft_record(chr_xtr(records, "id"), draft)]
+}
+
+# Drafts are ordinary rack records; all that separates them from what a user
+# saved is a reserved id, minted by `draft_record_id()` and read back by
+# `is_draft_record()`. Nothing below this plain API knows about them, so a
+# backend stores and lists a draft exactly as it does anything else.
+draft_kinds <- function() c("record", "session")
+
+draft_prefix <- function(kind) {
+  paste0("blockr-draft-", kind, "-")
+}
+
+is_reserved_id <- function(id) {
+  Reduce(`|`, lapply(draft_prefix(draft_kinds()), startsWith, x = id))
+}
+
+draft_record_id <- function(id, draft) {
+
+  if (isFALSE(draft)) {
+
+    if (any(is_reserved_id(id))) {
+      blockr_abort(
+        "The rack record id {id} is reserved for drafts.",
+        class = "rack_id_reserved"
+      )
+    }
+
+    return(id)
+  }
+
+  paste0(draft_prefix(match.arg(draft, draft_kinds())), id)
+}
+
+is_draft_record <- function(id, draft) {
+
+  if (isFALSE(draft)) {
+    return(!is_reserved_id(id))
+  }
+
+  if (isTRUE(draft)) {
+    return(is_reserved_id(id))
+  }
+
+  startsWith(id, draft_prefix(match.arg(draft, draft_kinds())))
+}
+
+draft_record_key <- function(id) {
+  sub(paste0("^", draft_prefix("[a-z]+")), "", id)
 }
 
 upload_serialized <- function(backend, id, data, ...) {

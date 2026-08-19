@@ -248,7 +248,7 @@ manage_project_server <- function(id, board, ...) {
 
       all_workflows <- reactive({
         refresh_trigger()
-        tryCatch(rack_list(backend), error = function(e) list())
+        tryCatch(rack_records(backend), error = function(e) list())
       })
 
       workflow_query <- debounce(

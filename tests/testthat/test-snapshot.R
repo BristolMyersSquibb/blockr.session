@@ -4,8 +4,12 @@ snapshot_board <- function(...) {
 
 notice_text <- function(x) paste(as.character(x), collapse = " ")
 
-snapshot_pins <- function(backend) {
-  grep(paste0("^", snapshot_prefix()), pins::pin_list(backend), value = TRUE)
+draft_pins <- function(backend) {
+  grep("^blockr-draft-", pins::pin_list(backend), value = TRUE)
+}
+
+plant_draft <- function(backend, key, kind = "session", data = list(x = 1)) {
+  rack_create(backend, data, id = key, name = key, draft = kind)
 }
 
 local_snapshot_backend <- function(interval = 30, env = parent.frame()) {
@@ -21,7 +25,81 @@ local_snapshot_backend <- function(interval = 30, env = parent.frame()) {
   backend
 }
 
-test_that("an untouched board is never snapshotted", {
+test_that("a draft is an ordinary record at a reserved id", {
+
+  backend <- local_snapshot_backend()
+
+  id <- plant_draft(backend, "abc", "session")
+
+  expect_identical(id$id, "blockr-draft-session-abc")
+  expect_identical(draft_record_key(id$id), "abc")
+  expect_true(rack_exists(id, backend))
+  expect_equal(rack_load(id, backend), list(x = 1))
+
+  expect_no_error(rack_purge(id, backend))
+  expect_length(draft_pins(backend), 0L)
+})
+
+test_that("a draft overwrites rather than accumulating versions", {
+
+  backend <- local_snapshot_backend()
+
+  plant_draft(backend, "once", "session", list(x = 1))
+  Sys.sleep(1.1)
+  plant_draft(backend, "once", "session", list(x = 2))
+
+  expect_length(draft_pins(backend), 1L)
+  expect_equal(
+    rack_load(as_rack_id(list(id = "blockr-draft-session-once"), backend),
+              backend),
+    list(x = 2)
+  )
+})
+
+test_that("the reserved namespace is refused for a record the user saves", {
+
+  backend <- local_snapshot_backend()
+
+  expect_error(
+    rack_create(backend, list(x = 1), id = "blockr-draft-session-sneaky",
+                name = "sneaky"),
+    class = "rack_id_reserved"
+  )
+
+  expect_error(
+    draft_record_id("blockr-draft-record-x", FALSE),
+    class = "rack_id_reserved"
+  )
+
+  expect_identical(draft_record_id("ordinary", FALSE), "ordinary")
+})
+
+test_that("rack_records partitions a listing by kind", {
+
+  local_mocked_bindings(
+    rack_list = function(backend, ...) {
+      list(
+        new_rack_record(id = "a-workflow", name = "A workflow"),
+        new_rack_record(id = "blockr-draft-record-a-workflow", name = "A"),
+        new_rack_record(id = "blockr-draft-session-xyz", name = "X")
+      )
+    },
+    .package = "blockr.session"
+  )
+
+  expect_identical(chr_xtr(rack_records(NULL), "id"), "a-workflow")
+  expect_length(rack_records(NULL, draft = TRUE), 2L)
+  expect_identical(
+    chr_xtr(rack_records(NULL, draft = "record"), "id"),
+    "blockr-draft-record-a-workflow"
+  )
+  expect_identical(
+    chr_xtr(rack_records(NULL, draft = "session"), "id"),
+    "blockr-draft-session-xyz"
+  )
+})
+
+test_that("an untouched board is never drafted", {
 
   backend <- local_snapshot_backend()
 
@@ -32,7 +110,7 @@ test_that("an untouched board is never snapshotted", {
       session$elapse(30 * 1000)
       session$elapse(30 * 1000)
 
-      expect_length(snapshot_pins(backend), 0L)
+      expect_length(draft_pins(backend), 0L)
     },
     args = list(
       board = reactiveValues(board = snapshot_board(), board_id = "idle")
@@ -67,13 +145,12 @@ test_that("an idle tick touches the backend not at all", {
       expect_identical(calls, 0L)
     },
     args = list(
-      args = NULL,
       board = reactiveValues(board = snapshot_board(), board_id = "quiet")
     )
   )
 })
 
-test_that("an edit between ticks writes one snapshot and overwrites the next", {
+test_that("an edit between ticks writes one draft and overwrites the next", {
 
   backend <- local_snapshot_backend()
 
@@ -85,20 +162,15 @@ test_that("an edit between ticks writes one snapshot and overwrites the next", {
       board$board <- snapshot_board(b = new_subset_block())
       session$elapse(30 * 1000)
 
-      expect_length(snapshot_pins(backend), 1L)
+      expect_length(draft_pins(backend), 1L)
 
-      first <- rack_snapshot_list(backend)[[1L]]
+      first <- draft_pins(backend)
 
       board$board <- snapshot_board(b = new_subset_block(),
                                     c = new_subset_block())
       session$elapse(30 * 1000)
 
-      expect_length(snapshot_pins(backend), 1L)
-
-      second <- rack_snapshot_list(backend)[[1L]]
-
-      expect_identical(first$id, second$id)
-      expect_false(identical(first$content_hash, second$content_hash))
+      expect_identical(draft_pins(backend), first)
     },
     args = list(
       board = reactiveValues(board = snapshot_board(), board_id = "edited")
@@ -120,14 +192,14 @@ test_that("a revert writes the reverted state back", {
       board$board <- snapshot_board(b = new_subset_block())
       session$elapse(30 * 1000)
 
-      expect_false(
-        identical(rack_snapshot_list(backend)[[1L]]$content_hash, start)
-      )
+      slot <- as_rack_id(list(id = draft_pins(backend)), backend)
+
+      expect_false(identical(rack_content_hash(slot, backend), start))
 
       board$board <- snapshot_board()
       session$elapse(30 * 1000)
 
-      expect_identical(rack_snapshot_list(backend)[[1L]]$content_hash, start)
+      expect_identical(rack_content_hash(slot, backend), start)
     },
     args = list(
       board = reactiveValues(board = snapshot_board(), board_id = "reverted")
@@ -135,7 +207,7 @@ test_that("a revert writes the reverted state back", {
   )
 })
 
-test_that("snapshots stay out of the workflow listing", {
+test_that("drafts stay out of the workflow listing", {
 
   backend <- local_snapshot_backend()
 
@@ -147,8 +219,9 @@ test_that("snapshots stay out of the workflow listing", {
       board$board <- snapshot_board(b = new_subset_block())
       session$elapse(30 * 1000)
 
-      expect_length(snapshot_pins(backend), 1L)
-      expect_length(rack_list(backend), 0L)
+      expect_length(draft_pins(backend), 1L)
+      expect_length(rack_records(backend), 0L)
+      expect_length(rack_list(backend), 1L)
     },
     args = list(
       board = reactiveValues(board = snapshot_board(), board_id = "hidden")
@@ -173,7 +246,7 @@ test_that("autosave stays off unless an interval is configured", {
       board$board <- snapshot_board(b = new_subset_block())
       session$elapse(30 * 1000)
 
-      expect_length(snapshot_pins(backend), 0L)
+      expect_length(draft_pins(backend), 0L)
     },
     args = list(
       board = reactiveValues(board = snapshot_board(), board_id = "off")
@@ -181,32 +254,7 @@ test_that("autosave stays off unless an interval is configured", {
   )
 })
 
-test_that("a backend without the snapshot capability is never written to", {
-
-  backend <- local_snapshot_backend()
-
-  local_mocked_bindings(
-    rack_capabilities = function(backend, ...) list(snapshot = FALSE),
-    .package = "blockr.session"
-  )
-
-  testServer(
-    manage_project_server,
-    {
-      session$flushReact()
-
-      board$board <- snapshot_board(b = new_subset_block())
-      session$elapse(30 * 1000)
-
-      expect_length(snapshot_pins(backend), 0L)
-    },
-    args = list(
-      board = reactiveValues(board = snapshot_board(), board_id = "incapable")
-    )
-  )
-})
-
-test_that("a save clears the session slot and moves to the rack pool", {
+test_that("a save clears the session draft and moves to the record kind", {
 
   backend <- local_snapshot_backend()
 
@@ -218,21 +266,21 @@ test_that("a save clears the session slot and moves to the rack pool", {
       board$board <- snapshot_board(b = new_subset_block())
       session$elapse(30 * 1000)
 
-      expect_identical(rack_snapshot_list(backend)[[1L]]$pool, "session")
+      expect_length(rack_records(backend, draft = "session"), 1L)
 
       first_save(session, "moved")
       session$flushReact()
 
-      expect_length(snapshot_pins(backend), 0L)
+      expect_length(draft_pins(backend), 0L)
 
       board$board <- snapshot_board(b = new_subset_block(),
                                     c = new_subset_block())
       session$elapse(30 * 1000)
 
-      rec <- rack_snapshot_list(backend)[[1L]]
+      drafts <- rack_records(backend, draft = "record")
 
-      expect_identical(rec$pool, "rack")
-      expect_identical(rec$rack_id, "moved")
+      expect_length(drafts, 1L)
+      expect_identical(draft_record_key(drafts[[1L]]$id), "moved")
     },
     args = list(
       board = reactiveValues(board = snapshot_board(), board_id = "moved")
@@ -240,7 +288,7 @@ test_that("a save clears the session slot and moves to the rack pool", {
   )
 })
 
-test_that("a loaded record is not snapshotted until it changes", {
+test_that("a loaded record is not drafted until it changes", {
 
   backend <- local_snapshot_backend()
 
@@ -264,12 +312,12 @@ test_that("a loaded record is not snapshotted until it changes", {
       session$flushReact()
       session$elapse(30 * 1000)
 
-      expect_length(snapshot_pins(backend), 0L)
+      expect_length(draft_pins(backend), 0L)
 
       board$board <- snapshot_board(b = new_subset_block())
       session$elapse(30 * 1000)
 
-      expect_length(snapshot_pins(backend), 1L)
+      expect_length(draft_pins(backend), 1L)
     },
     args = list(
       board = reactiveValues(
@@ -280,47 +328,11 @@ test_that("a loaded record is not snapshotted until it changes", {
   )
 })
 
-test_that("the sweep collects a stamped session past the grace, not before", {
+test_that("the sweep collects a draft past its TTL", {
 
   backend <- local_snapshot_backend()
 
-  stale <- as_snapshot_id(snapshot_pin_name("gone", "session"), backend)
-  fresh <- as_snapshot_id(snapshot_pin_name("kept", "session"), backend)
-
-  rack_snapshot(
-    backend, stale, list(x = 1),
-    meta = list(
-      pool = "session",
-      ended_at = format_stamp(Sys.time() - 3600)
-    )
-  )
-
-  rack_snapshot(
-    backend, fresh, list(x = 2),
-    meta = list(
-      pool = "session",
-      ended_at = format_stamp(Sys.time() - 60)
-    )
-  )
-
-  expect_length(snapshot_pins(backend), 2L)
-
-  kept <- snapshot_sweep(backend)
-
-  expect_length(kept, 1L)
-  expect_identical(kept[[1L]]$id, fresh$id)
-  expect_length(snapshot_pins(backend), 1L)
-})
-
-test_that("the sweep collects a snapshot past its TTL", {
-
-  backend <- local_snapshot_backend()
-
-  withr::local_options(blockr.session_snapshot_ttl = 7)
-
-  slot <- as_snapshot_id(snapshot_pin_name("old", "session"), backend)
-
-  rack_snapshot(backend, slot, list(x = 1), meta = list(pool = "session"))
+  plant_draft(backend, "old", "session")
 
   expect_length(snapshot_sweep(backend), 1L)
 
@@ -330,10 +342,10 @@ test_that("the sweep collects a snapshot past its TTL", {
   )
 
   expect_length(snapshot_sweep(backend), 0L)
-  expect_length(snapshot_pins(backend), 0L)
+  expect_length(draft_pins(backend), 0L)
 })
 
-test_that("a rack snapshot is offered only when it differs from the record", {
+test_that("a record draft is offered only when it differs from the record", {
 
   backend <- local_snapshot_backend()
 
@@ -344,25 +356,19 @@ test_that("a rack snapshot is offered only when it differs from the record", {
       saved <- serialize_now("offer")
 
       rid <- as_rack_id(list(id = "offer"), backend)
-      slot <- as_snapshot_id(snapshot_pin_name("offer", "rack"), backend)
 
-      rack_snapshot(
-        backend, slot, saved,
-        meta = list(pool = "rack", rack_id = "offer")
-      )
+      plant_draft(backend, "offer", "record", saved)
 
       expect_length(
-        snapshot_offers(rack_snapshot_list(backend), rid, backend),
+        snapshot_offers(rack_records(backend, draft = TRUE), rid, backend),
         0L
       )
 
-      rack_snapshot(
-        backend, slot, list(nothing = "like the record"),
-        meta = list(pool = "rack", rack_id = "offer")
-      )
+      Sys.sleep(1.1)
+      plant_draft(backend, "offer", "record", list(nothing = "like it"))
 
       expect_length(
-        snapshot_offers(rack_snapshot_list(backend), rid, backend),
+        snapshot_offers(rack_records(backend, draft = TRUE), rid, backend),
         1L
       )
     },
@@ -372,91 +378,16 @@ test_that("a rack snapshot is offered only when it differs from the record", {
   )
 })
 
-test_that("the snapshot just recovered from is not offered back", {
+test_that("the draft just recovered from is not offered back", {
 
   backend <- local_snapshot_backend()
 
-  slot <- as_snapshot_id(snapshot_pin_name("mine", "session"), backend)
+  slot <- plant_draft(backend, "mine", "session")
 
-  rack_snapshot(backend, slot, list(x = 1), meta = list(pool = "session"))
-
-  records <- rack_snapshot_list(backend)
+  records <- rack_records(backend, draft = TRUE)
 
   expect_length(snapshot_offers(records, NULL, backend), 1L)
   expect_length(snapshot_offers(records, NULL, backend, skip = slot$id), 0L)
-})
-
-test_that("discarding one offer leaves the others alone", {
-
-  backend <- local_snapshot_backend()
-
-  one <- as_snapshot_id(snapshot_pin_name("one", "session"), backend)
-  two <- as_snapshot_id(snapshot_pin_name("two", "session"), backend)
-
-  rack_snapshot(backend, one, list(x = 1), meta = list(pool = "session"))
-  rack_snapshot(backend, two, list(x = 2), meta = list(pool = "session"))
-
-  testServer(
-    manage_project_server,
-    {
-      session$flushReact()
-
-      session$setInputs(snapshot_discard = one$id)
-
-      expect_identical(snapshot_pins(backend), two$id)
-    },
-    args = list(
-      board = reactiveValues(board = snapshot_board(), board_id = "offers")
-    )
-  )
-})
-
-test_that("restoring points the URL at the snapshot without discarding it", {
-
-  backend <- local_snapshot_backend()
-
-  one <- as_snapshot_id(snapshot_pin_name("one", "session"), backend)
-  two <- as_snapshot_id(snapshot_pin_name("two", "session"), backend)
-
-  rack_snapshot(backend, one, list(x = 1), meta = list(pool = "session"))
-  rack_snapshot(backend, two, list(x = 2), meta = list(pool = "session"))
-
-  reloaded <- NULL
-  local_mocked_bindings(
-    reload_with_query = function(query, session) reloaded <<- query,
-    .package = "blockr.session"
-  )
-
-  testServer(
-    manage_project_server,
-    {
-      session$flushReact()
-
-      session$setInputs(snapshot_restore = one$id)
-
-      expect_match(reloaded, paste0("recover=", one$id), fixed = TRUE)
-      expect_setequal(snapshot_pins(backend), c(one$id, two$id))
-    },
-    args = list(
-      board = reactiveValues(board = snapshot_board(), board_id = "restore")
-    )
-  )
-})
-
-test_that("a rack offer carries its record id into the recovery URL", {
-
-  rec <- new_rack_record(
-    id = snapshot_pin_name("wf", "rack"),
-    name = "wf",
-    pool = "rack",
-    rack_id = "wf"
-  )
-
-  query <- recovery_query(rec, "?other=keep")
-
-  expect_match(query, "recover=blockr-snapshot-r-wf", fixed = TRUE)
-  expect_match(query, "id=wf", fixed = TRUE)
-  expect_match(query, "other=keep", fixed = TRUE)
 })
 
 test_that("parking a draft says so, and a failure says that instead", {
@@ -465,6 +396,7 @@ test_that("parking a draft says so, and a failure says that instead", {
 
   toasts <- 0L
   breaks <- FALSE
+  real_create <- rack_create
 
   # mocks belong out here: local_mocked_bindings() called inside a testServer
   # block does not unwind with it and would stay installed for later tests
@@ -473,11 +405,11 @@ test_that("parking a draft says so, and a failure says that instead", {
       toasts <<- toasts + 1L
       invisible(NULL)
     },
-    rack_snapshot = function(backend, id, data, ...) {
+    rack_create = function(backend, data, id, name, draft = FALSE, ...) {
       if (breaks) {
         stop("backend down")
       }
-      rack_snapshot.pins_board(backend, id, data, ...)
+      real_create(backend, data, id, name, draft = draft, ...)
     },
     .package = "blockr.session"
   )
@@ -517,13 +449,14 @@ test_that("a failed write leaves the hash unadvanced, so a tick retries", {
   backend <- local_snapshot_backend()
 
   fail <- TRUE
+  real_create <- rack_create
 
   local_mocked_bindings(
-    rack_snapshot = function(backend, id, data, ...) {
+    rack_create = function(backend, data, id, name, draft = FALSE, ...) {
       if (fail) {
         stop("backend down")
       }
-      rack_snapshot.pins_board(backend, id, data, ...)
+      real_create(backend, data, id, name, draft = draft, ...)
     },
     .package = "blockr.session"
   )
@@ -536,12 +469,12 @@ test_that("a failed write leaves the hash unadvanced, so a tick retries", {
       board$board <- snapshot_board(b = new_subset_block())
       session$elapse(30 * 1000)
 
-      expect_length(snapshot_pins(backend), 0L)
+      expect_length(draft_pins(backend), 0L)
 
       fail <<- FALSE
       session$elapse(30 * 1000)
 
-      expect_length(snapshot_pins(backend), 1L)
+      expect_length(draft_pins(backend), 1L)
     },
     args = list(
       board = reactiveValues(board = snapshot_board(), board_id = "retry")
@@ -549,47 +482,11 @@ test_that("a failed write leaves the hash unadvanced, so a tick retries", {
   )
 })
 
-test_that("a session that ends stamps its snapshot instead of dropping it", {
-
-  backend <- local_snapshot_backend()
-
-  testServer(
-    manage_project_server,
-    {
-      session$flushReact()
-
-      board$board <- snapshot_board(b = new_subset_block())
-      session$elapse(30 * 1000)
-
-      expect_length(snapshot_pins(backend), 1L)
-
-      # a pin version is named to the second and the stamp rewrites the same
-      # payload, so ending within the same second as the write collides
-      Sys.sleep(1.1)
-
-      # testServer leaves the session open, so the ended callbacks that carry
-      # the stamp only run once the session is actually closed
-      session$close()
-    },
-    args = list(
-      board = reactiveValues(board = snapshot_board(), board_id = "ending")
-    )
-  )
-
-  stamped <- rack_snapshot_list(backend)
-
-  expect_length(stamped, 1L)
-  expect_false(is.null(stamped[[1L]]$ended))
-  expect_length(snapshot_pins(backend), 1L)
-})
-
 test_that("the recovery list opens on the bare handle, not on every load", {
 
   backend <- local_snapshot_backend()
 
-  slot <- as_snapshot_id(snapshot_pin_name("waiting", "session"), backend)
-
-  rack_snapshot(backend, slot, list(x = 1), meta = list(pool = "session"))
+  plant_draft(backend, "waiting", "session")
 
   modals <- 0L
   local_mocked_bindings(
@@ -635,9 +532,7 @@ test_that("the notice disappears once every draft is dealt with", {
 
   backend <- local_snapshot_backend()
 
-  slot <- as_snapshot_id(snapshot_pin_name("only", "session"), backend)
-
-  rack_snapshot(backend, slot, list(x = 1), meta = list(pool = "session"))
+  slot <- plant_draft(backend, "only", "session")
 
   testServer(
     manage_project_server,
@@ -649,6 +544,7 @@ test_that("the notice disappears once every draft is dealt with", {
       session$setInputs(snapshot_discard = slot$id)
 
       expect_null(output$recovery_notice)
+      expect_length(draft_pins(backend), 0L)
     },
     args = list(
       board = reactiveValues(board = snapshot_board(), board_id = "cleared")
@@ -656,47 +552,73 @@ test_that("the notice disappears once every draft is dealt with", {
   )
 })
 
-test_that("the Connect workflow listing holds snapshots back", {
-
-  backend <- mock_board_connect()
-
-  items <- list(
-    list(
-      content_category = "pin",
-      name = "a-workflow",
-      title = "A workflow",
-      last_deployed_time = "2026-08-16T10:00:00Z",
-      owner = list(username = "user_a")
-    ),
-    list(
-      content_category = "pin",
-      name = snapshot_pin_name("secret", "session"),
-      title = "blockr snapshot: secret",
-      last_deployed_time = "2026-08-16T11:00:00Z",
-      owner = list(username = "user_a")
-    ),
-    list(
-      content_category = "pin",
-      name = snapshot_pin_name("a-workflow", "rack"),
-      title = "blockr snapshot: A workflow",
-      last_deployed_time = "2026-08-16T11:30:00Z",
-      owner = list(username = "user_a")
-    )
-  )
-
-  records <- connect_pin_records(backend, items)
-
-  expect_length(records, 1L)
-  expect_identical(records[[1L]]$id, "a-workflow")
-})
-
-test_that("a recovering session adopts the slot it was offered", {
+test_that("discarding one offer leaves the others alone", {
 
   backend <- local_snapshot_backend()
 
-  slot <- as_snapshot_id(snapshot_pin_name("adopted", "session"), backend)
+  one <- plant_draft(backend, "one", "session")
+  two <- plant_draft(backend, "two", "session")
 
-  rack_snapshot(backend, slot, list(x = 1), meta = list(pool = "session"))
+  testServer(
+    manage_project_server,
+    {
+      session$flushReact()
+
+      session$setInputs(snapshot_discard = one$id)
+
+      expect_identical(draft_pins(backend), two$id)
+    },
+    args = list(
+      board = reactiveValues(board = snapshot_board(), board_id = "offers")
+    )
+  )
+})
+
+test_that("restoring points the URL at the draft without discarding it", {
+
+  backend <- local_snapshot_backend()
+
+  one <- plant_draft(backend, "one", "session")
+  two <- plant_draft(backend, "two", "session")
+
+  reloaded <- NULL
+  local_mocked_bindings(
+    reload_with_query = function(query, session) reloaded <<- query,
+    .package = "blockr.session"
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      session$flushReact()
+
+      session$setInputs(snapshot_restore = one$id)
+
+      expect_match(reloaded, paste0("recover=", one$id), fixed = TRUE)
+      expect_setequal(draft_pins(backend), c(one$id, two$id))
+    },
+    args = list(
+      board = reactiveValues(board = snapshot_board(), board_id = "restore")
+    )
+  )
+})
+
+test_that("a record offer carries its workflow id into the recovery URL", {
+
+  rec <- new_rack_record(id = "blockr-draft-record-wf", name = "wf")
+
+  query <- recovery_query(rec, "?other=keep")
+
+  expect_match(query, "recover=blockr-draft-record-wf", fixed = TRUE)
+  expect_match(query, "id=wf", fixed = TRUE)
+  expect_match(query, "other=keep", fixed = TRUE)
+})
+
+test_that("a recovering session adopts the draft it was offered", {
+
+  backend <- local_snapshot_backend()
+
+  slot <- plant_draft(backend, "adopted", "session")
 
   testServer(
     manage_project_server,
@@ -707,7 +629,7 @@ test_that("a recovering session adopts the slot it was offered", {
       board$board <- snapshot_board(b = new_subset_block())
       session$elapse(30 * 1000)
 
-      expect_identical(snapshot_pins(backend), slot$id)
+      expect_identical(draft_pins(backend), slot$id)
     },
     args = list(
       board = reactiveValues(board = snapshot_board(), board_id = "adopted")

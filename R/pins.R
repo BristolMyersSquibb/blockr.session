@@ -365,7 +365,8 @@ rack_download.rack_id_pins <- function(id, backend, ...) {
 
 #' @export
 rack_upload.pins_board <- function(backend, path, id, name = NULL,
-                                   content_hash = NULL, ...) {
+                                   content_hash = NULL, versioned = TRUE,
+                                   ...) {
 
   slug <- pin_name(id)
 
@@ -387,7 +388,7 @@ rack_upload.pins_board <- function(backend, path, id, name = NULL,
     backend,
     path,
     slug,
-    versioned = TRUE,
+    versioned = versioned,
     metadata = metadata,
     tags = blockr_session_tags()
   )
@@ -433,7 +434,6 @@ rack_capabilities.pins_board <- function(backend, ...) {
     versioning = TRUE,
     tags = TRUE,
     metadata = TRUE,
-    snapshot = TRUE,
     sharing = FALSE,
     visibility = FALSE,
     user_discovery = FALSE
