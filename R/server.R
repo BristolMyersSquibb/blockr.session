@@ -1131,12 +1131,12 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      snapshot_writer(
+      draft_writer(
         board, backend, current_id, save_event, serialize_now, current_query,
         save_status, session
       )
 
-      snapshot_recovery(
+      draft_recovery(
         input, output, backend, current_id, current_query, session
       )
 
@@ -1194,7 +1194,7 @@ rack_loader <- function() {
 
     if (not_null(recover)) {
 
-      recovered <- load_snapshot(
+      recovered <- load_draft(
         recover,
         get_session_backend(
           if (is.null(session)) list(request = request) else session

@@ -48,7 +48,7 @@ with no record yet parks under an opaque per-session id. Saving clears the
 latter. A later session lists what is left and offers each entry for restore
 or discard, leaving anything untouched available next time; the offer is
 reached from the navbar or by loading the app with a bare \code{recover} query
-parameter. Drafts are swept once they pass the \code{session_snapshot_ttl}
+parameter. Drafts are swept once they pass the \code{session_draft_ttl}
 option's retention, in days, seven by default.
 }
 

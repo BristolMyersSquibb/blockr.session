@@ -1,4 +1,4 @@
-snapshot_interval <- function() {
+draft_interval <- function() {
 
   val <- blockr_option("session_autosave", NULL)
 
@@ -15,28 +15,28 @@ snapshot_interval <- function() {
   val
 }
 
-snapshot_ttl_days <- function() {
+draft_ttl_days <- function() {
 
   val <- suppressWarnings(
-    as.numeric(blockr_option("session_snapshot_ttl", 7))
+    as.numeric(blockr_option("session_draft_ttl", 7))
   )
 
   if (is.na(val) || val <= 0) 7 else val
 }
 
-snapshot_enabled <- function() {
-  not_null(snapshot_interval())
+draft_enabled <- function() {
+  not_null(draft_interval())
 }
 
-snapshot_writer <- function(board, backend, current_id, save_event,
-                            serialize_now, current_query, status,
-                            session = get_session()) {
+draft_writer <- function(board, backend, current_id, save_event,
+                         serialize_now, current_query, status,
+                         session = get_session()) {
 
-  if (!snapshot_enabled()) {
+  if (!draft_enabled()) {
     return(invisible(NULL))
   }
 
-  interval <- snapshot_interval()
+  interval <- draft_interval()
 
   state <- new.env(parent = emptyenv())
   state$key <- rand_names()
@@ -48,7 +48,7 @@ snapshot_writer <- function(board, backend, current_id, save_event,
     save_event(),
     {
       drop_session_slot(state, backend)
-      state$held <- snapshot_hash(serialize_now)
+      state$held <- draft_hash(serialize_now)
     },
     ignoreInit = TRUE,
     ignoreNULL = TRUE
@@ -59,7 +59,7 @@ snapshot_writer <- function(board, backend, current_id, save_event,
       invalidateLater(interval * 1000, session)
 
       isolate(
-        snapshot_tick(
+        draft_tick(
           state, board, backend, current_id(), serialize_now, current_query()
         )
       )
@@ -69,23 +69,23 @@ snapshot_writer <- function(board, backend, current_id, save_event,
   invisible(state)
 }
 
-snapshot_hash <- function(serialize_now) {
+draft_hash <- function(serialize_now) {
   tryCatch(content_hash(serialize_now()), error = function(e) NULL)
 }
 
 # The first tick runs at the session's first flush, before the user can have
 # touched anything, so it is what establishes the baseline: whatever was loaded
 # is what the record already holds, and only a later divergence is unsaved.
-snapshot_tick <- function(state, board, backend, rid, serialize_now, query) {
+draft_tick <- function(state, board, backend, rid, serialize_now, query) {
 
   if (is.null(state$held)) {
 
-    state$held <- snapshot_hash(serialize_now)
+    state$held <- draft_hash(serialize_now)
 
     return(adopt_draft(state, backend, recovery_key(query)))
   }
 
-  take_snapshot(state, board, backend, rid, serialize_now)
+  write_draft(state, board, backend, rid, serialize_now)
 }
 
 # A recovered session takes over the draft it was offered rather than minting a
@@ -104,7 +104,7 @@ adopt_draft <- function(state, backend, key) {
   invisible(NULL)
 }
 
-take_snapshot <- function(state, board, backend, rid, serialize_now) {
+write_draft <- function(state, board, backend, rid, serialize_now) {
 
   if (!has_content(board$board)) {
     return(invisible(NULL))
@@ -130,7 +130,7 @@ take_snapshot <- function(state, board, backend, rid, serialize_now) {
       backend,
       data,
       id = key,
-      name = snapshot_board_name(board),
+      name = draft_board_name(board),
       draft = draft
     ),
     error = function(e) {
@@ -142,7 +142,7 @@ take_snapshot <- function(state, board, backend, rid, serialize_now) {
   # The status text carries this rather than a notification: a tick that keeps
   # failing would otherwise raise one toast per interval. Setting a reactiveVal
   # to the value it already holds is a no-op, so the message lands once.
-  set_snapshot_status(
+  set_draft_status(
     state, if (is.null(slot)) "Autosave failed" else "Saved as draft"
   )
 
@@ -164,7 +164,7 @@ has_content <- function(board) {
   has_length(board_block_ids(board))
 }
 
-snapshot_board_name <- function(board) {
+draft_board_name <- function(board) {
   coal(
     get_board_option_or_null("board_name"),
     board$board_id,
@@ -173,7 +173,7 @@ snapshot_board_name <- function(board) {
   )
 }
 
-set_snapshot_status <- function(state, text) {
+set_draft_status <- function(state, text) {
 
   if (is.null(state$status)) {
     return(invisible(NULL))
@@ -210,7 +210,7 @@ discard_draft <- function(id, backend) {
   )
 }
 
-load_snapshot <- function(key, backend) {
+load_draft <- function(key, backend) {
 
   payload <- tryCatch(
     rack_load(as_rack_id(list(id = key), backend), backend),
@@ -245,14 +245,14 @@ recovery_menu_requested <- function(query) {
   "recover" %in% names(parsed) && !nzchar(coal(parsed$recover, ""))
 }
 
-snapshot_sweep <- function(backend) {
+sweep_drafts <- function(backend) {
 
   records <- tryCatch(
     rack_records(backend, draft = TRUE),
     error = function(e) list()
   )
 
-  keep <- !lgl_ply(records, snapshot_expired)
+  keep <- !lgl_ply(records, draft_expired)
 
   for (rec in records[!keep]) {
     discard_draft(as_rack_id(rec, backend), backend)
@@ -261,21 +261,21 @@ snapshot_sweep <- function(backend) {
   records[keep]
 }
 
-snapshot_expired <- function(rec) {
+draft_expired <- function(rec) {
 
   age <- as.numeric(difftime(Sys.time(), rec$saved, units = "days"))
 
-  isTRUE(age > snapshot_ttl_days())
+  isTRUE(age > draft_ttl_days())
 }
 
-snapshot_offers <- function(records, rid, backend, skip = NULL) {
+draft_offers <- function(records, rid, backend, skip = NULL) {
 
-  keep <- lgl_ply(records, snapshot_offerable, rid, backend, skip)
+  keep <- lgl_ply(records, draft_offerable, rid, backend, skip)
 
   records[keep]
 }
 
-snapshot_offerable <- function(rec, rid, backend, skip) {
+draft_offerable <- function(rec, rid, backend, skip) {
 
   if (identical(rec$id, skip)) {
     return(FALSE)
@@ -298,12 +298,12 @@ snapshot_offerable <- function(rec, rid, backend, skip) {
   not_null(held) && !identical(held, stored)
 }
 
-snapshot_recovery <- function(input, output, backend, current_id,
-                              current_query, session = get_session()) {
+draft_recovery <- function(input, output, backend, current_id,
+                           current_query, session = get_session()) {
 
   # Nothing parks drafts while autosave is off, so a deployment that never
   # turns it on pays no listing on load either
-  if (!snapshot_enabled()) {
+  if (!draft_enabled()) {
     return(invisible(NULL))
   }
 
@@ -312,8 +312,8 @@ snapshot_recovery <- function(input, output, backend, current_id,
   observeEvent(
     TRUE,
     {
-      found <- snapshot_offers(
-        snapshot_sweep(backend),
+      found <- draft_offers(
+        sweep_drafts(backend),
         current_id(),
         backend,
         recovery_key(current_query())
@@ -333,27 +333,27 @@ snapshot_recovery <- function(input, output, backend, current_id,
   )
 
   observeEvent(
-    input$snapshot_menu,
+    input$draft_menu,
     showModal(recovery_modal(session$ns), session)
   )
 
-  output$snapshot_offers <- renderUI(
+  output$draft_offers <- renderUI(
     tags$table(
       class = "blockr-workflow-table",
-      tags$tbody(lapply(offers(), snapshot_offer_row, session$ns))
+      tags$tbody(lapply(offers(), draft_offer_row, session$ns))
     )
   )
 
   observeEvent(
-    input$snapshot_discard,
+    input$draft_discard,
     {
-      rec <- offer_by_id(offers(), input$snapshot_discard)
+      rec <- offer_by_id(offers(), input$draft_discard)
 
       if (not_null(rec)) {
         discard_draft(as_rack_id(rec, backend), backend)
       }
 
-      rest <- drop_offer(offers(), input$snapshot_discard)
+      rest <- drop_offer(offers(), input$draft_discard)
       offers(rest)
 
       if (!has_length(rest)) {
@@ -363,9 +363,9 @@ snapshot_recovery <- function(input, output, backend, current_id,
   )
 
   observeEvent(
-    input$snapshot_restore,
+    input$draft_restore,
     {
-      rec <- offer_by_id(offers(), input$snapshot_restore)
+      rec <- offer_by_id(offers(), input$draft_restore)
 
       if (is.null(rec)) {
         return()
@@ -410,9 +410,9 @@ recovery_notice <- function(ns, offers) {
 
   tags$button(
     type = "button",
-    class = "btn btn-sm blockr-snapshot-notice",
+    class = "btn btn-sm blockr-draft-notice",
     title = "Unsaved work from an earlier session",
-    onclick = shiny_input_js(ns("snapshot_menu"), "open"),
+    onclick = shiny_input_js(ns("draft_menu"), "open"),
     bsicons::bs_icon("clock-history"),
     sprintf(" %d draft%s", length(offers), if (length(offers) > 1L) "s" else "")
   )
@@ -426,13 +426,13 @@ recovery_modal <- function(ns) {
       "These boards hold changes that were never saved. Restoring reloads ",
       "one of them; anything left alone stays available."
     ),
-    uiOutput(ns("snapshot_offers")),
+    uiOutput(ns("draft_offers")),
     footer = modalButton("Close"),
     easyClose = TRUE
   )
 }
 
-snapshot_offer_row <- function(rec, ns) {
+draft_offer_row <- function(rec, ns) {
   tags$tr(
     class = "blockr-workflow-row",
     tags$td(class = "blockr-wf-name", rec$name),
@@ -442,13 +442,13 @@ snapshot_offer_row <- function(rec, ns) {
       tags$button(
         type = "button",
         class = "btn btn-sm btn-primary",
-        onclick = shiny_input_js(ns("snapshot_restore"), rec$id),
+        onclick = shiny_input_js(ns("draft_restore"), rec$id),
         "Restore"
       ),
       tags$button(
         type = "button",
         class = "btn btn-sm",
-        onclick = shiny_input_js(ns("snapshot_discard"), rec$id),
+        onclick = shiny_input_js(ns("draft_discard"), rec$id),
         "Discard"
       )
     )

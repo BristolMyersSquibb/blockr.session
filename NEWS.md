@@ -5,7 +5,7 @@
   backend as a *draft*, and a later session offers to restore it. A draft is an
   ordinary record at a reserved id, so it never touches a workflow's version
   history and stays out of the workflow listing. Retention is governed by
-  `session_snapshot_ttl`.
+  `session_draft_ttl`.
 
 * The `rack_create()` function gains a `draft` argument minting those reserved
   ids, and the new `rack_records()` lists records of one kind at a time. Draft

@@ -55,7 +55,7 @@ record in every respect a backend can see -- same store, same tags, read
 with \code{\link[=rack_load]{rack_load()}} and dropped with \code{rack_purge()} -- and all that sets it
 apart is a reserved id, minted by \code{rack_create(draft = )} and matched by
 \code{rack_records(draft = )}. Nothing below this API knows drafts exist, so a
-backend needs no snapshot support of its own.
+backend needs no draft support of its own.
 
 Passing \code{draft} also relaxes what \code{rack_create()} does, because a draft is a
 single slot rather than a history: the id-already-taken check is skipped, so

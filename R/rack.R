@@ -273,7 +273,7 @@ rack_load <- function(id, backend, ...) {
 #' with [rack_load()] and dropped with `rack_purge()` -- and all that sets it
 #' apart is a reserved id, minted by `rack_create(draft = )` and matched by
 #' `rack_records(draft = )`. Nothing below this API knows drafts exist, so a
-#' backend needs no snapshot support of its own.
+#' backend needs no draft support of its own.
 #'
 #' Passing `draft` also relaxes what `rack_create()` does, because a draft is a
 #' single slot rather than a history: the id-already-taken check is skipped, so
@@ -348,14 +348,14 @@ rack_records <- function(backend, draft = FALSE, ...) {
 # saved is a reserved id, minted by `draft_record_id()` and read back by
 # `is_draft_record()`. Nothing below this plain API knows about them, so a
 # backend stores and lists a draft exactly as it does anything else.
-draft_kinds <- function() c("record", "session")
+draft_kinds <- c("record", "session")
 
 draft_prefix <- function(kind) {
   paste0("blockr-draft-", kind, "-")
 }
 
 is_reserved_id <- function(id) {
-  Reduce(`|`, lapply(draft_prefix(draft_kinds()), startsWith, x = id))
+  Reduce(`|`, lapply(draft_prefix(draft_kinds), startsWith, x = id))
 }
 
 draft_record_id <- function(id, draft) {
@@ -372,7 +372,7 @@ draft_record_id <- function(id, draft) {
     return(id)
   }
 
-  paste0(draft_prefix(match.arg(draft, draft_kinds())), id)
+  paste0(draft_prefix(match.arg(draft, draft_kinds)), id)
 }
 
 is_draft_record <- function(id, draft) {
@@ -385,7 +385,7 @@ is_draft_record <- function(id, draft) {
     return(is_reserved_id(id))
   }
 
-  startsWith(id, draft_prefix(match.arg(draft, draft_kinds())))
+  startsWith(id, draft_prefix(match.arg(draft, draft_kinds)))
 }
 
 draft_record_key <- function(id) {
