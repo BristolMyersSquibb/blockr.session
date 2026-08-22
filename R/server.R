@@ -664,6 +664,26 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      # A DOWNLOAD LINK THAT IS NEVER SEEN STILL HAS TO BE REGISTERED.
+      #
+      # `download_workflows` and `download_versions` are the hidden anchors the
+      # per-row Download buttons click: the button sets the selection input and
+      # then calls `.click()` on the anchor. Both live in a `display: none`
+      # wrapper, and Shiny SUSPENDS a hidden output -- it never sends the value
+      # that fills in the link's `href` and clears its `disabled` class. So the
+      # anchor sat there with `href=""`, the click went nowhere, and the row
+      # button did nothing at all: no request, no error, no notification.
+      #
+      # `download_selected` in the modal header escaped this by accident. Its
+      # wrapper is `visibility: hidden; position: absolute`, which still takes
+      # part in layout, so Shiny does not consider it hidden and registers it
+      # normally. That is why the toolbar download worked and the row download
+      # did not, and why the difference looked like a backend problem rather
+      # than a rendering one.
+      outputOptions(output, "download_workflows", suspendWhenHidden = FALSE)
+      outputOptions(output, "download_versions", suspendWhenHidden = FALSE)
+      outputOptions(output, "download_selected", suspendWhenHidden = FALSE)
+
       # UPLOAD workflows
       observeEvent(
         input$upload_file,
