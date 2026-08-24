@@ -29,10 +29,11 @@ test_that("a draft is an ordinary record at a reserved id", {
 
   backend <- local_draft_backend()
 
-  id <- plant_draft(backend, "abc", "session")
+  id <- plant_draft(backend, "abc")
 
-  expect_identical(id$id, "blockr-draft-session-abc")
-  expect_identical(draft_record_key(id$id), "abc")
+  expect_true(startsWith(id$id, "blockr-draft-session-"))
+  expect_identical(draft_record_kind(id$id), "session")
+  expect_identical(draft_record_hash(id$id), draft_key_hash("abc"))
   expect_true(rack_exists(id, backend))
   expect_equal(rack_load(id, backend), list(x = 1))
 
@@ -40,19 +41,97 @@ test_that("a draft is an ordinary record at a reserved id", {
   expect_length(draft_pins(backend), 0L)
 })
 
-test_that("a draft overwrites rather than accumulating versions", {
+test_that("a minted slot is overwritten rather than accumulating", {
 
   backend <- local_draft_backend()
 
-  plant_draft(backend, "once", "session", list(x = 1))
+  slot <- plant_draft(backend, "once", data = list(x = 1))
   Sys.sleep(1.1)
-  plant_draft(backend, "once", "session", list(x = 2))
+  again <- plant_draft(backend, slot$id, data = list(x = 2))
 
+  expect_identical(again$id, slot$id)
   expect_length(draft_pins(backend), 1L)
-  expect_equal(
-    rack_load(as_rack_id(list(id = "blockr-draft-session-once"), backend),
-              backend),
-    list(x = 2)
+  expect_equal(rack_load(slot, backend), list(x = 2))
+})
+
+test_that("a fresh mint for the same key is a distinct slot", {
+
+  backend <- local_draft_backend()
+
+  first <- plant_draft(backend, "twice", data = list(x = 1))
+  Sys.sleep(1.1)
+  second <- plant_draft(backend, "twice", data = list(x = 2))
+
+  expect_false(identical(first$id, second$id))
+  expect_identical(draft_record_hash(first$id), draft_record_hash(second$id))
+  expect_length(draft_pins(backend), 2L)
+})
+
+
+test_that("a later session writes to the same record slot", {
+
+  backend <- local_draft_backend()
+
+  earlier <- plant_draft(backend, "shared", "record")
+
+  testServer(
+    manage_project_server,
+    {
+      first_save(session, "shared")
+      session$flushReact()
+
+      board$board <- draft_board(b = new_subset_block())
+      session$elapse(30 * 1000)
+
+      drafts <- rack_records(backend, draft = "record")
+
+      expect_length(drafts, 1L)
+      expect_identical(drafts[[1L]]$id, earlier$id)
+    },
+    args = list(
+      board = reactiveValues(board = draft_board(), board_id = "shared")
+    )
+  )
+})
+
+test_that("a record draft never expires, whatever its age", {
+
+  backend <- local_draft_backend()
+
+  plant_draft(backend, "kept", "record")
+
+  local_mocked_bindings(
+    draft_ttl_days = function() 0.000001,
+    .package = "blockr.session"
+  )
+
+  expect_length(sweep_drafts(backend), 1L)
+  expect_length(draft_pins(backend), 1L)
+})
+
+test_that("a save drops the draft it supersedes", {
+
+  backend <- local_draft_backend()
+
+  testServer(
+    manage_project_server,
+    {
+      first_save(session, "superseded")
+      session$flushReact()
+
+      board$board <- draft_board(b = new_subset_block())
+      session$elapse(30 * 1000)
+
+      expect_length(rack_records(backend, draft = "record"), 1L)
+
+      session$setInputs(save_btn = 2)
+      session$flushReact()
+
+      expect_length(rack_records(backend, draft = TRUE), 0L)
+    },
+    args = list(
+      board = reactiveValues(board = draft_board(), board_id = "superseded")
+    )
   )
 })
 
@@ -61,13 +140,13 @@ test_that("the reserved namespace is refused for a record the user saves", {
   backend <- local_draft_backend()
 
   expect_error(
-    rack_create(backend, list(x = 1), id = "blockr-draft-session-sneaky",
+    rack_create(backend, list(x = 1), id = "blockr-draft-session-1-abc",
                 name = "sneaky"),
     class = "rack_id_reserved"
   )
 
   expect_error(
-    draft_record_id("blockr-draft-record-x", FALSE),
+    draft_record_id("blockr-draft-record-abc", FALSE),
     class = "rack_id_reserved"
   )
 
@@ -80,8 +159,8 @@ test_that("rack_records partitions a listing by kind", {
     rack_list = function(backend, ...) {
       list(
         new_rack_record(id = "a-workflow", name = "A workflow"),
-        new_rack_record(id = "blockr-draft-record-a-workflow", name = "A"),
-        new_rack_record(id = "blockr-draft-session-xyz", name = "X")
+        new_rack_record(id = "blockr-draft-record-aaaaaaaa", name = "A"),
+        new_rack_record(id = "blockr-draft-session-2-bbbbbbbb", name = "X")
       )
     },
     .package = "blockr.session"
@@ -91,11 +170,11 @@ test_that("rack_records partitions a listing by kind", {
   expect_length(rack_records(NULL, draft = TRUE), 2L)
   expect_identical(
     chr_xtr(rack_records(NULL, draft = "record"), "id"),
-    "blockr-draft-record-a-workflow"
+    "blockr-draft-record-aaaaaaaa"
   )
   expect_identical(
     chr_xtr(rack_records(NULL, draft = "session"), "id"),
-    "blockr-draft-session-xyz"
+    "blockr-draft-session-2-bbbbbbbb"
   )
 })
 
@@ -280,7 +359,9 @@ test_that("a save clears the session draft and moves to the record kind", {
       drafts <- rack_records(backend, draft = "record")
 
       expect_length(drafts, 1L)
-      expect_identical(draft_record_key(drafts[[1L]]$id), "moved")
+      expect_identical(
+        draft_record_hash(drafts[[1L]]$id), draft_key_hash("moved")
+      )
     },
     args = list(
       board = reactiveValues(board = draft_board(), board_id = "moved")
@@ -332,57 +413,37 @@ test_that("the sweep collects a draft past its TTL", {
 
   backend <- local_draft_backend()
 
-  plant_draft(backend, "old", "session")
+  plant_draft(backend, "old")
 
   expect_length(sweep_drafts(backend), 1L)
 
-  local_mocked_bindings(
-    draft_ttl_days = function() 0.000001,
-    .package = "blockr.session"
-  )
+  past <- Sys.time() + (draft_ttl_days() + 1) * 86400
 
-  expect_length(sweep_drafts(backend), 0L)
+  expect_length(sweep_drafts(backend, now = past), 0L)
   expect_length(draft_pins(backend), 0L)
 })
 
-test_that("a record draft is offered only when it differs from the record", {
+test_that("a record draft is offered for its own record and no other", {
 
   backend <- local_draft_backend()
 
-  testServer(
-    manage_project_server,
-    {
-      first_save(session, "offer")
-      saved <- serialize_now("offer")
+  plant_draft(backend, "offer", "record")
 
-      rid <- as_rack_id(list(id = "offer"), backend)
+  records <- rack_records(backend, draft = TRUE)
 
-      plant_draft(backend, "offer", "record", saved)
+  mine <- as_rack_id(list(id = "offer"), backend)
+  other <- as_rack_id(list(id = "elsewhere"), backend)
 
-      expect_length(
-        draft_offers(rack_records(backend, draft = TRUE), rid, backend),
-        0L
-      )
-
-      Sys.sleep(1.1)
-      plant_draft(backend, "offer", "record", list(nothing = "like it"))
-
-      expect_length(
-        draft_offers(rack_records(backend, draft = TRUE), rid, backend),
-        1L
-      )
-    },
-    args = list(
-      board = reactiveValues(board = draft_board(), board_id = "offer")
-    )
-  )
+  expect_length(draft_offers(records, mine, backend), 1L)
+  expect_length(draft_offers(records, other, backend), 0L)
+  expect_length(draft_offers(records, NULL, backend), 0L)
 })
 
 test_that("the draft just recovered from is not offered back", {
 
   backend <- local_draft_backend()
 
-  slot <- plant_draft(backend, "mine", "session")
+  slot <- plant_draft(backend, "mine")
 
   records <- rack_records(backend, draft = TRUE)
 
@@ -486,7 +547,7 @@ test_that("the recovery list opens on the bare handle, not on every load", {
 
   backend <- local_draft_backend()
 
-  plant_draft(backend, "waiting", "session")
+  plant_draft(backend, "waiting")
 
   modals <- 0L
   local_mocked_bindings(
@@ -532,7 +593,7 @@ test_that("the notice disappears once every draft is dealt with", {
 
   backend <- local_draft_backend()
 
-  slot <- plant_draft(backend, "only", "session")
+  slot <- plant_draft(backend, "only")
 
   testServer(
     manage_project_server,
@@ -556,8 +617,8 @@ test_that("discarding one offer leaves the others alone", {
 
   backend <- local_draft_backend()
 
-  one <- plant_draft(backend, "one", "session")
-  two <- plant_draft(backend, "two", "session")
+  one <- plant_draft(backend, "one")
+  two <- plant_draft(backend, "two")
 
   testServer(
     manage_project_server,
@@ -578,8 +639,8 @@ test_that("restoring points the URL at the draft without discarding it", {
 
   backend <- local_draft_backend()
 
-  one <- plant_draft(backend, "one", "session")
-  two <- plant_draft(backend, "two", "session")
+  one <- plant_draft(backend, "one")
+  two <- plant_draft(backend, "two")
 
   reloaded <- NULL
   local_mocked_bindings(
@@ -605,20 +666,21 @@ test_that("restoring points the URL at the draft without discarding it", {
 
 test_that("a record offer carries its workflow id into the recovery URL", {
 
-  rec <- new_rack_record(id = "blockr-draft-record-wf", name = "wf")
+  rec <- new_rack_record(id = "blockr-draft-record-abcdefgh", name = "wf")
 
-  query <- recovery_query(rec, "?other=keep")
+  query <- recovery_query(rec, "?other=keep", as_rack_id(list(id = "wf"),
+                                                         pins::board_temp()))
 
-  expect_match(query, "recover=blockr-draft-record-wf", fixed = TRUE)
+  expect_match(query, "recover=blockr-draft-record-abcdefgh", fixed = TRUE)
   expect_match(query, "id=wf", fixed = TRUE)
   expect_match(query, "other=keep", fixed = TRUE)
 })
 
-test_that("a recovering session adopts the draft it was offered", {
+test_that("recovering keeps the old draft until the new one holds the work", {
 
   backend <- local_draft_backend()
 
-  slot <- plant_draft(backend, "adopted", "session")
+  slot <- plant_draft(backend, "recovered")
 
   testServer(
     manage_project_server,
@@ -626,13 +688,21 @@ test_that("a recovering session adopts the draft it was offered", {
       prev_query(paste0("?recover=", slot$id))
       session$flushReact()
 
-      board$board <- draft_board(b = new_subset_block())
+      # nothing written yet, so the handle in the URL still resolves
       session$elapse(30 * 1000)
 
       expect_identical(draft_pins(backend), slot$id)
+
+      board$board <- draft_board(b = new_subset_block())
+      session$elapse(30 * 1000)
+
+      drafts <- draft_pins(backend)
+
+      expect_length(drafts, 1L)
+      expect_false(identical(drafts, slot$id))
     },
     args = list(
-      board = reactiveValues(board = draft_board(), board_id = "adopted")
+      board = reactiveValues(board = draft_board(), board_id = "recovered")
     )
   )
 })

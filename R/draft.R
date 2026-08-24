@@ -42,12 +42,15 @@ draft_writer <- function(board, backend, current_id, save_event,
   state$key <- rand_names()
   state$held <- NULL
   state$slot <- NULL
+  state$slot_key <- NULL
+  state$slot_name <- NULL
+  state$recovered <- NULL
   state$status <- status
 
   observeEvent(
     save_event(),
     {
-      drop_session_slot(state, backend)
+      drop_slot(state, backend)
       state$held <- draft_hash(serialize_now)
     },
     ignoreInit = TRUE,
@@ -81,27 +84,12 @@ draft_tick <- function(state, board, backend, rid, serialize_now, query) {
   if (is.null(state$held)) {
 
     state$held <- draft_hash(serialize_now)
+    state$recovered <- recovery_key(query)
 
-    return(adopt_draft(state, backend, recovery_key(query)))
-  }
-
-  write_draft(state, board, backend, rid, serialize_now)
-}
-
-# A recovered session takes over the draft it was offered rather than minting a
-# fresh key and moving the content: the `recover` handle stays in the URL, so
-# adopting keeps a reload of that URL resolvable, where a move would strand it
-# on a purged draft until the next tick wrote the new one.
-adopt_draft <- function(state, backend, key) {
-
-  if (is.null(key) || !is_draft_record(key, "session")) {
     return(invisible(NULL))
   }
 
-  state$key <- draft_record_key(key)
-  state$slot <- as_rack_id(list(id = key), backend)
-
-  invisible(NULL)
+  write_draft(state, board, backend, rid, serialize_now)
 }
 
 write_draft <- function(state, board, backend, rid, serialize_now) {
@@ -122,16 +110,18 @@ write_draft <- function(state, board, backend, rid, serialize_now) {
     return(invisible(NULL))
   }
 
-  draft <- if (is.null(rid)) "session" else "record"
+  kind <- if (is.null(rid)) "session" else "record"
   key <- if (is.null(rid)) state$key else rid$id
+
+  name <- draft_board_name(board)
 
   slot <- tryCatch(
     rack_create(
       backend,
       data,
-      id = key,
-      name = draft_board_name(board),
-      draft = draft
+      id = draft_slot_id(state, kind, key),
+      name = name,
+      draft = kind
     ),
     error = function(e) {
       log_debug("Draft write failed: {conditionMessage(e)}")
@@ -150,14 +140,47 @@ write_draft <- function(state, board, backend, rid, serialize_now) {
     return(invisible(NULL))
   }
 
-  if (identical(draft, "record")) {
-    drop_session_slot(state, backend)
-  }
-
   state$held <- hash
   state$slot <- slot
+  state$slot_key <- key
+  state$slot_name <- name
+
+  drop_recovered(state, backend)
 
   invisible(slot)
+}
+
+# A session that recovered a draft owns a fresh slot like any other, and the
+# one it was handed is dropped only once that slot holds the work. Purging
+# first would leave the `recover` handle in the URL pointing at nothing
+# until the next tick, so a reload in that window lands on an empty board.
+drop_recovered <- function(state, backend) {
+
+  if (is.null(state$recovered)) {
+    return(invisible(NULL))
+  }
+
+  discard_draft(as_rack_id(list(id = state$recovered), backend), backend)
+
+  state$recovered <- NULL
+
+  invisible(NULL)
+}
+
+# A record draft's id is a pure function of the workflow, so it needs no
+# carrying forward. A session draft's carries a mint time, so re-minting each
+# tick would strew a new record per tick instead of overwriting one slot.
+draft_slot_id <- function(state, kind, key) {
+
+  if (identical(kind, "record") || is.null(state$slot)) {
+    return(key)
+  }
+
+  if (!is_draft_record(state$slot$id, "session")) {
+    return(key)
+  }
+
+  state$slot$id
 }
 
 has_content <- function(board) {
@@ -174,23 +197,15 @@ draft_board_name <- function(board) {
 }
 
 set_draft_status <- function(state, text) {
-
-  if (is.null(state$status)) {
-    return(invisible(NULL))
-  }
-
   state$status(text)
-
-  invisible(NULL)
 }
 
-drop_session_slot <- function(state, backend) {
+# A save supersedes whatever the session had parked, so the draft goes with it.
+# Without that a record draft, which never expires, would sit holding content
+# the record already has for as long as the workflow exists.
+drop_slot <- function(state, backend) {
 
   if (is.null(state$slot)) {
-    return(invisible(NULL))
-  }
-
-  if (!is_draft_record(state$slot$id, "session")) {
     return(invisible(NULL))
   }
 
@@ -245,14 +260,14 @@ recovery_menu_requested <- function(query) {
   "recover" %in% names(parsed) && !nzchar(coal(parsed$recover, ""))
 }
 
-sweep_drafts <- function(backend) {
+sweep_drafts <- function(backend, now = Sys.time()) {
 
   records <- tryCatch(
     rack_records(backend, draft = TRUE),
     error = function(e) list()
   )
 
-  keep <- !lgl_ply(records, draft_expired)
+  keep <- !lgl_ply(records, draft_expired, now)
 
   for (rec in records[!keep]) {
     discard_draft(as_rack_id(rec, backend), backend)
@@ -261,11 +276,17 @@ sweep_drafts <- function(backend) {
   records[keep]
 }
 
-draft_expired <- function(rec) {
+# Both clocks come off the id: `saved` is not part of `new_rack_record()` and a
+# backend that omits it would otherwise expire nothing, silently.
+draft_expired <- function(rec, now = Sys.time()) {
 
-  age <- as.numeric(difftime(Sys.time(), rec$saved, units = "days"))
+  if (identical(draft_record_kind(rec$id), "record")) {
+    return(FALSE)
+  }
 
-  isTRUE(age > draft_ttl_days())
+  age <- as.numeric(now) - draft_record_epoch(rec$id)
+
+  isTRUE(age > draft_ttl_days() * 86400)
 }
 
 draft_offers <- function(records, rid, backend, skip = NULL) {
@@ -285,17 +306,10 @@ draft_offerable <- function(rec, rid, backend, skip) {
     return(TRUE)
   }
 
-  if (is.null(rid) || !identical(draft_record_key(rec$id), rid$id)) {
-    return(FALSE)
-  }
-
-  stored <- tryCatch(rack_content_hash(rid, backend), error = function(e) NULL)
-  held <- tryCatch(
-    rack_content_hash(as_rack_id(rec, backend), backend),
-    error = function(e) NULL
-  )
-
-  not_null(held) && !identical(held, stored)
+  # A save drops the draft it shadowed, so one still standing for this record
+  # is unsaved work by construction -- no content comparison needed
+  not_null(rid) &&
+    identical(draft_record_hash(rec$id), draft_key_hash(rid$id))
 }
 
 draft_recovery <- function(input, output, backend, current_id,
@@ -373,7 +387,9 @@ draft_recovery <- function(input, output, backend, current_id,
 
       removeModal(session)
 
-      reload_with_query(recovery_query(rec, current_query()), session)
+      reload_with_query(
+        recovery_query(rec, current_query(), current_id()), session
+      )
     }
   )
 
@@ -391,12 +407,12 @@ drop_offer <- function(offers, id) {
   offers[!chr_xtr(offers, "id") %in% id]
 }
 
-recovery_query <- function(rec, keep) {
+recovery_query <- function(rec, keep, rid = NULL) {
 
   params <- list(recover = rec$id)
 
-  if (is_draft_record(rec$id, "record")) {
-    params$id <- draft_record_key(rec$id)
+  if (is_draft_record(rec$id, "record") && not_null(rid)) {
+    params$id <- rid$id
   }
 
   build_query_string(c(params, drop_session_query(keep)))

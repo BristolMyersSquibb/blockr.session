@@ -24,9 +24,9 @@ returned by the blockr session machinery).}
 
 \item{name}{Character scalar. The display name for the new record.}
 
-\item{draft}{The kind of record: \code{FALSE} for one the user saved, or
-\code{"record"} / \code{"session"} for a draft. A \code{rack_records()} call
-additionally accepts \code{TRUE}, matching a draft of either kind.}
+\item{draft}{Which records this concerns: \code{FALSE} for one the user saved,
+or a draft kind, \code{"session"} or \code{"record"}. A \code{rack_records()} call also
+accepts \code{TRUE}, matching a draft of either kind.}
 
 \item{...}{Additional arguments forwarded to \code{\link[=rack_upload]{rack_upload()}} or, for
 \code{rack_records()}, to \code{\link[=rack_list]{rack_list()}}.}
@@ -59,11 +59,24 @@ backend needs no draft support of its own.
 
 Passing \code{draft} also relaxes what \code{rack_create()} does, because a draft is a
 single slot rather than a history: the id-already-taken check is skipped, so
-a repeated write overwrites, and the write is unversioned. Two kinds are
-minted -- \code{"record"} for the draft that follows a saved workflow, keyed on
-that workflow's id, and \code{"session"} for a board with no record yet, keyed on
-an opaque per-session id. With \code{draft = FALSE} the reserved namespace is
-refused instead, so a user cannot save a record into it.
+a repeated write overwrites, and the write is unversioned. With
+\code{draft = FALSE} the reserved namespace is refused instead, so a user cannot
+save a record into it.
+
+A draft is of one \emph{kind}. A \code{record} draft follows a saved workflow and is
+keyed on it, so its id is the same in every session: there is one slot per
+workflow by construction, it is overwritten as the work changes, and the
+save it was shadowing drops it. Nothing about it expires, since a workflow
+bounds it. A \code{session} draft belongs to a board with no record yet, keyed on
+an opaque per-session id, and those do accumulate -- so one carries the time
+it was opened and is swept on a retention read straight off the id. That
+needs neither the optional \code{metadata} capability nor any field beyond those
+\code{new_rack_record()} guarantees. The key is hashed into the id rather than
+embedded, since a workflow id may hold characters a backend rejects in a
+record name.
+
+The id a draft write returns carries no version: a draft keeps one, and the
+next write to that slot deletes it.
 }
 
 \seealso{

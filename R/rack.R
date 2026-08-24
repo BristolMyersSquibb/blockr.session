@@ -277,11 +277,24 @@ rack_load <- function(id, backend, ...) {
 #'
 #' Passing `draft` also relaxes what `rack_create()` does, because a draft is a
 #' single slot rather than a history: the id-already-taken check is skipped, so
-#' a repeated write overwrites, and the write is unversioned. Two kinds are
-#' minted -- `"record"` for the draft that follows a saved workflow, keyed on
-#' that workflow's id, and `"session"` for a board with no record yet, keyed on
-#' an opaque per-session id. With `draft = FALSE` the reserved namespace is
-#' refused instead, so a user cannot save a record into it.
+#' a repeated write overwrites, and the write is unversioned. With
+#' `draft = FALSE` the reserved namespace is refused instead, so a user cannot
+#' save a record into it.
+#'
+#' A draft is of one *kind*. A `record` draft follows a saved workflow and is
+#' keyed on it, so its id is the same in every session: there is one slot per
+#' workflow by construction, it is overwritten as the work changes, and the
+#' save it was shadowing drops it. Nothing about it expires, since a workflow
+#' bounds it. A `session` draft belongs to a board with no record yet, keyed on
+#' an opaque per-session id, and those do accumulate -- so one carries the time
+#' it was opened and is swept on a retention read straight off the id. That
+#' needs neither the optional `metadata` capability nor any field beyond those
+#' `new_rack_record()` guarantees. The key is hashed into the id rather than
+#' embedded, since a workflow id may hold characters a backend rejects in a
+#' record name.
+#'
+#' The id a draft write returns carries no version: a draft keeps one, and the
+#' next write to that slot deletes it.
 #'
 #' @param backend A rack backend object (e.g. a `pins_board`).
 #' @param data An R object to serialise and store (typically the session list
@@ -290,9 +303,9 @@ rack_load <- function(id, backend, ...) {
 #'   (typically the board id); errors if it already names a record. For
 #'   `rack_append()`, the `rack_id` of the record to add a version to.
 #' @param name Character scalar. The display name for the new record.
-#' @param draft The kind of record: `FALSE` for one the user saved, or
-#'   `"record"` / `"session"` for a draft. A `rack_records()` call
-#'   additionally accepts `TRUE`, matching a draft of either kind.
+#' @param draft Which records this concerns: `FALSE` for one the user saved,
+#'   or a draft kind, `"session"` or `"record"`. A `rack_records()` call also
+#'   accepts `TRUE`, matching a draft of either kind.
 #' @param ... Additional arguments forwarded to [rack_upload()] or, for
 #'   `rack_records()`, to [rack_list()].
 #'
@@ -316,9 +329,17 @@ rack_create <- function(backend, data, id, name, draft = FALSE, ...) {
     )
   }
 
-  upload_serialized(
+  res <- upload_serialized(
     backend, rid, data, name = name, versioned = isFALSE(draft), ...
   )
+
+  if (isFALSE(draft)) {
+    return(res)
+  }
+
+  # A draft keeps one version and the next write deletes it, so pinning the
+  # returned handle to that version would break the very next read
+  as_rack_id(list(id = res$id, user = res$user), backend)
 }
 
 #' @rdname rack_create
@@ -348,17 +369,38 @@ rack_records <- function(backend, draft = FALSE, ...) {
 # saved is a reserved id, minted by `draft_record_id()` and read back by
 # `is_draft_record()`. Nothing below this plain API knows about them, so a
 # backend stores and lists a draft exactly as it does anything else.
-draft_kinds <- c("record", "session")
+#
+# The id carries everything retention needs -- which kind, whether the owning
+# session closed cleanly, and when -- because it is the one field the contract
+# guarantees on a listing. Metadata is an optional capability and `saved` is
+# not part of `new_rack_record()`, so a sweep resting on either would quietly
+# do nothing on a conforming backend that supplies neither.
+#
+#   blockr-draft-<state>-<epoch>-<hash>
+#
+# The key is hashed rather than embedded: Posit Connect rejects a content name
+# outside `[-_A-Za-z0-9]`, which a workflow id is free to violate on a file
+# board, and hashing also keeps the id a fixed width whatever the id it is
+# derived from.
+draft_kinds <- c("session", "record")
 
-draft_prefix <- function(kind) {
-  paste0("blockr-draft-", kind, "-")
+# Only a session draft carries a mint time, because only a session draft
+# expires. A record draft is anchored to a workflow, so there is at most one
+# per workflow however long anyone edits, and it is dropped when the save it
+# was shadowing lands. That leaves its id nothing to say beyond which workflow
+# it belongs to, and makes it the same id in every session -- one slot per
+# record by construction rather than by tidying up after.
+draft_prefix <- "blockr-draft-"
+
+draft_key_hash <- function(key) {
+  substr(rlang::hash(key), 1L, 8L)
 }
 
 is_reserved_id <- function(id) {
-  Reduce(`|`, lapply(draft_prefix(draft_kinds), startsWith, x = id))
+  startsWith(id, draft_prefix)
 }
 
-draft_record_id <- function(id, draft) {
+draft_record_id <- function(id, draft, time = Sys.time()) {
 
   if (isFALSE(draft)) {
 
@@ -372,9 +414,23 @@ draft_record_id <- function(id, draft) {
     return(id)
   }
 
-  paste0(draft_prefix(match.arg(draft, draft_kinds)), id)
+  kind <- match.arg(draft, draft_kinds)
+
+  # idempotent: an id already minted for this kind is a slot being overwritten,
+  # and its epoch is when the slot was opened, not now
+  if (is_draft_record(id, kind)) {
+    return(id)
+  }
+
+  if (identical(kind, "record")) {
+    return(paste0(draft_prefix, kind, "-", draft_key_hash(id)))
+  }
+
+  paste0(draft_prefix, kind, "-", as.integer(time), "-", draft_key_hash(id))
 }
 
+# `draft` matches either a whole state or just the kind, so a caller can ask
+# for every session draft without naming both of its states.
 is_draft_record <- function(id, draft) {
 
   if (isFALSE(draft)) {
@@ -385,11 +441,26 @@ is_draft_record <- function(id, draft) {
     return(is_reserved_id(id))
   }
 
-  startsWith(id, draft_prefix(match.arg(draft, draft_kinds)))
+  startsWith(id, paste0(draft_prefix, match.arg(draft, draft_kinds)))
 }
 
-draft_record_key <- function(id) {
-  sub(paste0("^", draft_prefix("[a-z]+")), "", id)
+draft_record_parts <- function(id) {
+  strsplit(sub(paste0("^", draft_prefix), "", id), "-", fixed = TRUE)[[1L]]
+}
+
+draft_record_kind <- function(id) {
+  draft_record_parts(id)[[1L]]
+}
+
+draft_record_hash <- function(id) {
+
+  parts <- draft_record_parts(id)
+
+  parts[[length(parts)]]
+}
+
+draft_record_epoch <- function(id) {
+  as.numeric(draft_record_parts(id)[[2L]])
 }
 
 upload_serialized <- function(backend, id, data, ...) {
