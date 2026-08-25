@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">blockr.session</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -43,13 +43,19 @@
     </div>
 
     <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.1" id="blockrsession-011">blockr.session 0.1.1<a class="anchor" aria-label="anchor" href="#blockrsession-011"></a></h2>
+<ul><li><p>Setting the <code>session_autosave</code> blockr option to an interval in seconds turns on crash recovery: a board with unsaved changes is parked on the configured backend as a <em>draft</em>, and a later session offers to restore it. A draft is an ordinary record at a reserved id, so it never touches a workflow’s version history and stays out of the workflow listing. Retention is governed by <code>session_draft_ttl</code>.</p></li>
+<li><p>The <code><a href="../reference/rack_create.html">rack_create()</a></code> function gains a <code>draft</code> argument minting those reserved ids, and the new <code><a href="../reference/rack_create.html">rack_records()</a></code> lists records of one kind at a time. Draft writes are unversioned, via a new <code>versioned</code> argument on <code><a href="../reference/rack-backend.html">rack_upload()</a></code>.</p></li>
+</ul></div>
+    <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.0" id="blockrsession-010">blockr.session 0.1.0<a class="anchor" aria-label="anchor" href="#blockrsession-010"></a></h2><p class="text-muted">CRAN release: 2026-08-04</p>
 <ul><li><p>Initial CRAN release.</p></li>
 <li><p><code><a href="../reference/manage_project.html">manage_project()</a></code> provides a blockr.core <code>preserve_board</code> plugin that saves, restores and manages boards from within a running app, with a navbar dropdown exposing a workflow listing, version history and an editable board title.</p></li>
 <li><p>Board storage is backed by the pins package. <code><a href="../reference/user_pins_board.html">user_pins_board()</a></code> is the default backend, resolved from the <code>session_mgmt_backend</code> blockr option: on Posit Connect with the Connect API Integration enabled, each visitor reads and writes pins under their own account, falling back to the application’s Connect credentials and then to a local board off Connect.</p></li>
 <li><p>On Posit Connect, boards can be shared with named users and given a visibility level from the dropdown’s Sharing tab.</p></li>
 </ul></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

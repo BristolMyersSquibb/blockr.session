@@ -7,7 +7,8 @@ the backend's native display field. rack_append() adds a new version to
 the existing record identified by id, erroring (class
 rack_append_missing) if there is none, and never touches the name. Together
 they replace the former rack_save(), separating insert from append. To
-change a record's name, use rack_rename()."><meta property="og:description" content="rack_create() serialises data to JSON and stores it as a new record
+change a record's name, use rack_rename(). rack_records() lists what a
+backend holds, of one kind at a time."><meta property="og:description" content="rack_create() serialises data to JSON and stores it as a new record
 keyed on id – the board's own stable id, so the record id and the board id
 match. It is a strict insert: it errors (class rack_create_exists) if id
 already names a record rather than appending a version. name is written to
@@ -15,7 +16,8 @@ the backend's native display field. rack_append() adds a new version to
 the existing record identified by id, erroring (class
 rack_append_missing) if there is none, and never touches the name. Together
 they replace the former rack_save(), separating insert from append. To
-change a record's name, use rack_rename()."></head><body>
+change a record's name, use rack_rename(). rack_records() lists what a
+backend holds, of one kind at a time."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -23,7 +25,7 @@ change a record's name, use rack_rename()."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">blockr.session</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,14 +70,17 @@ the backend's native display field. <code>rack_append()</code> adds a <strong>ne
 the existing record identified by <code>id</code>, erroring (class
 <code>rack_append_missing</code>) if there is none, and never touches the name. Together
 they replace the former <code>rack_save()</code>, separating insert from append. To
-change a record's name, use <code><a href="rack-backend.html">rack_rename()</a></code>.</p>
+change a record's name, use <code><a href="rack-backend.html">rack_rename()</a></code>. <code>rack_records()</code> lists what a
+backend holds, of one kind at a time.</p>
     </div>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">rack_create</span><span class="op">(</span><span class="va">backend</span>, <span class="va">data</span>, <span class="va">id</span>, <span class="va">name</span>, <span class="va">...</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">rack_create</span><span class="op">(</span><span class="va">backend</span>, <span class="va">data</span>, <span class="va">id</span>, <span class="va">name</span>, draft <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">rack_append</span><span class="op">(</span><span class="va">id</span>, <span class="va">backend</span>, <span class="va">data</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
+<span><span class="fu">rack_append</span><span class="op">(</span><span class="va">id</span>, <span class="va">backend</span>, <span class="va">data</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="fu">rack_records</span><span class="op">(</span><span class="va">backend</span>, draft <span class="op">=</span> <span class="cn">FALSE</span>, <span class="va">...</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -101,18 +106,57 @@ returned by the blockr session machinery).</p></dd>
 <dd><p>Character scalar. The display name for the new record.</p></dd>
 
 
+<dt id="arg-draft">draft<a class="anchor" aria-label="anchor" href="#arg-draft"></a></dt>
+<dd><p>Which records this concerns: <code>FALSE</code> for one the user saved,
+or a draft kind, <code>"session"</code> or <code>"record"</code>. A <code>rack_records()</code> call also
+accepts <code>TRUE</code>, matching a draft of either kind.</p></dd>
+
+
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Additional arguments forwarded to <code><a href="rack-backend.html">rack_upload()</a></code>.</p></dd>
+<dd><p>Additional arguments forwarded to <code><a href="rack-backend.html">rack_upload()</a></code> or, for
+<code>rack_records()</code>, to <code><a href="rack-backend.html">rack_list()</a></code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A <code>rack_id</code> object identifying the newly created version.</p>
+    <p><code>rack_create()</code> and <code>rack_append()</code> return a <code>rack_id</code> object
+identifying the newly created version, <code>rack_records()</code> a list of
+<code>rack_record</code>s.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="drafts">Drafts<a class="anchor" aria-label="anchor" href="#drafts"></a></h2>
+
+
+<p>A <em>draft</em> is unsaved work parked for crash recovery. It is an ordinary rack
+record in every respect a backend can see – same store, same tags, read
+with <code><a href="rack_load.html">rack_load()</a></code> and dropped with <code><a href="rack-backend.html">rack_purge()</a></code> – and all that sets it
+apart is a reserved id, minted by <code>rack_create(draft = )</code> and matched by
+<code>rack_records(draft = )</code>. Nothing below this API knows drafts exist, so a
+backend needs no draft support of its own.</p>
+<p>Passing <code>draft</code> also relaxes what <code>rack_create()</code> does, because a draft is a
+single slot rather than a history: the id-already-taken check is skipped, so
+a repeated write overwrites, and the write is unversioned. With
+<code>draft = FALSE</code> the reserved namespace is refused instead, so a user cannot
+save a record into it.</p>
+<p>A draft is of one <em>kind</em>. A <code>record</code> draft follows a saved workflow and is
+keyed on it, so its id is the same in every session: there is one slot per
+workflow by construction, it is overwritten as the work changes, and the
+save it was shadowing drops it. Nothing about it expires, since a workflow
+bounds it. A <code>session</code> draft belongs to a board with no record yet, keyed on
+an opaque per-session id, and those do accumulate – so one carries the time
+it was opened and is swept on a retention read straight off the id. That
+needs neither the optional <code>metadata</code> capability nor any field beyond those
+<code><a href="rack-backend.html">new_rack_record()</a></code> guarantees. The key is hashed into the id rather than
+embedded, since a workflow id may hold characters a backend rejects in a
+record name.</p>
+<p>The id a draft write returns carries no version: a draft keeps one, and the
+next write to that slot deletes it.</p>
     </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="rack_load.html">rack_load()</a></code> for the complementary load function, <code><a href="rack-backend.html">rack_rename()</a></code>
-to change a record's name, <code><a href="rack-backend.html">rack_upload()</a></code> for the underlying generic.</p></div>
+to change a record's name, <code><a href="rack-backend.html">rack_upload()</a></code> and <code><a href="rack-backend.html">rack_list()</a></code> for the
+underlying generics.</p></div>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

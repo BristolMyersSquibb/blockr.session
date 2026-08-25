@@ -11,7 +11,7 @@ workflows, version history, and editable title."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">blockr.session</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -89,6 +89,31 @@ workflows, version history, and editable title.</p>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>See <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/preserve_board.html" class="external-link">blockr.core::preserve_board()</a></code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="crash-recovery">Crash recovery<a class="anchor" aria-label="anchor" href="#crash-recovery"></a></h2>
+
+
+<p>Set the <code>session_autosave</code> <code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/blockr_option.html" class="external-link">blockr.core::blockr_option()</a></code> to an interval in
+seconds to have unsaved work parked for recovery. On each tick the board is
+serialized and, when it differs from what was last parked, written to the
+configured backend as a <em>draft</em> (see <code><a href="rack_create.html">rack_create()</a></code>): an ordinary record at
+a reserved id, which overwrites in place rather than keeping a history and
+is held out of the workflow listing. An idle board costs one local
+serialization per tick and no backend traffic at all.</p>
+<p>Recovery is what a draft is for, so nothing is published by it: a save
+remains the only way work reaches a record other people can load. A session
+holding a loaded record parks under that record, one slot reused; a board
+with no record yet parks under an opaque per-session id. Saving clears the
+latter. A later session lists what is left and offers each entry for restore
+or discard, leaving anything untouched available next time; the offer is
+reached from the navbar or by loading the app with a bare <code>recover</code> query
+parameter. A draft against a saved workflow is dropped by the save that
+supersedes it and otherwise kept, there being one per workflow however long
+anyone edits. A draft of a board with no record yet does accumulate, so it
+is swept once it passes the <code>session_draft_ttl</code> option's retention, in days,
+seven by default – measured from when the draft was opened, so set it well
+clear of how long a session typically runs.</p>
     </div>
 
     <div class="section level2">

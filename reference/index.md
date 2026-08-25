@@ -45,6 +45,7 @@ from a request URL.
 
 - [`rack_create()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack_create.md)
   [`rack_append()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack_create.md)
+  [`rack_records()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack_create.md)
   : Create or append to a session record on a rack backend
 - [`rack_load()`](https://bristolmyerssquibb.github.io/blockr.session/reference/rack_load.md)
   : Load a session from a rack backend
