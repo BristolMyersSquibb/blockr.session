@@ -285,6 +285,50 @@ test_that("modal_toggle updates the server-side selection", {
   )
 })
 
+test_that("download outputs are registered even while hidden (#119)", {
+
+  ast_calls <- function(x) {
+
+    if (!is.call(x)) {
+      return(list())
+    }
+
+    c(list(x), unlst(lapply(as.list(x), ast_calls)))
+  }
+
+  call_head <- function(x) {
+
+    if (is.call(x[[1L]])) {
+      return(x[[1L]][[3L]])
+    }
+
+    x[[1L]]
+  }
+
+  is_handler <- function(x) {
+    identical(call_head(x), quote(`<-`)) &&
+      length(x[[2L]]) == 3L && identical(x[[2L]][[2L]], quote(output)) &&
+      is.call(x[[3L]]) && identical(call_head(x[[3L]]), quote(downloadHandler))
+  }
+
+  is_unsuspended <- function(x) {
+    identical(call_head(x), quote(outputOptions)) &&
+      isFALSE(as.list(x)$suspendWhenHidden)
+  }
+
+  handler_name <- function(x) as.character(x[[2L]][[3L]])
+  option_name <- function(x) as.character(as.list(x)[[3L]])
+
+  fns <- Filter(is.function, eapply(asNamespace("blockr.session"), identity))
+  calls <- unlst(lapply(lapply(fns, body), ast_calls))
+
+  handlers <- chr_ply(Filter(is_handler, calls), handler_name)
+  unsuspended <- chr_ply(Filter(is_unsuspended, calls), option_name)
+
+  expect_gt(length(handlers), 0L)
+  expect_identical(sort(setdiff(handlers, unsuspended)), character())
+})
+
 test_that("suggest_copy_id suffixes -copy when no copy exists (#99)", {
 
   backend <- pins::board_temp(versioned = TRUE)

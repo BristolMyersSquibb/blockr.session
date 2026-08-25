@@ -667,6 +667,12 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
+      # The Download buttons on modal rows click these anchors; a suspended
+      # output never gets the href that would make the click do anything.
+      outputOptions(output, "download_selected", suspendWhenHidden = FALSE)
+      outputOptions(output, "download_workflows", suspendWhenHidden = FALSE)
+      outputOptions(output, "download_versions", suspendWhenHidden = FALSE)
+
       # UPLOAD workflows
       observeEvent(
         input$upload_file,
