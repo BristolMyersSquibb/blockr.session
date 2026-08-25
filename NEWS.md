@@ -1,5 +1,9 @@
 # blockr.session 0.1.1
 
+* Downloading a single workflow or a single version from a row of the workflow
+  listing works again: both buttons drive a hidden download link that Shiny had
+  left unregistered while hidden, so clicking did nothing at all.
+
 * Setting the `session_autosave` blockr option to an interval in seconds turns
   on crash recovery: a board with unsaved changes is parked on the configured
   backend as a *draft*, and a later session offers to restore it. A draft is an
