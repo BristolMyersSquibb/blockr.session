@@ -3,11 +3,14 @@
 \name{rack_create}
 \alias{rack_create}
 \alias{rack_append}
+\alias{rack_records}
 \title{Create or append to a session record on a rack backend}
 \usage{
-rack_create(backend, data, id, name, ...)
+rack_create(backend, data, id, name, draft = FALSE, ...)
 
 rack_append(id, backend, data, ...)
+
+rack_records(backend, draft = FALSE, ...)
 }
 \arguments{
 \item{backend}{A rack backend object (e.g. a \code{pins_board}).}
@@ -21,10 +24,17 @@ returned by the blockr session machinery).}
 
 \item{name}{Character scalar. The display name for the new record.}
 
-\item{...}{Additional arguments forwarded to \code{\link[=rack_upload]{rack_upload()}}.}
+\item{draft}{Which records this concerns: \code{FALSE} for one the user saved,
+or a draft kind, \code{"session"} or \code{"record"}. A \code{rack_records()} call also
+accepts \code{TRUE}, matching a draft of either kind.}
+
+\item{...}{Additional arguments forwarded to \code{\link[=rack_upload]{rack_upload()}} or, for
+\code{rack_records()}, to \code{\link[=rack_list]{rack_list()}}.}
 }
 \value{
-A \code{rack_id} object identifying the newly created version.
+\code{rack_create()} and \code{rack_append()} return a \code{rack_id} object
+identifying the newly created version, \code{rack_records()} a list of
+\code{rack_record}s.
 }
 \description{
 \code{rack_create()} serialises \code{data} to JSON and stores it as a \strong{new} record
@@ -35,9 +45,42 @@ the backend's native display field. \code{rack_append()} adds a \strong{new vers
 the existing record identified by \code{id}, erroring (class
 \code{rack_append_missing}) if there is none, and never touches the name. Together
 they replace the former \code{rack_save()}, separating insert from append. To
-change a record's name, use \code{rack_rename()}.
+change a record's name, use \code{rack_rename()}. \code{rack_records()} lists what a
+backend holds, of one kind at a time.
 }
+\section{Drafts}{
+
+A \emph{draft} is unsaved work parked for crash recovery. It is an ordinary rack
+record in every respect a backend can see -- same store, same tags, read
+with \code{\link[=rack_load]{rack_load()}} and dropped with \code{rack_purge()} -- and all that sets it
+apart is a reserved id, minted by \code{rack_create(draft = )} and matched by
+\code{rack_records(draft = )}. Nothing below this API knows drafts exist, so a
+backend needs no draft support of its own.
+
+Passing \code{draft} also relaxes what \code{rack_create()} does, because a draft is a
+single slot rather than a history: the id-already-taken check is skipped, so
+a repeated write overwrites, and the write is unversioned. With
+\code{draft = FALSE} the reserved namespace is refused instead, so a user cannot
+save a record into it.
+
+A draft is of one \emph{kind}. A \code{record} draft follows a saved workflow and is
+keyed on it, so its id is the same in every session: there is one slot per
+workflow by construction, it is overwritten as the work changes, and the
+save it was shadowing drops it. Nothing about it expires, since a workflow
+bounds it. A \code{session} draft belongs to a board with no record yet, keyed on
+an opaque per-session id, and those do accumulate -- so one carries the time
+it was opened and is swept on a retention read straight off the id. That
+needs neither the optional \code{metadata} capability nor any field beyond those
+\code{new_rack_record()} guarantees. The key is hashed into the id rather than
+embedded, since a workflow id may hold characters a backend rejects in a
+record name.
+
+The id a draft write returns carries no version: a draft keeps one, and the
+next write to that slot deletes it.
+}
+
 \seealso{
 \code{\link[=rack_load]{rack_load()}} for the complementary load function, \code{rack_rename()}
-to change a record's name, \code{\link[=rack_upload]{rack_upload()}} for the underlying generic.
+to change a record's name, \code{\link[=rack_upload]{rack_upload()}} and \code{\link[=rack_list]{rack_list()}} for the
+underlying generics.
 }

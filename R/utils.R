@@ -149,11 +149,17 @@ reset_board_name <- function(board, name) {
 
 # the query keys rack_loader() interprets; everything else in the URL is
 # preserved across New and save/navigate so app-level params survive.
-session_query_keys <- c("id", "board_name", "user", "version", "new")
+session_query_keys <- c("id", "board_name", "user", "version", "new",
+                        "recover")
 
 drop_session_query <- function(query) {
   parsed <- parseQueryString(coal(query, ""))
   parsed[setdiff(names(parsed), session_query_keys)]
+}
+
+reload_with_query <- function(query, session) {
+  updateQueryString(query, mode = "replace", session = session)
+  session$reload()
 }
 
 build_query_string <- function(params) {

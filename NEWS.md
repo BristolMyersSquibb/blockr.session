@@ -1,3 +1,16 @@
+# blockr.session 0.1.1
+
+* Setting the `session_autosave` blockr option to an interval in seconds turns
+  on crash recovery: a board with unsaved changes is parked on the configured
+  backend as a *draft*, and a later session offers to restore it. A draft is an
+  ordinary record at a reserved id, so it never touches a workflow's version
+  history and stays out of the workflow listing. Retention is governed by
+  `session_draft_ttl`.
+
+* The `rack_create()` function gains a `draft` argument minting those reserved
+  ids, and the new `rack_records()` lists records of one kind at a time. Draft
+  writes are unversioned, via a new `versioned` argument on `rack_upload()`.
+
 # blockr.session 0.1.0
 
 * Initial CRAN release.

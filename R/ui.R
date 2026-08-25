@@ -141,6 +141,9 @@ manage_project_ui <- function(id, x) {
         uiOutput(ns("rack_id_area")),
         class = "blockr-navbar-id-area"
       ),
+      # Recoverable drafts from earlier sessions; renders nothing when there
+      # are none, and is the way in to the recovery list
+      uiOutput(ns("recovery_notice"), inline = TRUE),
       # Save status
       tags$div(
         class = "blockr-navbar-save-section",

@@ -61,7 +61,7 @@ upload_workflows <- function(file_info, backend) {
 
     tryCatch(
       {
-        rid <- as_rack_id(list(id = data$id), backend)
+        rid <- as_rack_id(list(id = draft_record_id(data$id, FALSE)), backend)
         rack_upload(backend, fpath, rid, name = wf_name)
         uploaded <- uploaded + 1L
       },

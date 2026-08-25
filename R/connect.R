@@ -367,7 +367,8 @@ rack_info.rack_id_pins_connect <- function(id, backend, ...) {
 
 #' @export
 rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
-                                           content_hash = NULL, ...) {
+                                           content_hash = NULL,
+                                           versioned = TRUE, ...) {
 
   slug <- id$id
   qualified <- paste0(backend$account, "/", slug)
@@ -391,7 +392,7 @@ rack_upload.pins_board_connect <- function(backend, path, id, name = NULL,
     path,
     qualified,
     title = title,
-    versioned = TRUE,
+    versioned = versioned,
     metadata = metadata,
     tags = blockr_session_tags()
   )
