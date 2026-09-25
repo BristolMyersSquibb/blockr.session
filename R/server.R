@@ -1362,19 +1362,24 @@ save_controls <- function(ns, saved) {
       `aria-expanded` = "false",
       tags$span(class = "visually-hidden", "Toggle save menu")
     ),
+    # blockr.ui's menu look on the Bootstrap dropdown. The one row opens a
+    # dialog, so it may carry an icon (design system, Menus).
     tags$ul(
-      class = "dropdown-menu dropdown-menu-end blockr-navbar-save-menu",
+      class = paste(
+        "dropdown-menu dropdown-menu-end blockr-menu",
+        "blockr-navbar-save-menu"
+      ),
       tags$li(
         tags$button(
           id = ns("save_as_btn"),
-          class = "dropdown-item",
+          class = "dropdown-item blockr-menu__item",
           type = "button",
           onclick = sprintf(
             "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
             ns("save_as_btn")
           ),
-          bsicons::bs_icon("files"),
-          "Save as new workflow"
+          tags$span(class = "blockr-menu__icon", bsicons::bs_icon("files")),
+          tags$span(class = "blockr-menu__label", "Save as new workflow")
         )
       )
     )
@@ -1407,15 +1412,22 @@ new_controls <- function(ns, new_tab_href) {
       `aria-expanded` = "false",
       tags$span(class = "visually-hidden", "Toggle new menu")
     ),
+    # The one row leaves the page for a new tab, so it may carry an icon.
     tags$ul(
-      class = "dropdown-menu dropdown-menu-end blockr-navbar-new-menu",
+      class = paste(
+        "dropdown-menu dropdown-menu-end blockr-menu",
+        "blockr-navbar-new-menu"
+      ),
       tags$li(
         tags$a(
-          class = "dropdown-item",
+          class = "dropdown-item blockr-menu__item",
           href = new_tab_href,
           target = "_blank",
-          bsicons::bs_icon("box-arrow-up-right"),
-          "New in new tab"
+          tags$span(
+            class = "blockr-menu__icon",
+            bsicons::bs_icon("box-arrow-up-right")
+          ),
+          tags$span(class = "blockr-menu__label", "New in new tab")
         )
       )
     )
