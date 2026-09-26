@@ -19,39 +19,106 @@ manage_project_ui <- function(id, x) {
       stylesheet = "css/project-navbar.css",
       script = "js/project-navbar.js"
     ),
-    # Full-width navbar container - single flex row with spacer
+    # The navbar reads as a path: blockr.dock's mark (with this plugin's
+    # workflows menu), the workflow's name (what you do to this workflow),
+    # then blockr.dock's page menu. Each
+    # piece carries `data-navbar-slot`; blockr.dock's navbar orders the slots
+    # into one row, so this plugin's pieces and the dock's can interleave.
     tags$div(
       class = "manage-project-navbar",
-      # Hamburger menu with tabbed dropdown
+      # The mark's menu: every workflow, a new one, and drafts from earlier
+      # sessions. blockr.dock draws the mark; the class
+      # `blockr-navbar-brand-menu` asks it to hang this menu under the mark.
       tags$div(
-        class = "dropdown",
+        id = ns("tabbed_dropdown"),
+        class = paste(
+          "dropdown-menu blockr-tabbed-dropdown blockr-mark-menu",
+          "blockr-navbar-brand-menu"
+        ),
+        # Sticky search over the full workflow list. Typing filters
+        # server-side; the list renders a window and materializes more as
+        # you scroll (see project-navbar.js).
+        tags$div(
+          id = ns("panel_workflows"),
+          class = "blockr-tab-panel",
+          tags$div(
+            class = "blockr-workflow-search-wrap",
+            tags$div(
+              class = "blockr-workflow-search",
+              bsicons::bs_icon("search", size = "0.9em"),
+              tags$input(
+                id = ns("workflow_filter"),
+                type = "text",
+                class = "blockr-workflow-search-input",
+                placeholder = "Search workflows...",
+                autocomplete = "off",
+                oninput = sprintf(
+                  "Shiny.setInputValue('%s', this.value,
+                  {priority: 'event'})",
+                  ns("workflow_filter")
+                ),
+                onkeydown = "blockrWorkflowSearchKey(event, this)"
+              ),
+              tags$span(
+                class = "blockr-workflow-count",
+                textOutput(ns("workflow_count"), inline = TRUE)
+              )
+            )
+          ),
+          tags$div(
+            class = "blockr-workflows-list",
+            uiOutput(ns("recent_workflows"))
+          ),
+          tags$div(
+            class = "blockr-tab-footer",
+            tags$a(
+              href = "#",
+              class = "blockr-workflows-link",
+              onclick = sprintf(
+                "Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
+                return false;",
+                ns("view_all_workflows")
+              ),
+              "All workflows ",
+              bsicons::bs_icon("arrow-right")
+            )
+          )
+        ),
+        # New workflow, new in a new tab, and the drafts row when there are
+        # drafts to recover
+        tags$div(
+          class = "blockr-menu blockr-mark-actions",
+          uiOutput(ns("recovery_notice")),
+          uiOutput(ns("new_controls"))
+        )
+      ),
+      # The workflow's name: its menu holds what you do to this workflow
+      tags$div(
+        class = "dropdown blockr-navbar-name",
+        `data-navbar-slot` = "title",
         tags$button(
-          class = "blockr-navbar-icon-btn",
+          class = "blockr-navbar-name-btn",
           type = "button",
           `data-bs-toggle` = "dropdown",
           `data-bs-auto-close` = "outside",
           `aria-expanded` = "false",
-          bsicons::bs_icon("layers", size = "1.4em")
+          tagAppendAttributes(
+            textOutput(ns("rack_id_area"), inline = TRUE),
+            class = "blockr-navbar-title"
+          ),
+          bsicons::bs_icon("chevron-down", class = "blockr-navbar-chev")
         ),
-        # Tabbed dropdown content
         tags$div(
-          id = ns("tabbed_dropdown"),
-          class = "dropdown-menu blockr-tabbed-dropdown",
-          # Tab bar
+          class = "dropdown-menu blockr-tabbed-dropdown blockr-name-menu",
+          tags$div(
+            class = "blockr-menu blockr-name-actions",
+            uiOutput(ns("save_as_item"))
+          ),
           tags$div(
             class = "blockr-tab-bar",
             tags$button(
-              id = ns("tab_workflows"),
-              class = "blockr-tab active",
-              type = "button",
-              `data-panel` = ns("panel_workflows"),
-              onclick = tab_switch_js(),
-              bsicons::bs_icon("layers"),
-              "Workflows"
-            ),
-            tags$button(
               id = ns("tab_history"),
-              class = "blockr-tab",
+              class = "blockr-tab active",
               type = "button",
               `data-panel` = ns("panel_history"),
               onclick = tab_switch_js(),
@@ -60,60 +127,9 @@ manage_project_ui <- function(id, x) {
             ),
             uiOutput(ns("sharing_tab"))
           ),
-          # Workflows panel
-          tags$div(
-            id = ns("panel_workflows"),
-            class = "blockr-tab-panel",
-            # Sticky search over the full workflow list. Typing filters
-            # server-side; the list renders a window and materializes more as
-            # you scroll (see project-navbar.js).
-            tags$div(
-              class = "blockr-workflow-search-wrap",
-              tags$div(
-                class = "blockr-workflow-search",
-                bsicons::bs_icon("search", size = "0.9em"),
-                tags$input(
-                  id = ns("workflow_filter"),
-                  type = "text",
-                  class = "blockr-workflow-search-input",
-                  placeholder = "Search workflows...",
-                  autocomplete = "off",
-                  oninput = sprintf(
-                    "Shiny.setInputValue('%s', this.value,
-                    {priority: 'event'})",
-                    ns("workflow_filter")
-                  ),
-                  onkeydown = "blockrWorkflowSearchKey(event, this)"
-                ),
-                tags$span(
-                  class = "blockr-workflow-count",
-                  textOutput(ns("workflow_count"), inline = TRUE)
-                )
-              )
-            ),
-            tags$div(
-              class = "blockr-workflows-list",
-              uiOutput(ns("recent_workflows"))
-            ),
-            tags$div(
-              class = "blockr-tab-footer",
-              tags$a(
-                href = "#",
-                class = "blockr-workflows-link",
-                onclick = sprintf(
-                  "Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
-                  return false;",
-                  ns("view_all_workflows")
-                ),
-                "Manage workflows ",
-                bsicons::bs_icon("arrow-right")
-              )
-            )
-          ),
-          # History panel
           tags$div(
             id = ns("panel_history"),
-            class = "blockr-tab-panel blockr-tab-panel-hidden",
+            class = "blockr-tab-panel",
             tags$div(
               class = "blockr-history-title",
               uiOutput(ns("history_title"), inline = TRUE)
@@ -138,43 +154,21 @@ manage_project_ui <- function(id, x) {
           uiOutput(ns("sharing_panel"))
         )
       ),
-      # Read-only workflow (rack) ID -- rendered only once the workflow has a
-      # chosen id; an unsaved board has none, and "Not saved" carries that state
+      # The save state lives on the button (Save..., Save); the status text
+      # stays for screen readers and carries "Autosave failed" as a tooltip
       tagAppendAttributes(
-        uiOutput(ns("rack_id_area")),
-        class = "blockr-navbar-id-area"
+        textOutput(ns("save_status"), container = tags$span, inline = TRUE),
+        class = "visually-hidden"
       ),
-      # Recoverable drafts from earlier sessions; renders nothing when there
-      # are none, and is the way in to the recovery list
-      uiOutput(ns("recovery_notice"), inline = TRUE),
-      # Save status
-      tags$div(
-        class = "blockr-navbar-save-section",
-        tagAppendAttributes(
-          textOutput(
-            ns("save_status"),
-            container = tags$span,
-            inline = TRUE
-          ),
-          class = "blockr-navbar-meta"
-        ),
-        # Save on its own until the workflow is saved; the "Save as new
-        # workflow" split only appears once there is a record to fork from
-        tagAppendAttributes(
-          uiOutput(ns("save_controls")),
-          class = "btn-group blockr-navbar-save-group"
-        )
-      ),
-      # New split button: "New" creates in place; caret opens a fresh
-      # board in a new tab
       tagAppendAttributes(
-        uiOutput(ns("new_controls")),
-        class = "btn-group blockr-navbar-new-group"
+        uiOutput(ns("save_controls")),
+        class = "blockr-navbar-save-group",
+        `data-navbar-slot` = "actions"
       ),
-      # Spacer to push avatar to the right
-      tags$span(class = "manage-project-spacer"),
-      # User avatar
-      uiOutput(ns("user_avatar"), inline = TRUE)
+      tagAppendAttributes(
+        uiOutput(ns("user_avatar"), inline = TRUE),
+        `data-navbar-slot` = "account"
+      )
     )
   )
 }

@@ -330,19 +330,16 @@ manage_project_server <- function(id, board, ...) {
         save_status()
       )
 
-      output$rack_id_area <- renderUI({
+      # The name button's label: the workflow's id once it has one
+      output$rack_id_area <- renderText(
+        if (is.null(current_id())) "Untitled workflow" else current_rack_id()
+      )
 
-        req(current_id())
-
-        tagList(
-          tagAppendAttributes(
-            tags$span(current_rack_id()),
-            class = "blockr-navbar-title blockr-navbar-rack-id",
-            title = "Workflow ID"
-          ),
-          tags$span(class = "blockr-navbar-divider")
-        )
-      })
+      # "Save as new workflow" heads the name menu once there is a record to
+      # fork from
+      output$save_as_item <- renderUI(
+        if (not_null(current_id())) save_as_item(session$ns)
+      )
 
       output$save_controls <- renderUI(
         save_controls(session$ns, saved = not_null(current_id()))
@@ -1335,101 +1332,63 @@ navigate_to_board <- function(id, backend, session) {
 
 save_controls <- function(ns, saved) {
 
-  save_btn <- tags$button(
+  # A quiet disk icon, like the tools beside it: saving is something people
+  # do now and then. Before the first save it asks for a name; after, it
+  # saves in place. "Save as new workflow" is in the name menu.
+  label <- if (saved) "Save" else "Save\u2026"
+
+  tags$button(
     id = ns("save_btn"),
     class = "blockr-navbar-save-btn",
     type = "button",
+    title = label,
+    `aria-label` = label,
     onclick = sprintf(
       "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
       ns("save_btn")
     ),
-    bsicons::bs_icon("floppy", size = "1em")
+    bsicons::bs_icon("floppy")
   )
+}
 
-  if (!saved) {
-    return(save_btn)
-  }
-
+save_as_item <- function(ns) {
   tagList(
-    save_btn,
-    tags$button(
-      class = paste(
-        "blockr-navbar-save-btn blockr-navbar-save-toggle",
-        "dropdown-toggle"
-      ),
-      type = "button",
-      `data-bs-toggle` = "dropdown",
-      `aria-expanded` = "false",
-      tags$span(class = "visually-hidden", "Toggle save menu")
+    save_as_button(ns),
+    tags$div(class = "blockr-name-actions-rule")
+  )
+}
+
+save_as_button <- function(ns) {
+  tags$button(
+    id = ns("save_as_btn"),
+    class = "dropdown-item blockr-menu__item",
+    type = "button",
+    onclick = sprintf(
+      "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+      ns("save_as_btn")
     ),
-    # blockr.ui's menu look on the Bootstrap dropdown. The one row opens a
-    # dialog, so it may carry an icon (design system, Menus).
-    tags$ul(
-      class = paste(
-        "dropdown-menu dropdown-menu-end blockr-menu",
-        "blockr-navbar-save-menu"
-      ),
-      tags$li(
-        tags$button(
-          id = ns("save_as_btn"),
-          class = "dropdown-item blockr-menu__item",
-          type = "button",
-          onclick = sprintf(
-            "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-            ns("save_as_btn")
-          ),
-          tags$span(class = "blockr-menu__icon", bsicons::bs_icon("files")),
-          tags$span(class = "blockr-menu__label", "Save as new workflow")
-        )
-      )
-    )
+    tags$span(class = "blockr-menu__label", "Save as new workflow\u2026")
   )
 }
 
 new_controls <- function(ns, new_tab_href) {
 
-  new_btn <- tags$button(
-    id = ns("new_btn"),
-    class = "blockr-navbar-btn-new",
-    type = "button",
-    onclick = sprintf(
-      "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-      ns("new_btn")
-    ),
-    bsicons::bs_icon("plus"),
-    "New"
-  )
-
   tagList(
-    new_btn,
     tags$button(
-      class = paste(
-        "blockr-navbar-btn-new blockr-navbar-new-toggle",
-        "dropdown-toggle"
-      ),
+      id = ns("new_btn"),
+      class = "dropdown-item blockr-menu__item",
       type = "button",
-      `data-bs-toggle` = "dropdown",
-      `aria-expanded` = "false",
-      tags$span(class = "visually-hidden", "Toggle new menu")
-    ),
-    # The one row leaves the page for a new tab, so it may carry an icon.
-    tags$ul(
-      class = paste(
-        "dropdown-menu dropdown-menu-end blockr-menu",
-        "blockr-navbar-new-menu"
+      onclick = sprintf(
+        "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+        ns("new_btn")
       ),
-      tags$li(
-        tags$a(
-          class = "dropdown-item blockr-menu__item",
-          href = new_tab_href,
-          target = "_blank",
-          tags$span(
-            class = "blockr-menu__icon",
-            bsicons::bs_icon("box-arrow-up-right")
-          ),
-          tags$span(class = "blockr-menu__label", "New in new tab")
-        )
-      )
+      tags$span(class = "blockr-menu__label", "New workflow")
+    ),
+    tags$a(
+      class = "dropdown-item blockr-menu__item",
+      href = new_tab_href,
+      target = "_blank",
+      tags$span(class = "blockr-menu__label", "New in a new tab")
     )
   )
 }
