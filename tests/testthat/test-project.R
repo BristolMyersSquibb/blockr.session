@@ -55,7 +55,7 @@ test_that("manage_project ui", {
   expect_s3_class(manage_project_ui("project", new_board()), "shiny.tag.list")
 })
 
-test_that("save-as appears in the split menu only once saved (#67, #81)", {
+test_that("save-as appears in the name menu only once saved (#67, #81)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -64,19 +64,21 @@ test_that("save-as appears in the split menu only once saved (#67, #81)", {
   testServer(
     manage_project_server,
     {
-      # unsaved: a bare Save button, no split dropdown and no Save As
-      unsaved <- output$save_controls
+      # unsaved: the menu's Save asks for a name, and no Save As
+      unsaved <- output$save_items
       expect_true(any(grepl("save_btn", unsaved, fixed = TRUE)))
-      expect_false(any(grepl("save_as_btn", unsaved, fixed = TRUE)))
-      expect_false(any(grepl("dropdown-toggle", unsaved, fixed = TRUE)))
+      expect_true(any(grepl("Save\u2026", unsaved, fixed = TRUE)))
+      expect_false(any(grepl("save_as_btn", output$save_items, fixed = TRUE)))
+      expect_false(any(grepl("download_current", output$save_items, fixed = TRUE)))
 
       prev_query("?id=saveas-test")
       session$flushReact()
 
-      # saved: the split dropdown carrying Save As appears
-      saved <- output$save_controls
-      expect_true(any(grepl("save_as_btn", saved, fixed = TRUE)))
-      expect_true(any(grepl("dropdown-toggle", saved, fixed = TRUE)))
+      # saved: Save saves in place, and the menu adds Save as and Download
+      saved <- output$save_items
+      expect_false(any(grepl("Save\u2026", saved, fixed = TRUE)))
+      expect_true(any(grepl("save_as_btn", output$save_items, fixed = TRUE)))
+      expect_true(any(grepl("download_current", output$save_items, fixed = TRUE)))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "saveas-test")
@@ -471,7 +473,7 @@ test_that("New navigates to a fresh `?new=` id the loader honors (#68)", {
   expect_false(identical(fresh_id, "served"))
 })
 
-test_that("New split button offers a fresh `?new=` new tab (#74)", {
+test_that("the mark menu offers New and a fresh `?new=` new tab (#74)", {
   withr::local_options(
     blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
   )
@@ -490,7 +492,7 @@ test_that("New split button offers a fresh `?new=` new tab (#74)", {
 
       link <- xml2::xml_find_all(doc, ".//a[@target='_blank']")
       expect_length(link, 1L)
-      expect_match(xml2::xml_text(link), "New in new tab")
+      expect_match(xml2::xml_text(link), "New in a new tab")
 
       href <- xml2::xml_attr(link, "href")
       expect_match(href, "^\\?new=")
@@ -772,7 +774,7 @@ test_that("version_history output shows versions after save", {
   )
 })
 
-test_that("version_history output shows empty message for unsaved board", {
+test_that("version_history output is empty for an unsaved board", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -783,11 +785,9 @@ test_that("version_history output shows empty message for unsaved board", {
   testServer(
     manage_project_server,
     {
+      # empty, so the save menu hides its Versions block
       html <- output$version_history
-      expect_true(
-        any(grepl("No versions found", html)) ||
-          any(grepl("Save workflow to see history", html))
-      )
+      expect_false(any(grepl("blockr-workflow-item", html$html, fixed = TRUE)))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "vh-empty-test")
@@ -937,7 +937,7 @@ test_that("view_all_versions triggers modal", {
   )
 })
 
-test_that("sharing tab absent with pins backend", {
+test_that("Share row absent with pins backend", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -949,7 +949,7 @@ test_that("sharing tab absent with pins backend", {
     manage_project_server,
     {
       # With pins_board (sharing=FALSE), req() fails silently
-      expect_error(output$sharing_tab, class = "shiny.silent.error")
+      expect_error(output$share_item, class = "shiny.silent.error")
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "no-sharing-test")
@@ -957,7 +957,7 @@ test_that("sharing tab absent with pins backend", {
   )
 })
 
-test_that("sharing tab appears only once the workflow is saved", {
+test_that("Share row appears only once the workflow is saved", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -974,23 +974,23 @@ test_that("sharing tab appears only once the workflow is saved", {
     }
   )
 
-  # Unsaved: nothing to share yet, so the tab stays hidden even though the
+  # Unsaved: nothing to share yet, so the row stays hidden even though the
   # backend is sharing-capable
   testServer(
     manage_project_server,
-    expect_error(output$sharing_tab, class = "shiny.silent.error"),
+    expect_error(output$share_item, class = "shiny.silent.error"),
     args = list(
       board = reactiveValues(board = test_board, board_id = "unsaved")
     )
   )
 
-  # Saved: the tab and its controls render
+  # Saved: the row and the sharing panel render
   testServer(
     manage_project_server,
     {
       prev_query("?id=sharing-test")
 
-      expect_true(any(grepl("Sharing", output$sharing_tab)))
+      expect_true(any(grepl("Share", output$share_item)))
       expect_true(any(grepl("VISIBILITY", output$sharing_panel)))
 
       # Sharing controls only render in "Restricted" (acl) mode
@@ -1108,7 +1108,7 @@ test_that("navbar shows a rack id area, not an editable title (#81)", {
   expect_length(title_input, 0)
 })
 
-test_that("the rack id area shows only for a saved workflow (#81)", {
+test_that("the name reads Untitled until the workflow is saved (#81)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -1117,8 +1117,8 @@ test_that("the rack id area shows only for a saved workflow (#81)", {
   testServer(
     manage_project_server,
     {
-      # a never-saved board has no chosen id, so the area renders nothing
-      expect_error(output$rack_id_area, class = "shiny.silent.error")
+      # a never-saved board has no chosen id yet
+      expect_identical(output$rack_id_area, "Untitled workflow")
 
       prev_query("?id=loaded-board")
       session$flushReact()
