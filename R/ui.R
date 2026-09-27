@@ -130,22 +130,45 @@ manage_project_ui <- function(id, x) {
               class = "blockr-menu blockr-save-actions",
               uiOutput(ns("save_items"))
             ),
-            # The latest versions; hidden until there is a saved version
+            # "Version history", whose recent versions open in a menu beside
+            # it: something people look at rarely. Hidden until there is a
+            # saved version.
             tags$div(
               class = "blockr-save-versions",
               tags$div(class = "blockr-save-rule"),
-              tags$div(class = "blockr-history-title", "Versions"),
-              uiOutput(ns("version_history")),
-              tags$a(
-                href = "#",
-                class = "blockr-workflows-link",
-                onclick = sprintf(
-                  "Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
-                  return false;",
-                  ns("view_all_versions")
-                ),
-                "All versions ",
-                bsicons::bs_icon("arrow-right")
+              tags$div(
+                class = "blockr-menu blockr-save-actions",
+                tags$button(
+                  class = "dropdown-item blockr-menu__item blockr-versions-row",
+                  type = "button",
+                  `aria-haspopup` = "menu",
+                  `aria-expanded` = "false",
+                  tags$span(
+                    class = "blockr-menu__icon",
+                    bsicons::bs_icon("clock-history")
+                  ),
+                  tags$span(class = "blockr-menu__label", "Version history"),
+                  tagAppendAttributes(
+                    navbar_chevron(),
+                    class = "blockr-versions-chev"
+                  )
+                )
+              ),
+              tags$div(
+                class = "blockr-versions-flyout",
+                role = "menu",
+                uiOutput(ns("version_history")),
+                tags$a(
+                  href = "#",
+                  class = "blockr-workflows-link",
+                  onclick = sprintf(
+                    "Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
+                    return false;",
+                    ns("view_all_versions")
+                  ),
+                  "All versions ",
+                  bsicons::bs_icon("arrow-right")
+                )
               )
             ),
             uiOutput(ns("share_item"))

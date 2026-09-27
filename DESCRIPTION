@@ -1,6 +1,6 @@
 Package: blockr.session
 Title: Session Management for 'blockr'
-Version: 0.1.1.9016
+Version: 0.1.1.9018
 Authors@R:
     c(person(given = "Nicolas",
              family = "Bennett",

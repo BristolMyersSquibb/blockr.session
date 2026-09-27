@@ -869,12 +869,11 @@ manage_project_server <- function(id, board, ...) {
 
       sharing_trigger <- reactiveVal(0)
 
-      # "Share..." at the foot of the save menu; it swaps the menu for the
-      # sharing panel
+      # "Share..." at the foot of the save menu, under Version history; it
+      # swaps the menu for the sharing panel
       output$share_item <- renderUI({
         req(has_sharing())
         tagList(
-          tags$div(class = "blockr-save-rule"),
           tags$div(
             class = "blockr-menu blockr-save-actions",
             tags$button(

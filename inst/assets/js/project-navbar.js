@@ -244,12 +244,21 @@ document.addEventListener('hidden.bs.modal', function(event) {
 });
 
 // --- The save menu ----------------------------------------------------------
-// Save, Save as and Download close the menu; Share swaps in the sharing panel
-// and the menu opens on its first panel again next time.
+// Save, Save as and Download close the menu; Version history opens the recent
+// versions beside it; Share swaps in the sharing panel. The menu opens on its
+// first panel again next time.
 
 document.addEventListener('click', function(event) {
   var row = event.target.closest('.blockr-save-actions .blockr-menu__item');
   if (!row || row.classList.contains('blockr-share-item')) return;
+  // "Version history" opens its own menu, and stays
+  if (row.classList.contains('blockr-versions-row')) {
+    var box = row.closest('.blockr-save-versions');
+    var open = !box.classList.contains('is-open');
+    box.classList.toggle('is-open', open);
+    row.setAttribute('aria-expanded', open ? 'true' : 'false');
+    return;
+  }
   var group = row.closest('.blockr-navbar-save-group');
   var toggle = group && group.querySelector('[data-bs-toggle="dropdown"]');
   if (toggle) bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
@@ -258,6 +267,11 @@ document.addEventListener('click', function(event) {
 document.addEventListener('hidden.bs.dropdown', function(event) {
   var group = event.target.closest('.blockr-navbar-save-group');
   if (!group) return;
+  group.querySelectorAll('.blockr-save-versions').forEach(function(box) {
+    box.classList.remove('is-open');
+    var row = box.querySelector('.blockr-versions-row');
+    if (row) row.setAttribute('aria-expanded', 'false');
+  });
   group.querySelectorAll('.blockr-save-menu .blockr-tab-panel').forEach(
     function(p) {
       p.classList.toggle(
