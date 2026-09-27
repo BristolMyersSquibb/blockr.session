@@ -34,7 +34,7 @@ manage_project_ui <- function(id, x) {
         tags$button(
           class = "blockr-navbar-name-btn",
           type = "button",
-          title = "Workflows",
+          `aria-label` = "Workflows",
           `data-bs-toggle` = "dropdown",
           `data-bs-auto-close` = "outside",
           `aria-expanded` = "false",
@@ -115,7 +115,6 @@ manage_project_ui <- function(id, x) {
         tags$button(
           class = "blockr-navbar-save-toggle",
           type = "button",
-          title = "Save options",
           `aria-label` = "Save options",
           `data-bs-toggle` = "dropdown",
           `data-bs-auto-close` = "outside",

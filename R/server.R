@@ -1361,14 +1361,11 @@ save_controls <- function(ns, saved) {
   # A quiet disk icon: saving is something people do now and then. Before
   # the first save it asks for a name; after, it saves in place. The chevron
   # beside it opens the save menu.
-  label <- if (saved) "Save (Ctrl+S)" else "Save\u2026 (Ctrl+S)"
-
   tags$button(
     id = ns("save_btn"),
     class = "blockr-navbar-save-btn",
     type = "button",
-    title = label,
-    `aria-label` = label,
+    `aria-label` = if (saved) "Save" else "Save\u2026",
     onclick = sprintf(
       "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
       ns("save_btn")

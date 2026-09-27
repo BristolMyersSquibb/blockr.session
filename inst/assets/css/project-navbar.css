@@ -1012,6 +1012,18 @@
   color: var(--blockr-color-text-muted);
 }
 
+/* The name and the save menu wait for the server's first render (the name,
+   the disk icon), so the bar never shows their chevrons alone */
+.blockr-navbar-name:has(.blockr-navbar-title:empty),
+.blockr-navbar-save-group:not(:has(.blockr-navbar-save-btn)) {
+  visibility: hidden;
+}
+
+.manage-project-navbar:has(.blockr-navbar-title:empty)
+  .blockr-navbar-save-group {
+  visibility: hidden;
+}
+
 /* The name's menu: the workflow list, then New and the drafts row */
 .blockr-name-actions,
 .blockr-save-actions {
