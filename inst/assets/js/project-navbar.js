@@ -242,3 +242,41 @@ document.addEventListener('hidden.bs.modal', function(event) {
     );
   }
 });
+
+// --- The save menu ----------------------------------------------------------
+// Save, Save as and Download close the menu; Share swaps in the sharing panel
+// and the menu opens on its first panel again next time.
+
+document.addEventListener('click', function(event) {
+  var row = event.target.closest('.blockr-save-actions .blockr-menu__item');
+  if (!row || row.classList.contains('blockr-share-item')) return;
+  var group = row.closest('.blockr-navbar-save-group');
+  var toggle = group && group.querySelector('[data-bs-toggle="dropdown"]');
+  if (toggle) bootstrap.Dropdown.getOrCreateInstance(toggle).hide();
+});
+
+document.addEventListener('hidden.bs.dropdown', function(event) {
+  var group = event.target.closest('.blockr-navbar-save-group');
+  if (!group) return;
+  group.querySelectorAll('.blockr-save-menu .blockr-tab-panel').forEach(
+    function(p) {
+      p.classList.toggle(
+        'blockr-tab-panel-hidden', !p.classList.contains('blockr-save-panel')
+      );
+    }
+  );
+});
+
+// Ctrl+S saves, Ctrl+Shift+S saves as a new workflow (Cmd on a Mac)
+document.addEventListener('keydown', function(event) {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+  if (event.key !== 's' && event.key !== 'S') return;
+
+  var target = document.querySelector(
+    event.shiftKey ? '.blockr-save-as-item' : '.blockr-navbar-save-btn'
+  );
+  if (!target) return;
+
+  event.preventDefault();
+  target.click();
+});

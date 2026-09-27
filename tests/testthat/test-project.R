@@ -68,16 +68,18 @@ test_that("save-as appears in the name menu only once saved (#67, #81)", {
       unsaved <- output$save_controls
       expect_true(any(grepl("save_btn", unsaved, fixed = TRUE)))
       expect_true(any(grepl("Save\u2026", unsaved, fixed = TRUE)))
-      expect_false(any(grepl("save_as_btn", output$save_as_item, fixed = TRUE)))
+      expect_false(any(grepl("save_as_btn", output$save_items, fixed = TRUE)))
+      expect_false(any(grepl("download_current", output$save_items, fixed = TRUE)))
 
       prev_query("?id=saveas-test")
       session$flushReact()
 
-      # saved: still one button, and Save As heads the name menu
+      # saved: still one button, and the save menu adds Save as and Download
       saved <- output$save_controls
       expect_false(any(grepl("dropdown-toggle", saved, fixed = TRUE)))
       expect_false(any(grepl("Save\u2026", saved, fixed = TRUE)))
-      expect_true(any(grepl("save_as_btn", output$save_as_item, fixed = TRUE)))
+      expect_true(any(grepl("save_as_btn", output$save_items, fixed = TRUE)))
+      expect_true(any(grepl("download_current", output$save_items, fixed = TRUE)))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "saveas-test")
@@ -938,7 +940,7 @@ test_that("view_all_versions triggers modal", {
   )
 })
 
-test_that("sharing tab absent with pins backend", {
+test_that("Share row absent with pins backend", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -950,7 +952,7 @@ test_that("sharing tab absent with pins backend", {
     manage_project_server,
     {
       # With pins_board (sharing=FALSE), req() fails silently
-      expect_error(output$sharing_tab, class = "shiny.silent.error")
+      expect_error(output$share_item, class = "shiny.silent.error")
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "no-sharing-test")
@@ -958,7 +960,7 @@ test_that("sharing tab absent with pins backend", {
   )
 })
 
-test_that("sharing tab appears only once the workflow is saved", {
+test_that("Share row appears only once the workflow is saved", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -975,23 +977,23 @@ test_that("sharing tab appears only once the workflow is saved", {
     }
   )
 
-  # Unsaved: nothing to share yet, so the tab stays hidden even though the
+  # Unsaved: nothing to share yet, so the row stays hidden even though the
   # backend is sharing-capable
   testServer(
     manage_project_server,
-    expect_error(output$sharing_tab, class = "shiny.silent.error"),
+    expect_error(output$share_item, class = "shiny.silent.error"),
     args = list(
       board = reactiveValues(board = test_board, board_id = "unsaved")
     )
   )
 
-  # Saved: the tab and its controls render
+  # Saved: the row and the sharing panel render
   testServer(
     manage_project_server,
     {
       prev_query("?id=sharing-test")
 
-      expect_true(any(grepl("Sharing", output$sharing_tab)))
+      expect_true(any(grepl("Share", output$share_item)))
       expect_true(any(grepl("VISIBILITY", output$sharing_panel)))
 
       # Sharing controls only render in "Restricted" (acl) mode

@@ -971,7 +971,7 @@
 }
 
 /* ============================================
-   The path: mark / workflow / page
+   The workflow: its name, then its save menu
    ============================================
    blockr.dock orders the pieces by their `data-navbar-slot`; the rules
    here only draw them. Every control is 30px, hover is bg-hover. */
@@ -987,6 +987,11 @@
   background: transparent;
   color: var(--blockr-color-text-default);
   cursor: pointer;
+}
+
+.blockr-navbar-name-btn:hover,
+.blockr-navbar-name-btn[aria-expanded="true"] {
+  background: var(--blockr-color-bg-hover);
 }
 
 .blockr-navbar-name-btn .blockr-navbar-title {
@@ -1007,9 +1012,9 @@
   color: var(--blockr-color-text-muted);
 }
 
-/* The mark's menu: the workflow list, then New and the drafts row */
-.blockr-mark-actions,
-.blockr-name-actions {
+/* The name's menu: the workflow list, then New and the drafts row */
+.blockr-name-actions,
+.blockr-save-actions {
   position: static;
   display: block;
   max-height: none;
@@ -1019,23 +1024,8 @@
   background: transparent;
 }
 
-.blockr-mark-actions {
-  border-top: 1px solid var(--blockr-color-border-default);
-}
-
-/* Empty until the workflow has a record; the row brings its own divider */
 .blockr-name-actions {
-  padding: 0;
-}
-
-.blockr-name-actions .blockr-menu__item {
-  width: calc(100% - 12px);
-  margin: 6px;
-}
-
-.blockr-name-actions-rule {
-  height: 1px;
-  background: var(--blockr-color-border-default);
+  border-top: 1px solid var(--blockr-color-border-default);
 }
 
 .blockr-draft-count {
@@ -1048,24 +1038,49 @@
   color: var(--blockr-color-text-warning);
 }
 
-/* Save: a quiet 30px icon, like the tools beside it */
+/* Save: a quiet disk icon and a chevron, one hover for both */
 .blockr-navbar-save-group {
   display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.blockr-navbar-save-group:hover,
+.blockr-navbar-save-group:has(.blockr-navbar-save-toggle[aria-expanded="true"]) {
+  background: var(--blockr-color-bg-hover);
 }
 
 .blockr-navbar-save-btn,
-.blockr-navbar-save-group > .blockr-navbar-save-btn:first-child {
-  width: 30px;
+.blockr-navbar-save-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 30px;
   padding: 0;
   border: 0;
-  border-radius: 6px;
   background: transparent;
   color: var(--blockr-color-text-muted);
+  cursor: pointer;
 }
 
-.blockr-navbar-save-btn:hover {
-  background: var(--blockr-color-bg-hover);
+.blockr-navbar-save-btn {
+  width: 30px;
+  border-radius: 6px 0 0 6px;
+}
+
+.blockr-navbar-save-toggle {
+  width: 18px;
+  margin-left: -4px;
+  border-radius: 0 6px 6px 0;
+}
+
+.blockr-navbar-save-toggle::after {
+  display: none;
+}
+
+.blockr-navbar-save-btn:hover,
+.blockr-navbar-save-toggle:hover {
+  background: transparent;
   border: 0;
   color: var(--blockr-color-text-default);
 }
@@ -1073,6 +1088,64 @@
 .blockr-navbar-save-btn svg {
   width: 16px;
   height: 16px;
+}
+
+.blockr-navbar-save-btn:focus:not(:focus-visible),
+.blockr-navbar-save-toggle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* The save menu: Save, Save as, Download; the latest versions; Share */
+.blockr-save-menu {
+  width: 330px;
+}
+
+.blockr-save-rule {
+  height: 1px;
+  margin: 6px -6px;
+  background: var(--blockr-color-border-default);
+}
+
+.blockr-save-menu .blockr-history-title {
+  padding: 4px 10px 2px;
+}
+
+.blockr-save-menu .blockr-history-empty {
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.blockr-save-menu .shiny-download-link.blockr-menu__item {
+  text-decoration: none;
+  color: var(--blockr-color-text-default);
+}
+
+/* Share's panel: a back row that names it */
+.blockr-sharing-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  margin-bottom: 4px;
+  border: 0;
+  border-radius: var(--blockr-radius-md);
+  background: transparent;
+  font-size: var(--blockr-font-size-base);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-default);
+  cursor: pointer;
+}
+
+.blockr-sharing-back:hover {
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-sharing-back svg {
+  width: 14px;
+  height: 14px;
+  color: var(--blockr-color-text-muted);
 }
 
 /* The avatar in the design system's look */

@@ -335,11 +335,34 @@ manage_project_server <- function(id, board, ...) {
         if (is.null(current_id())) "Untitled workflow" else current_rack_id()
       )
 
-      # "Save as new workflow" heads the name menu once there is a record to
-      # fork from
-      output$save_as_item <- renderUI(
-        if (not_null(current_id())) save_as_item(session$ns)
+      # The save menu's rows: Save always, Save as and Download once there
+      # is a record to fork from or download
+      output$save_items <- renderUI(
+        save_items(session$ns, saved = not_null(current_id()))
       )
+
+      # Download the saved workflow as a file, as the backend stores it
+      output$download_current <- downloadHandler(
+        filename = function() paste0(current_rack_id(), ".json"),
+        content = function(file) {
+          id <- current_id()
+          req(id)
+          sel <- list(list(id = id$id, name = id$id, user = coal(id$user, "")))
+          tryCatch(
+            file.copy(prepare_download(sel, backend), file),
+            error = function(e) {
+              notify(
+                paste("Download failed:", conditionMessage(e)),
+                type = "error",
+                glue = FALSE,
+                session = session
+              )
+            }
+          )
+        }
+      )
+
+      outputOptions(output, "download_current", suspendWhenHidden = FALSE)
 
       output$save_controls <- renderUI(
         save_controls(session$ns, saved = not_null(current_id()))
@@ -703,16 +726,6 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      output$history_title <- renderUI(
-        {
-          id <- current_id()
-
-          if (not_null(id)) {
-            tags$span(current_rack_id())
-          }
-        }
-      )
-
       output$version_history <- renderUI(
         {
           refresh_trigger()
@@ -741,7 +754,7 @@ manage_project_server <- function(id, board, ...) {
           active_version <- parseQueryString(current_query())$version
 
           items <- lapply(
-            seq_len(min(nrow(versions), 4)),
+            seq_len(min(nrow(versions), 3)),
             function(i) {
               v <- versions[i, ]
               time_ago <- format_time_ago(v$created)
@@ -857,16 +870,22 @@ manage_project_server <- function(id, board, ...) {
 
       sharing_trigger <- reactiveVal(0)
 
-      output$sharing_tab <- renderUI({
+      # "Share..." at the foot of the save menu; it swaps the menu for the
+      # sharing panel
+      output$share_item <- renderUI({
         req(has_sharing())
-        tags$button(
-          id = session$ns("tab_sharing"),
-          class = "blockr-tab",
-          type = "button",
-          `data-panel` = session$ns("panel_sharing"),
-          onclick = tab_switch_js(),
-          bsicons::bs_icon("people"),
-          "Sharing"
+        tagList(
+          tags$div(class = "blockr-save-rule"),
+          tags$div(
+            class = "blockr-menu blockr-save-actions",
+            tags$button(
+              class = "dropdown-item blockr-menu__item blockr-share-item",
+              type = "button",
+              onclick = panel_switch_js(session$ns("panel_sharing")),
+              tags$span(class = "blockr-menu__icon", bsicons::bs_icon("people")),
+              tags$span(class = "blockr-menu__label", "Share\u2026")
+            )
+          )
         )
       })
 
@@ -880,6 +899,13 @@ manage_project_server <- function(id, board, ...) {
             "blockr-tab-panel blockr-tab-panel-hidden",
             "blockr-sharing-panel"
           ),
+          tags$button(
+            class = "blockr-sharing-back",
+            type = "button",
+            onclick = panel_switch_js(session$ns("panel_save")),
+            bsicons::bs_icon("arrow-left"),
+            "Share"
+          ),
           if (isTRUE(caps$visibility)) {
             tags$div(
               class = "blockr-sharing-section",
@@ -891,10 +917,10 @@ manage_project_server <- function(id, board, ...) {
         )
       })
 
-      # Render the tab and panel eagerly (whether the tab shows is fixed once
-      # a workflow loads), so opening the hamburger shows all three tabs at
-      # once instead of two with the sharing tab flashing in a beat later.
-      outputOptions(output, "sharing_tab", suspendWhenHidden = FALSE)
+      # Render the row and panel eagerly (whether they show is fixed once a
+      # workflow loads), so opening the save menu shows Share at once rather
+      # than a beat later.
+      outputOptions(output, "share_item", suspendWhenHidden = FALSE)
       outputOptions(output, "sharing_panel", suspendWhenHidden = FALSE)
 
       output$sharing_controls <- renderUI({
@@ -1332,10 +1358,10 @@ navigate_to_board <- function(id, backend, session) {
 
 save_controls <- function(ns, saved) {
 
-  # A quiet disk icon, like the tools beside it: saving is something people
-  # do now and then. Before the first save it asks for a name; after, it
-  # saves in place. "Save as new workflow" is in the name menu.
-  label <- if (saved) "Save" else "Save\u2026"
+  # A quiet disk icon: saving is something people do now and then. Before
+  # the first save it asks for a name; after, it saves in place. The chevron
+  # beside it opens the save menu.
+  label <- if (saved) "Save (Ctrl+S)" else "Save\u2026 (Ctrl+S)"
 
   tags$button(
     id = ns("save_btn"),
@@ -1351,23 +1377,55 @@ save_controls <- function(ns, saved) {
   )
 }
 
-save_as_item <- function(ns) {
-  tagList(
-    save_as_button(ns),
-    tags$div(class = "blockr-name-actions-rule")
-  )
-}
+save_items <- function(ns, saved) {
 
-save_as_button <- function(ns) {
-  tags$button(
-    id = ns("save_as_btn"),
-    class = "dropdown-item blockr-menu__item",
-    type = "button",
-    onclick = sprintf(
-      "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
-      ns("save_as_btn")
+  item <- function(id, icon, label, key = NULL, cls = NULL) {
+    tags$button(
+      id = ns(id),
+      class = paste("dropdown-item blockr-menu__item", cls),
+      type = "button",
+      onclick = sprintf(
+        "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
+        ns(id)
+      ),
+      tags$span(class = "blockr-menu__icon", bsicons::bs_icon(icon)),
+      tags$span(class = "blockr-menu__label", label),
+      if (not_null(key)) tags$span(class = "blockr-menu__meta", key)
+    )
+  }
+
+  tagList(
+    # The row clicks the disk icon, so both take the same path
+    tags$button(
+      class = "dropdown-item blockr-menu__item blockr-save-item",
+      type = "button",
+      onclick = sprintf(
+        "document.getElementById('%s').click()",
+        ns("save_btn")
+      ),
+      tags$span(class = "blockr-menu__icon", bsicons::bs_icon("floppy")),
+      tags$span(class = "blockr-menu__label", if (saved) "Save" else "Save\u2026"),
+      tags$span(class = "blockr-menu__meta", "Ctrl+S")
     ),
-    tags$span(class = "blockr-menu__label", "Save as new workflow\u2026")
+    if (saved) {
+      tagList(
+        item(
+          "save_as_btn", "copy", "Save as new workflow\u2026",
+          key = "Ctrl+Shift+S", cls = "blockr-save-as-item"
+        ),
+        tags$a(
+          id = ns("download_current"),
+          class = paste(
+            "dropdown-item blockr-menu__item shiny-download-link"
+          ),
+          href = "",
+          target = "_blank",
+          download = NA,
+          tags$span(class = "blockr-menu__icon", bsicons::bs_icon("download")),
+          tags$span(class = "blockr-menu__label", "Download")
+        )
+      )
+    }
   )
 }
 
