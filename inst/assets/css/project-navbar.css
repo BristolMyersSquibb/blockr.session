@@ -1061,7 +1061,7 @@
   color: var(--blockr-color-text-warning);
 }
 
-/* Save: a quiet disk icon and a chevron, one hover for both */
+/* Save: the word and a chevron, one hover for both */
 .blockr-navbar-save-group {
   display: inline-flex;
   align-items: center;
@@ -1086,14 +1086,17 @@
   cursor: pointer;
 }
 
+/* Word and chevron 6px apart, as in the name's button */
 .blockr-navbar-save-btn {
-  width: 30px;
+  padding: 0 0 0 8px;
   border-radius: 6px 0 0 6px;
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
 }
 
 .blockr-navbar-save-toggle {
-  width: 18px;
-  margin-left: -4px;
+  width: auto;
+  padding: 0 8px 0 6px;
   border-radius: 0 6px 6px 0;
 }
 
@@ -1108,11 +1111,6 @@
   color: var(--blockr-color-text-default);
 }
 
-.blockr-navbar-save-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
 .blockr-navbar-save-btn:focus:not(:focus-visible),
 .blockr-navbar-save-toggle:focus:not(:focus-visible) {
   outline: none;
@@ -1120,7 +1118,7 @@
 
 /* The save menu: Save, Save as, Download; the latest versions; Share */
 .blockr-save-menu {
-  width: 330px;
+  width: 360px;
 }
 
 .blockr-save-rule {

@@ -1358,19 +1358,18 @@ navigate_to_board <- function(id, backend, session) {
 
 save_controls <- function(ns, saved) {
 
-  # A quiet disk icon: saving is something people do now and then. Before
-  # the first save it asks for a name; after, it saves in place. The chevron
-  # beside it opens the save menu.
+  # The word Save, quiet like the chevron beside it. Before the first save it
+  # asks for a name ("Save..."); after, it saves in place. The chevron opens
+  # the save menu.
   tags$button(
     id = ns("save_btn"),
     class = "blockr-navbar-save-btn",
     type = "button",
-    `aria-label` = if (saved) "Save" else "Save\u2026",
     onclick = sprintf(
       "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
       ns("save_btn")
     ),
-    bsicons::bs_icon("floppy")
+    if (saved) "Save" else "Save\u2026"
   )
 }
 
