@@ -130,19 +130,23 @@ manage_project_ui <- function(id, x) {
               class = "blockr-menu blockr-save-actions",
               uiOutput(ns("save_items"))
             ),
-            tags$div(class = "blockr-save-rule"),
-            tags$div(class = "blockr-history-title", "Versions"),
-            uiOutput(ns("version_history")),
-            tags$a(
-              href = "#",
-              class = "blockr-workflows-link",
-              onclick = sprintf(
-                "Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
-                return false;",
-                ns("view_all_versions")
-              ),
-              "All versions ",
-              bsicons::bs_icon("arrow-right")
+            # The latest versions; hidden until there is a saved version
+            tags$div(
+              class = "blockr-save-versions",
+              tags$div(class = "blockr-save-rule"),
+              tags$div(class = "blockr-history-title", "Versions"),
+              uiOutput(ns("version_history")),
+              tags$a(
+                href = "#",
+                class = "blockr-workflows-link",
+                onclick = sprintf(
+                  "Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
+                  return false;",
+                  ns("view_all_versions")
+                ),
+                "All versions ",
+                bsicons::bs_icon("arrow-right")
+              )
             ),
             uiOutput(ns("share_item"))
           ),

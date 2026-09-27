@@ -729,12 +729,7 @@ manage_project_server <- function(id, board, ...) {
 
           id <- current_id()
           if (is.null(id)) {
-            return(
-              tags$div(
-                class = "blockr-history-empty",
-                "Save workflow to see history"
-              )
-            )
+            return(NULL)
           }
 
           versions <- tryCatch(
@@ -783,6 +778,10 @@ manage_project_server <- function(id, board, ...) {
           tagList(items)
         }
       )
+
+      # Rendered while hidden: the save menu shows its Versions block only
+      # once this has content, so a suspended output would never show
+      outputOptions(output, "version_history", suspendWhenHidden = FALSE)
 
       observeEvent(
         input$load_version,
@@ -1353,6 +1352,19 @@ navigate_to_board <- function(id, backend, session) {
   )
 }
 
+# A shortcut hint in the menu: "Ctrl+" before the key, or the Mac's command
+# sign where project-navbar.js finds a Mac
+shortcut_meta <- function(key) {
+  tags$span(
+    class = "blockr-menu__meta",
+    tags$span(class = "blockr-key-ctrl", paste0("Ctrl+", key)),
+    tags$span(
+      class = "blockr-key-mac",
+      paste0("\u2318", sub("Shift+", "\u21e7", key, fixed = TRUE))
+    )
+  )
+}
+
 save_items <- function(ns, saved) {
 
   item <- function(id, icon, label, key = NULL, cls = NULL) {
@@ -1366,7 +1378,7 @@ save_items <- function(ns, saved) {
       ),
       tags$span(class = "blockr-menu__icon", bsicons::bs_icon(icon)),
       tags$span(class = "blockr-menu__label", label),
-      if (not_null(key)) tags$span(class = "blockr-menu__meta", key)
+      if (not_null(key)) shortcut_meta(key)
     )
   }
 
@@ -1375,13 +1387,13 @@ save_items <- function(ns, saved) {
     # saves in place
     item(
       "save_btn", "floppy", if (saved) "Save" else "Save\u2026",
-      key = "Ctrl+S", cls = "blockr-save-item"
+      key = "S", cls = "blockr-save-item"
     ),
     if (saved) {
       tagList(
         item(
           "save_as_btn", "copy", "Save as new workflow\u2026",
-          key = "Ctrl+Shift+S", cls = "blockr-save-as-item"
+          key = "Shift+S", cls = "blockr-save-as-item"
         ),
         tags$a(
           id = ns("download_current"),

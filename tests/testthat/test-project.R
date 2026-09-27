@@ -774,7 +774,7 @@ test_that("version_history output shows versions after save", {
   )
 })
 
-test_that("version_history output shows empty message for unsaved board", {
+test_that("version_history output is empty for an unsaved board", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -785,11 +785,9 @@ test_that("version_history output shows empty message for unsaved board", {
   testServer(
     manage_project_server,
     {
+      # empty, so the save menu hides its Versions block
       html <- output$version_history
-      expect_true(
-        any(grepl("No versions found", html)) ||
-          any(grepl("Save workflow to see history", html))
-      )
+      expect_false(any(grepl("blockr-workflow-item", html$html, fixed = TRUE)))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "vh-empty-test")

@@ -267,6 +267,11 @@ document.addEventListener('hidden.bs.dropdown', function(event) {
   );
 });
 
+// The menu's shortcut hints show the command sign on a Mac
+if (/Mac|iPhone|iPad/.test(navigator.platform)) {
+  document.documentElement.classList.add('blockr-mac');
+}
+
 // Ctrl+S saves, Ctrl+Shift+S saves as a new workflow (Cmd on a Mac)
 document.addEventListener('keydown', function(event) {
   if (!(event.ctrlKey || event.metaKey) || event.altKey) return;

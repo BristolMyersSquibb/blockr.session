@@ -1090,9 +1090,28 @@
   outline: none;
 }
 
-/* The save menu: Save, Save as, Download; the latest versions; Share */
+/* The save menu: Save, Save as, Download; the latest versions; Share. As
+   wide as its rows need. */
 .blockr-save-menu {
-  width: 360px;
+  width: max-content;
+  min-width: 240px;
+}
+
+.blockr-save-actions {
+  padding: 0;
+}
+
+.blockr-save-versions:has(.shiny-html-output:empty) {
+  display: none;
+}
+
+.blockr-key-mac,
+.blockr-mac .blockr-key-ctrl {
+  display: none;
+}
+
+.blockr-mac .blockr-key-mac {
+  display: inline;
 }
 
 .blockr-save-rule {
