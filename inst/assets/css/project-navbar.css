@@ -1006,10 +1006,21 @@
   white-space: nowrap;
 }
 
+/* The design system's chevron: muted, default on hover, turned while the
+   menu is open */
 .blockr-navbar-chev {
-  width: 12px;
-  height: 12px;
+  display: inline-flex;
   color: var(--blockr-color-text-muted);
+  transition: transform var(--blockr-transition), color var(--blockr-transition);
+}
+
+.blockr-navbar-name-btn:hover .blockr-navbar-chev,
+.blockr-navbar-save-toggle:hover .blockr-navbar-chev {
+  color: var(--blockr-color-text-default);
+}
+
+[aria-expanded="true"] > .blockr-navbar-chev {
+  transform: rotate(180deg);
 }
 
 /* The name and the save menu wait for the server's first render (the name,
