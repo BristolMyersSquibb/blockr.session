@@ -1105,15 +1105,6 @@
   display: none;
 }
 
-.blockr-key-mac,
-.blockr-mac .blockr-key-ctrl {
-  display: none;
-}
-
-.blockr-mac .blockr-key-mac {
-  display: inline;
-}
-
 .blockr-save-rule {
   height: 1px;
   margin: 6px -6px;
