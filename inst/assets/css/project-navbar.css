@@ -10,11 +10,6 @@
   gap: 12px;
 }
 
-/* Spacer for future navbar items */
-.manage-project-spacer {
-  flex: 1;
-}
-
 /* --- Tabbed Dropdown Menu --- */
 /* The workflows panel: blockr.ui's menu surface (bg-raised, 1px
    border-default, radius 10, shadow-md), with tabs on top. Its rows are menu
@@ -29,53 +24,6 @@
   margin-top: 4px !important;
   background: var(--blockr-color-bg-raised);
   color: var(--blockr-color-text-default);
-}
-
-/* Tab bar */
-.blockr-tab-bar {
-  display: flex;
-  /* even gaps around content-sized tabs: equal outer margins and equal
-     inter-tab gaps, rather than equal-width boxes whose centred labels
-     read as uneven when the labels differ in width */
-  justify-content: space-evenly;
-  border-bottom: 1px solid var(--blockr-color-border-default);
-  background: var(--blockr-color-bg-raised);
-  padding: 0;
-  /* the tab bar is the top element; round its corners so the dropdown's
-     rounded top corners aren't squared off by its background */
-  border-top-left-radius: 10px;
-  border-top-right-radius: 10px;
-}
-
-.blockr-tab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 11px 8px;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  font-size: var(--blockr-font-size-base);
-  font-weight: var(--blockr-font-weight-normal);
-  color: var(--blockr-color-text-muted);
-  cursor: pointer;
-  transition: color var(--blockr-transition);
-}
-
-.blockr-tab:hover {
-  color: var(--blockr-color-text-default);
-}
-
-.blockr-tab.active {
-  color: var(--blockr-color-text-accent);
-  border-bottom-color: var(--blockr-color-border-accent);
-}
-
-.blockr-tab svg {
-  width: 14px;
-  height: 14px;
 }
 
 /* Tab panels */
@@ -327,14 +275,6 @@
   padding: 8px 10px 4px;
 }
 
-/* --- Workflow (rack) ID --- */
-.blockr-navbar-id-area {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
 .blockr-navbar-title {
   display: block;
   padding: 6px 10px;
@@ -344,72 +284,15 @@
   line-height: 1.2;
 }
 
-.blockr-navbar-rack-id {
-  font-family: var(--bs-font-monospace, monospace);
-  color: #555;
-  white-space: nowrap;
-}
-
 .blockr-rack-id-hint {
   margin: 4px 0 0;
   font-size: 0.8rem;
   color: hsl(220, 3%, 45%);
 }
 
-/* --- Divider --- */
-.blockr-navbar-divider {
-  display: block;
-  width: 1px;
-  height: 20px;
-  background: hsl(220, 3%, 85%);
-}
-
-/* --- Save Section --- */
-.blockr-navbar-save-section {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.blockr-navbar-meta {
-  font-size: 0.75rem;
-  color: #999;
-}
-
-.blockr-navbar-save-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  background: transparent;
-  border: 1px solid hsl(220, 3%, 91%);
-  border-radius: 6px;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.blockr-navbar-save-btn:hover {
-  background: hsl(220, 3%, 97%);
-  border-color: hsl(220, 3%, 85%);
-  color: #333;
-}
-
-.blockr-navbar-save-btn svg {
-  width: 14px;
-  height: 14px;
-}
-
 /* --- Save Split Button --- */
 .blockr-navbar-save-group {
   display: inline-flex;
-}
-
-.blockr-navbar-save-group > .blockr-navbar-save-btn:first-child {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
 }
 
 .blockr-navbar-save-toggle {
@@ -420,63 +303,6 @@
 }
 
 .blockr-navbar-save-toggle::after {
-  margin: 0;
-}
-
-/* The Save and New menus are blockr.ui menus (`.blockr-menu`,
-   `.blockr-menu__item` on the Bootstrap dropdown); only the offset is here. */
-.blockr-navbar-save-menu,
-.blockr-navbar-new-menu {
-  margin-top: 4px !important;
-}
-
-/* --- New Button --- */
-.blockr-navbar-btn-new {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 28px;
-  padding: 0 12px;
-  background: transparent;
-  border: 1px solid hsl(220, 3%, 91%);
-  border-radius: 6px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.blockr-navbar-btn-new:hover {
-  background: hsl(220, 3%, 97%);
-  border-color: hsl(220, 3%, 85%);
-  color: #333;
-}
-
-.blockr-navbar-btn-new svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* --- New Split Button --- */
-.blockr-navbar-new-group {
-  display: inline-flex;
-}
-
-.blockr-navbar-new-group > .blockr-navbar-btn-new:first-child {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.blockr-navbar-new-toggle {
-  gap: 0;
-  padding: 0 7px;
-  border-left: none;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.blockr-navbar-new-toggle::after {
   margin: 0;
 }
 
@@ -805,11 +631,6 @@
 /* ============================================
    Sharing Panel
    ============================================ */
-
-/* Allow dynamic tab button (uiOutput wrapper) to participate in flex */
-.blockr-tab-bar > .shiny-html-output {
-  display: contents;
-}
 
 .blockr-sharing-section {
   padding: 8px 12px;
