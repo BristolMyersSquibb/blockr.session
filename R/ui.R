@@ -8,6 +8,9 @@ manage_project_ui <- function(id, x) {
   ns <- NS(id)
 
   tagList(
+    # blockr.ui: the design tokens and the menu classes the navbar's menus
+    # take their look from.
+    blockr.ui::controls_dep(),
     # CSS and JS dependencies
     htmltools::htmlDependency(
       "project-navbar",
