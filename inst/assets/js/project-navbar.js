@@ -273,7 +273,7 @@ document.addEventListener('keydown', function(event) {
   if (event.key !== 's' && event.key !== 'S') return;
 
   var target = document.querySelector(
-    event.shiftKey ? '.blockr-save-as-item' : '.blockr-navbar-save-btn'
+    event.shiftKey ? '.blockr-save-as-item' : '.blockr-save-item'
   );
   if (!target) return;
 

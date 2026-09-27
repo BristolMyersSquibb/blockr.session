@@ -105,20 +105,20 @@ manage_project_ui <- function(id, x) {
           )
         )
       ),
-      # Beside the name, everything about keeping this workflow: the disk
-      # icon saves, the chevron opens Save, Save as, Download, the latest
-      # versions and Share. Share swaps the menu for the sharing panel.
+      # Beside the name, everything about keeping this workflow. "Save" opens
+      # its menu, like the name and the views: Save, Save as, Download, the
+      # latest versions and Share. Share swaps the menu for the sharing
+      # panel. Ctrl+S saves without the menu.
       tags$div(
         class = "dropdown blockr-navbar-save-group",
         `data-navbar-slot` = "save",
-        uiOutput(ns("save_controls"), inline = TRUE),
         tags$button(
           class = "blockr-navbar-save-toggle",
           type = "button",
-          `aria-label` = "Save options",
           `data-bs-toggle` = "dropdown",
           `data-bs-auto-close` = "outside",
           `aria-expanded` = "false",
+          "Save",
           navbar_chevron()
         ),
         tags$div(

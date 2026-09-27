@@ -1015,7 +1015,8 @@
 }
 
 .blockr-navbar-name-btn:hover .blockr-navbar-chev,
-.blockr-navbar-save-toggle:hover .blockr-navbar-chev {
+.blockr-navbar-save-toggle:hover .blockr-navbar-chev,
+.blockr-navbar-save-toggle[aria-expanded="true"] .blockr-navbar-chev {
   color: var(--blockr-color-text-default);
 }
 
@@ -1023,13 +1024,9 @@
   transform: rotate(180deg);
 }
 
-/* The name and the save menu wait for the server's first render (the name,
-   the disk icon), so the bar never shows their chevrons alone */
+/* The name and Save wait for the server's first render of the name, so the
+   bar never shows a bare chevron or Save beside an empty name */
 .blockr-navbar-name:has(.blockr-navbar-title:empty),
-.blockr-navbar-save-group:not(:has(.blockr-navbar-save-btn)) {
-  visibility: hidden;
-}
-
 .manage-project-navbar:has(.blockr-navbar-title:empty)
   .blockr-navbar-save-group {
   visibility: hidden;
@@ -1061,57 +1058,34 @@
   color: var(--blockr-color-text-warning);
 }
 
-/* Save: the word and a chevron, one hover for both */
-.blockr-navbar-save-group {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 6px;
-}
-
-.blockr-navbar-save-group:hover,
-.blockr-navbar-save-group:has(.blockr-navbar-save-toggle[aria-expanded="true"]) {
-  background: var(--blockr-color-bg-hover);
-}
-
-.blockr-navbar-save-btn,
+/* Save: the word and a chevron, like the name's button */
 .blockr-navbar-save-toggle {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
+  width: auto;
   height: 30px;
-  padding: 0;
+  padding: 0 8px;
   border: 0;
+  border-radius: 6px;
   background: transparent;
   color: var(--blockr-color-text-muted);
-  cursor: pointer;
-}
-
-/* Word and chevron 6px apart, as in the name's button */
-.blockr-navbar-save-btn {
-  padding: 0 0 0 8px;
-  border-radius: 6px 0 0 6px;
   font-size: var(--blockr-font-size-sm);
   font-weight: var(--blockr-font-weight-medium);
-}
-
-.blockr-navbar-save-toggle {
-  width: auto;
-  padding: 0 8px 0 6px;
-  border-radius: 0 6px 6px 0;
+  cursor: pointer;
 }
 
 .blockr-navbar-save-toggle::after {
   display: none;
 }
 
-.blockr-navbar-save-btn:hover,
-.blockr-navbar-save-toggle:hover {
-  background: transparent;
+.blockr-navbar-save-toggle:hover,
+.blockr-navbar-save-toggle[aria-expanded="true"] {
+  background: var(--blockr-color-bg-hover);
   border: 0;
   color: var(--blockr-color-text-default);
 }
 
-.blockr-navbar-save-btn:focus:not(:focus-visible),
 .blockr-navbar-save-toggle:focus:not(:focus-visible) {
   outline: none;
 }

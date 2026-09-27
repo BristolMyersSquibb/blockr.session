@@ -64,8 +64,8 @@ test_that("save-as appears in the name menu only once saved (#67, #81)", {
   testServer(
     manage_project_server,
     {
-      # unsaved: one Save button that asks for a name, and no Save As
-      unsaved <- output$save_controls
+      # unsaved: the menu's Save asks for a name, and no Save As
+      unsaved <- output$save_items
       expect_true(any(grepl("save_btn", unsaved, fixed = TRUE)))
       expect_true(any(grepl("Save\u2026", unsaved, fixed = TRUE)))
       expect_false(any(grepl("save_as_btn", output$save_items, fixed = TRUE)))
@@ -74,9 +74,8 @@ test_that("save-as appears in the name menu only once saved (#67, #81)", {
       prev_query("?id=saveas-test")
       session$flushReact()
 
-      # saved: still one button, and the save menu adds Save as and Download
-      saved <- output$save_controls
-      expect_false(any(grepl("dropdown-toggle", saved, fixed = TRUE)))
+      # saved: Save saves in place, and the menu adds Save as and Download
+      saved <- output$save_items
       expect_false(any(grepl("Save\u2026", saved, fixed = TRUE)))
       expect_true(any(grepl("save_as_btn", output$save_items, fixed = TRUE)))
       expect_true(any(grepl("download_current", output$save_items, fixed = TRUE)))
