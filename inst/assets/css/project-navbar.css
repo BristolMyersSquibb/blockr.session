@@ -423,40 +423,11 @@
   margin: 0;
 }
 
+/* The Save and New menus are blockr.ui menus (`.blockr-menu`,
+   `.blockr-menu__item` on the Bootstrap dropdown); only the offset is here. */
 .blockr-navbar-save-menu,
 .blockr-navbar-new-menu {
-  min-width: 200px;
-  margin-top: 6px;
-  padding: 6px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px -8px rgb(0 0 0 / 0.2);
-}
-
-.blockr-navbar-save-menu .dropdown-item,
-.blockr-navbar-new-menu .dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: #374151;
-}
-
-.blockr-navbar-save-menu .dropdown-item:hover,
-.blockr-navbar-save-menu .dropdown-item:focus,
-.blockr-navbar-new-menu .dropdown-item:hover,
-.blockr-navbar-new-menu .dropdown-item:focus {
-  background-color: #f3f4f6;
-  color: #111827;
-}
-
-.blockr-navbar-save-menu .dropdown-item svg,
-.blockr-navbar-new-menu .dropdown-item svg {
-  width: 14px;
-  height: 14px;
-  color: #6b7280;
+  margin-top: 4px !important;
 }
 
 /* --- New Button --- */
@@ -997,4 +968,268 @@
   font-size: var(--blockr-font-size-sm);
   font-style: italic;
   padding: 8px 0;
+}
+
+/* ============================================
+   The workflow: its name, then its save menu
+   ============================================
+   blockr.dock orders the pieces by their `data-navbar-slot`; the rules
+   here only draw them. Every control is 30px, hover is bg-hover. */
+
+.blockr-navbar-name-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--blockr-color-text-default);
+  cursor: pointer;
+}
+
+.blockr-navbar-name-btn:hover,
+.blockr-navbar-name-btn[aria-expanded="true"] {
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-navbar-name-btn .blockr-navbar-title {
+  padding: 0;
+  font-size: var(--blockr-font-size-base);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-default);
+  line-height: 1.2;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The design system's chevron: muted, default on hover, turned while the
+   menu is open */
+.blockr-navbar-chev {
+  display: inline-flex;
+  color: var(--blockr-color-text-muted);
+  transition: transform var(--blockr-transition), color var(--blockr-transition);
+}
+
+.blockr-navbar-name-btn:hover .blockr-navbar-chev,
+.blockr-navbar-save-toggle:hover .blockr-navbar-chev,
+.blockr-navbar-save-toggle[aria-expanded="true"] .blockr-navbar-chev {
+  color: var(--blockr-color-text-default);
+}
+
+[aria-expanded="true"] > .blockr-navbar-chev {
+  transform: rotate(180deg);
+}
+
+/* The name and Save wait for the server's first render of the name, so the
+   bar never shows a bare chevron or Save beside an empty name */
+.blockr-navbar-name:has(.blockr-navbar-title:empty),
+.manage-project-navbar:has(.blockr-navbar-title:empty)
+  .blockr-navbar-save-group {
+  visibility: hidden;
+}
+
+/* The name's menu: the workflow list, then New and the drafts row */
+.blockr-name-actions,
+.blockr-save-actions {
+  position: static;
+  display: block;
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.blockr-name-actions {
+  border-top: 1px solid var(--blockr-color-border-default);
+}
+
+.blockr-draft-count {
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--blockr-color-bg-warning);
+  color: var(--blockr-color-text-warning);
+}
+
+/* Save: the word and a chevron, like the name's button */
+.blockr-navbar-save-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: auto;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--blockr-color-text-muted);
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  cursor: pointer;
+}
+
+.blockr-navbar-save-toggle::after {
+  display: none;
+}
+
+.blockr-navbar-save-toggle:hover,
+.blockr-navbar-save-toggle[aria-expanded="true"] {
+  background: var(--blockr-color-bg-hover);
+  border: 0;
+  color: var(--blockr-color-text-default);
+}
+
+.blockr-navbar-save-toggle:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* The save menu: Save, Save as, Download; the latest versions; Share. As
+   wide as its rows need. */
+.blockr-save-menu {
+  width: max-content;
+  min-width: 240px;
+}
+
+.blockr-save-actions {
+  padding: 0;
+}
+
+/* The save menu is short: no scroll box, which would also clip the version
+   history beside it and, where scrollbars take room, leave a gap on the
+   right */
+.blockr-save-menu .blockr-save-panel {
+  max-height: none;
+  overflow: visible;
+}
+
+.blockr-save-versions {
+  position: relative;
+}
+
+.blockr-save-versions:has(.shiny-html-output:empty) {
+  display: none;
+}
+
+/* "Version history": a menu row whose chevron points right, and the recent
+   versions in a menu of their own beside it, open while the pointer is on
+   the row or the menu, or after a click */
+.blockr-versions-chev {
+  margin-left: auto;
+  padding-left: 12px;
+}
+
+.blockr-versions-chev svg {
+  transform: rotate(-90deg);
+}
+
+/* It points to a menu beside it, so it does not turn when that opens */
+.blockr-versions-row[aria-expanded="true"] > .blockr-versions-chev {
+  transform: none;
+}
+
+.blockr-versions-flyout {
+  display: none;
+  position: absolute;
+  top: 6px;
+  left: calc(100% + 11px);
+  z-index: 2;
+  min-width: 240px;
+  padding: 6px;
+  background: var(--blockr-color-bg-raised);
+  border: 1px solid var(--blockr-color-border-default);
+  border-radius: 10px;
+  box-shadow: var(--blockr-shadow-md);
+}
+
+/* Covers the gap between the row and the menu, so the pointer can cross */
+.blockr-versions-flyout::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -12px;
+  width: 12px;
+}
+
+.blockr-save-versions:hover .blockr-versions-flyout,
+.blockr-save-versions.is-open .blockr-versions-flyout {
+  display: block;
+}
+
+.blockr-save-versions:hover .blockr-versions-row,
+.blockr-save-versions.is-open .blockr-versions-row {
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-save-rule {
+  height: 1px;
+  margin: 6px -6px;
+  background: var(--blockr-color-border-default);
+}
+
+.blockr-save-menu .blockr-history-title {
+  padding: 4px 10px 2px;
+}
+
+.blockr-save-menu .blockr-history-empty {
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.blockr-save-menu .shiny-download-link.blockr-menu__item {
+  text-decoration: none;
+  color: var(--blockr-color-text-default);
+}
+
+/* Share's panel: a back row that names it */
+.blockr-sharing-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  margin-bottom: 4px;
+  border: 0;
+  border-radius: var(--blockr-radius-md);
+  background: transparent;
+  font-size: var(--blockr-font-size-base);
+  font-weight: var(--blockr-font-weight-semibold);
+  color: var(--blockr-color-text-default);
+  cursor: pointer;
+}
+
+.blockr-sharing-back:hover {
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-sharing-back svg {
+  width: 14px;
+  height: 14px;
+  color: var(--blockr-color-text-muted);
+}
+
+/* The avatar in the design system's look */
+.blockr-navbar-avatar {
+  width: 28px;
+  height: 28px;
+  background: color-mix(in srgb, var(--blockr-color-border-accent) 14%, transparent);
+  color: var(--blockr-color-text-accent-strong);
+}
+
+/* The focus outline is for the keyboard; a click leaves none */
+.blockr-navbar-name-btn:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.blockr-navbar-name-btn:focus-visible {
+  outline: var(--blockr-focus-outline);
+  outline-offset: var(--blockr-focus-offset);
 }
