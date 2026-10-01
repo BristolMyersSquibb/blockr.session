@@ -16,6 +16,7 @@ manage_project_ui <- function(id, x) {
       stylesheet = "css/project-navbar.css",
       script = "js/project-navbar.js"
     ),
+    blockr.ui::controls_dep(),
     # Full-width navbar container - single flex row with spacer
     tags$div(
       class = "manage-project-navbar",

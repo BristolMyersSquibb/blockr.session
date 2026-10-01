@@ -613,6 +613,17 @@ test_that("the notice disappears once every draft is dealt with", {
   )
 })
 
+test_that("the notice explains itself in a blockr tooltip (#122)", {
+
+  notice <- xml2::xml_find_first(
+    xml2::read_html(as.character(recovery_notice(NS("project"), list(1L)))),
+    "//button"
+  )
+
+  expect_false(xml2::xml_has_attr(notice, "title"))
+  expect_true(xml2::xml_has_attr(notice, "data-blockr-tooltip"))
+})
+
 test_that("discarding one offer leaves the others alone", {
 
   backend <- local_draft_backend()
