@@ -428,7 +428,7 @@ recovery_notice <- function(ns, offers) {
   tags$button(
     type = "button",
     class = "dropdown-item blockr-menu__item blockr-draft-notice",
-    title = "Unsaved work from an earlier session",
+    `data-blockr-tooltip` = "Unsaved work from an earlier session",
     onclick = shiny_input_js(ns("draft_menu"), "open"),
     tags$span(class = "blockr-menu__label", "Recover drafts"),
     tags$span(class = "blockr-draft-count", length(offers))

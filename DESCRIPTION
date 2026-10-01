@@ -47,8 +47,9 @@ Suggests:
     quarto,
     withr,
     xml2
+Remotes:
+    BristolMyersSquibb/blockr.core,
+    BristolMyersSquibb/blockr.ui
 VignetteBuilder: quarto
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
-Remotes:
-    BristolMyersSquibb/blockr.ui

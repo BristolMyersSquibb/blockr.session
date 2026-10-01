@@ -329,6 +329,52 @@ test_that("download outputs are registered even while hidden (#119)", {
   expect_identical(sort(setdiff(handlers, unsuspended)), character())
 })
 
+test_that("icon-only controls in the workflow lists are named (#122)", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  ns <- NS("project")
+
+  wf <- new_rack_record(
+    id = "wf-01",
+    name = "alpha",
+    user = "tester",
+    saved = Sys.time()
+  )
+
+  versions <- data.frame(
+    version = c("v2", "v1"),
+    created = Sys.time() - c(60, 120),
+    ref = c("bbb", "aaa")
+  )
+
+  doc <- xml2::read_html(
+    as.character(
+      tagList(
+        workflow_item(wf, backend, ns),
+        tags$table(
+          workflow_modal_row(wf, character(), backend, ns),
+          version_subrows(wf, versions, TRUE, NULL, backend, ns)
+        )
+      )
+    )
+  )
+
+  icon_only <- xml2::xml_find_all(
+    doc,
+    "//*[self::a or self::button][not(normalize-space())]"
+  )
+
+  expect_length(xml2::xml_find_all(doc, "//*[@title]"), 0L)
+  expect_setequal(
+    xml2::xml_attr(icon_only, "data-blockr-tooltip"),
+    c("Open in new tab", "Version history", "Download", "Delete")
+  )
+  expect_identical(
+    xml2::xml_attr(icon_only, "aria-label"),
+    xml2::xml_attr(icon_only, "data-blockr-tooltip")
+  )
+})
+
 test_that("suggest_copy_id suffixes -copy when no copy exists (#99)", {
 
   backend <- pins::board_temp(versioned = TRUE)

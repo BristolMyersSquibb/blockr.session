@@ -1176,6 +1176,7 @@ manage_project_server <- function(id, board, ...) {
 
 #' Rack-backed board loader
 #'
+#' @description
 #' A [blockr.core::board_loader()] for [blockr.core::serve()] that picks the
 #' board to build from the request URL. The board named by the URL handle
 #' (`board_name` / `user` / `version`) loads from the `session_mgmt_backend`
@@ -1189,7 +1190,14 @@ manage_project_server <- function(id, board, ...) {
 #' the visitor may not read does not resolve, whatever the `user` / `board_name`
 #' in the URL. Pair it with [manage_project()] when calling
 #' [blockr.core::serve()]:
-#' `serve(board, plugins = c(.., manage_project()), loader = rack_loader())`.
+#'
+#' ```r
+#' serve(
+#'   board,
+#'   plugins = custom_plugins(manage_project()),
+#'   loader = rack_loader()
+#' )
+#' ```
 #'
 #' @return A [blockr.core::board_loader()] object.
 #'
@@ -1336,6 +1344,8 @@ workflow_item <- function(wf, backend, ns) {
       class = "blockr-open-newtab",
       href = board_query_string(wf, backend),
       target = "_blank",
+      `aria-label` = "Open in new tab",
+      `data-blockr-tooltip` = "Open in new tab",
       onclick = "event.stopPropagation();",
       bsicons::bs_icon("box-arrow-up-right", size = "0.75em")
     )
@@ -1536,7 +1546,8 @@ workflow_modal_row <- function(wf, selected, backend, ns, expanded = FALSE) {
       class = "blockr-wf-expand-cell",
       tags$button(
         class = "btn btn-sm blockr-wf-expand",
-        title = "Version history",
+        `aria-label` = "Version history",
+        `data-blockr-tooltip` = "Version history",
         `aria-expanded` = if (expanded) "true" else "false",
         onclick = shiny_input_obj_js(
           ns("modal_toggle_expand"),
@@ -1578,11 +1589,14 @@ workflow_modal_row <- function(wf, selected, backend, ns, expanded = FALSE) {
           class = "btn btn-sm btn-outline-secondary",
           href = board_query_string(wf, backend),
           target = "_blank",
+          `aria-label` = "Open in new tab",
+          `data-blockr-tooltip` = "Open in new tab",
           bsicons::bs_icon("box-arrow-up-right", size = "0.85em")
         ),
         tags$button(
           class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
-          title = "Download",
+          `aria-label` = "Download",
+          `data-blockr-tooltip` = "Download",
           onclick = sprintf(
             "Shiny.setInputValue('%s', [{id: '%s', name: '%s',
               user: '%s'}], {priority: 'event'});
@@ -1599,7 +1613,8 @@ workflow_modal_row <- function(wf, selected, backend, ns, expanded = FALSE) {
         ),
         tags$button(
           class = "btn btn-sm btn-outline-danger blockr-wf-row-btn",
-          title = "Delete",
+          `aria-label` = "Delete",
+          `data-blockr-tooltip` = "Delete",
           onclick = sprintf(
             "if (confirm('Delete %s?')) {
               Shiny.setInputValue('%s',
@@ -1883,11 +1898,14 @@ version_subrow <- function(wf, v, i, is_active, active_version, backend, ns) {
             backend
           ),
           target = "_blank",
+          `aria-label` = "Open in new tab",
+          `data-blockr-tooltip` = "Open in new tab",
           bsicons::bs_icon("box-arrow-up-right", size = "0.85em")
         ),
         tags$button(
           class = "btn btn-sm btn-outline-primary blockr-wf-row-btn",
-          title = "Download",
+          `aria-label` = "Download",
+          `data-blockr-tooltip` = "Download",
           onclick = sprintf(
             "Shiny.setInputValue('%s',
               [{id: '%s', version: '%s', user: '%s'}],
@@ -1907,7 +1925,8 @@ version_subrow <- function(wf, v, i, is_active, active_version, backend, ns) {
         } else {
           tags$button(
             class = "btn btn-sm btn-outline-danger blockr-wf-row-btn",
-            title = "Delete",
+            `aria-label` = "Delete",
+            `data-blockr-tooltip` = "Delete",
             onclick = sprintf(
               "if (confirm('Delete this version?')) {
                 Shiny.setInputValue('%s',

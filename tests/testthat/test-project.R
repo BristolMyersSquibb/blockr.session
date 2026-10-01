@@ -1130,6 +1130,64 @@ test_that("the name reads Untitled until the workflow is saved (#81)", {
   )
 })
 
+test_that("the navbar shows the workflow id without a tooltip (#122)", {
+
+  withr::local_options(
+    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      prev_query("?id=loaded-board")
+      session$flushReact()
+
+      area <- xml2::read_html(output$rack_id_area$html)
+      tips <- xml2::xml_find_all(area, "//*[@title or @data-blockr-tooltip]")
+
+      expect_length(tips, 0L)
+    },
+    args = list(
+      board = reactiveValues(board = new_board(), board_id = "fresh-board")
+    )
+  )
+})
+
+test_that("the navbar UI loads the script that draws its tooltips (#122)", {
+
+  deps <- htmltools::findDependencies(
+    manage_project_ui("project", new_board())
+  )
+
+  expect_true("blockr-ui-js" %in% chr_xtr(deps, "name"))
+})
+
+test_that("the navbar's icon-only buttons are named (#125)", {
+
+  doc <- xml2::read_html(
+    as.character(
+      tagList(
+        manage_project_ui("project", new_board()),
+        save_controls(NS("project"), saved = TRUE)
+      )
+    )
+  )
+
+  icon_only <- xml2::xml_find_all(
+    doc,
+    "//*[self::a or self::button][not(normalize-space())]"
+  )
+
+  expect_setequal(
+    xml2::xml_attr(icon_only, "data-blockr-tooltip"),
+    c("Workflows", "Save")
+  )
+  expect_identical(
+    xml2::xml_attr(icon_only, "aria-label"),
+    xml2::xml_attr(icon_only, "data-blockr-tooltip")
+  )
+})
+
 test_that("first save mints the chosen id, not the board id (#81)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
