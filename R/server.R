@@ -1154,6 +1154,7 @@ manage_project_server <- function(id, board, ...) {
 
 #' Rack-backed board loader
 #'
+#' @description
 #' A [blockr.core::board_loader()] for [blockr.core::serve()] that picks the
 #' board to build from the request URL. The board named by the URL handle
 #' (`board_name` / `user` / `version`) loads from the `session_mgmt_backend`
@@ -1167,7 +1168,14 @@ manage_project_server <- function(id, board, ...) {
 #' the visitor may not read does not resolve, whatever the `user` / `board_name`
 #' in the URL. Pair it with [manage_project()] when calling
 #' [blockr.core::serve()]:
-#' `serve(board, plugins = c(.., manage_project()), loader = rack_loader())`.
+#'
+#' ```r
+#' serve(
+#'   board,
+#'   plugins = custom_plugins(manage_project()),
+#'   loader = rack_loader()
+#' )
+#' ```
 #'
 #' @return A [blockr.core::board_loader()] object.
 #'

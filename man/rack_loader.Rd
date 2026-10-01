@@ -23,5 +23,11 @@ under the \emph{visitor's} own Posit Connect credentials at both phases; a board
 the visitor may not read does not resolve, whatever the \code{user} / \code{board_name}
 in the URL. Pair it with \code{\link[=manage_project]{manage_project()}} when calling
 \code{\link[blockr.core:serve]{blockr.core::serve()}}:
-\code{serve(board, plugins = c(.., manage_project()), loader = rack_loader())}.
+
+\if{html}{\out{<div class="sourceCode r">}}\preformatted{serve(
+  board,
+  plugins = custom_plugins(manage_project()),
+  loader = rack_loader()
+)
+}\if{html}{\out{</div>}}
 }
