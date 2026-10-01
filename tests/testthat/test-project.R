@@ -1136,21 +1136,33 @@ test_that("the navbar shows the workflow id without a tooltip (#122)", {
     blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
   )
 
+  # The id is the name button's label, rendered as text
   testServer(
     manage_project_server,
     {
       prev_query("?id=loaded-board")
       session$flushReact()
 
-      area <- xml2::read_html(output$rack_id_area$html)
-      tips <- xml2::xml_find_all(area, "//*[@title or @data-blockr-tooltip]")
-
-      expect_length(tips, 0L)
+      expect_false(grepl("<", output$rack_id_area, fixed = TRUE))
     },
     args = list(
       board = reactiveValues(board = new_board(), board_id = "fresh-board")
     )
   )
+
+  # and neither the button nor the label carries a tooltip
+  doc <- xml2::read_html(
+    as.character(manage_project_ui("project", new_board()))
+  )
+  tips <- xml2::xml_find_all(
+    doc,
+    paste0(
+      "//*[contains(@class, 'blockr-navbar-name')]",
+      "//*[@title or @data-blockr-tooltip]"
+    )
+  )
+
+  expect_length(tips, 0L)
 })
 
 test_that("the navbar UI loads the script that draws its tooltips (#122)", {
@@ -1162,30 +1174,34 @@ test_that("the navbar UI loads the script that draws its tooltips (#122)", {
   expect_true("blockr-ui-js" %in% chr_xtr(deps, "name"))
 })
 
-test_that("the navbar's icon-only buttons are named (#125)", {
+test_that("the navbar's buttons are named (#125)", {
 
   doc <- xml2::read_html(
     as.character(
       tagList(
         manage_project_ui("project", new_board()),
-        save_controls(NS("project"), saved = TRUE)
+        save_items(NS("project"), saved = TRUE)
       )
     )
   )
 
-  icon_only <- xml2::xml_find_all(
+  # The name button's label is the workflow id, an output that is empty
+  # until the server renders it, so the button carries its own name
+  unlabelled <- xml2::xml_find_all(
     doc,
     "//*[self::a or self::button][not(normalize-space())]"
   )
 
-  expect_setequal(
-    xml2::xml_attr(icon_only, "data-blockr-tooltip"),
-    c("Workflows", "Save")
+  expect_identical(xml2::xml_attr(unlabelled, "aria-label"), "Workflows")
+
+  # The save menu's rows are named by their labels
+  rows <- xml2::xml_find_all(
+    doc,
+    "//*[contains(@class, 'blockr-menu__item')]"
   )
-  expect_identical(
-    xml2::xml_attr(icon_only, "aria-label"),
-    xml2::xml_attr(icon_only, "data-blockr-tooltip")
-  )
+
+  expect_true(length(rows) > 0L)
+  expect_true(all(nzchar(trimws(xml2::xml_text(rows)))))
 })
 
 test_that("first save mints the chosen id, not the board id (#81)", {
