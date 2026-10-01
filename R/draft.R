@@ -424,13 +424,14 @@ recovery_notice <- function(ns, offers) {
     return(NULL)
   }
 
+  # A row in the mark's menu, with the count as a badge
   tags$button(
     type = "button",
-    class = "btn btn-sm blockr-draft-notice",
+    class = "dropdown-item blockr-menu__item blockr-draft-notice",
     `data-blockr-tooltip` = "Unsaved work from an earlier session",
     onclick = shiny_input_js(ns("draft_menu"), "open"),
-    bsicons::bs_icon("clock-history"),
-    sprintf(" %d draft%s", length(offers), if (length(offers) > 1L) "s" else "")
+    tags$span(class = "blockr-menu__label", "Recover drafts"),
+    tags$span(class = "blockr-draft-count", length(offers))
   )
 }
 

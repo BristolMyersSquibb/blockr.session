@@ -8,6 +8,9 @@ manage_project_ui <- function(id, x) {
   ns <- NS(id)
 
   tagList(
+    # blockr.ui: the design tokens and the menu classes the navbar's menus
+    # take their look from.
+    blockr.ui::controls_dep(),
     # CSS and JS dependencies
     htmltools::htmlDependency(
       "project-navbar",
@@ -16,57 +19,40 @@ manage_project_ui <- function(id, x) {
       stylesheet = "css/project-navbar.css",
       script = "js/project-navbar.js"
     ),
-    blockr.ui::controls_dep(),
-    # Full-width navbar container - single flex row with spacer
+    # The navbar: the workflow on the left (its name, whose menu switches to
+    # another workflow, and its save menu beside it), then blockr.dock's views
+    # on the right. Each piece carries `data-navbar-slot`; blockr.dock's
+    # navbar orders the slots into one row, so this plugin's pieces and the
+    # dock's can interleave.
     tags$div(
       class = "manage-project-navbar",
-      # Hamburger menu with tabbed dropdown
+      # The workflow's name: its menu lists every workflow, a new one, and
+      # drafts from earlier sessions
       tags$div(
-        class = "dropdown",
+        class = "dropdown blockr-navbar-name",
+        `data-navbar-slot` = "title",
         tags$button(
-          class = "blockr-navbar-icon-btn",
+          class = "blockr-navbar-name-btn",
           type = "button",
           `aria-label` = "Workflows",
-          `data-blockr-tooltip` = "Workflows",
           `data-bs-toggle` = "dropdown",
           `data-bs-auto-close` = "outside",
           `aria-expanded` = "false",
-          bsicons::bs_icon("layers", size = "1.4em")
+          tagAppendAttributes(
+            textOutput(ns("rack_id_area"), inline = TRUE),
+            class = "blockr-navbar-title"
+          ),
+          navbar_chevron()
         ),
-        # Tabbed dropdown content
         tags$div(
           id = ns("tabbed_dropdown"),
-          class = "dropdown-menu blockr-tabbed-dropdown",
-          # Tab bar
-          tags$div(
-            class = "blockr-tab-bar",
-            tags$button(
-              id = ns("tab_workflows"),
-              class = "blockr-tab active",
-              type = "button",
-              `data-panel` = ns("panel_workflows"),
-              onclick = tab_switch_js(),
-              bsicons::bs_icon("layers"),
-              "Workflows"
-            ),
-            tags$button(
-              id = ns("tab_history"),
-              class = "blockr-tab",
-              type = "button",
-              `data-panel` = ns("panel_history"),
-              onclick = tab_switch_js(),
-              bsicons::bs_icon("clock-history"),
-              "History"
-            ),
-            uiOutput(ns("sharing_tab"))
-          ),
-          # Workflows panel
+          class = "dropdown-menu blockr-tabbed-dropdown blockr-name-menu",
+          # Sticky search over the full workflow list. Typing filters
+          # server-side; the list renders a window and materializes more as
+          # you scroll (see project-navbar.js).
           tags$div(
             id = ns("panel_workflows"),
             class = "blockr-tab-panel",
-            # Sticky search over the full workflow list. Typing filters
-            # server-side; the list renders a window and materializes more as
-            # you scroll (see project-navbar.js).
             tags$div(
               class = "blockr-workflow-search-wrap",
               tags$div(
@@ -105,90 +91,132 @@ manage_project_ui <- function(id, x) {
                   return false;",
                   ns("view_all_workflows")
                 ),
-                "Manage workflows ",
+                "All workflows ",
                 bsicons::bs_icon("arrow-right")
               )
             )
           ),
-          # History panel
+          # New workflow, new in a new tab, and the drafts row when there are
+          # drafts to recover
           tags$div(
-            id = ns("panel_history"),
-            class = "blockr-tab-panel blockr-tab-panel-hidden",
+            class = "blockr-menu blockr-name-actions",
+            uiOutput(ns("recovery_notice")),
+            uiOutput(ns("new_controls"))
+          )
+        )
+      ),
+      # Beside the name, everything about keeping this workflow. "Save" opens
+      # its menu, like the name and the views: Save, Save as, Download, the
+      # latest versions and Share. Share swaps the menu for the sharing
+      # panel. Ctrl+S saves without the menu.
+      tags$div(
+        class = "dropdown blockr-navbar-save-group",
+        `data-navbar-slot` = "save",
+        tags$button(
+          class = "blockr-navbar-save-toggle",
+          type = "button",
+          `data-bs-toggle` = "dropdown",
+          `data-bs-auto-close` = "outside",
+          `aria-expanded` = "false",
+          "Save",
+          navbar_chevron()
+        ),
+        tags$div(
+          class = "dropdown-menu blockr-tabbed-dropdown blockr-save-menu",
+          tags$div(
+            id = ns("panel_save"),
+            class = "blockr-tab-panel blockr-save-panel",
             tags$div(
-              class = "blockr-history-title",
-              uiOutput(ns("history_title"), inline = TRUE)
+              class = "blockr-menu blockr-save-actions",
+              uiOutput(ns("save_items"))
             ),
-            uiOutput(ns("version_history")),
+            # "Version history", whose recent versions open in a menu beside
+            # it: something people look at rarely. Hidden until there is a
+            # saved version.
             tags$div(
-              class = "blockr-tab-footer",
-              tags$a(
-                href = "#",
-                class = "blockr-workflows-link",
-                onclick = sprintf(
-                  "Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
-                  return false;",
-                  ns("view_all_versions")
-                ),
-                "View all versions ",
-                bsicons::bs_icon("arrow-right")
+              class = "blockr-save-versions",
+              tags$div(class = "blockr-save-rule"),
+              tags$div(
+                class = "blockr-menu blockr-save-actions",
+                tags$button(
+                  class = "dropdown-item blockr-menu__item blockr-versions-row",
+                  type = "button",
+                  `aria-haspopup` = "menu",
+                  `aria-expanded` = "false",
+                  tags$span(
+                    class = "blockr-menu__icon",
+                    bsicons::bs_icon("clock-history")
+                  ),
+                  tags$span(class = "blockr-menu__label", "Version history"),
+                  tagAppendAttributes(
+                    navbar_chevron(),
+                    class = "blockr-versions-chev"
+                  )
+                )
+              ),
+              tags$div(
+                class = "blockr-versions-flyout",
+                role = "menu",
+                uiOutput(ns("version_history")),
+                tags$a(
+                  href = "#",
+                  class = "blockr-workflows-link",
+                  onclick = sprintf(
+                    "Shiny.setInputValue('%s', Date.now(), {priority: 'event'});
+                    return false;",
+                    ns("view_all_versions")
+                  ),
+                  "All versions ",
+                  bsicons::bs_icon("arrow-right")
+                )
               )
-            )
+            ),
+            uiOutput(ns("share_item"))
           ),
           # Sharing panel (conditionally rendered from server)
           uiOutput(ns("sharing_panel"))
         )
       ),
-      # Read-only workflow (rack) ID -- rendered only once the workflow has a
-      # chosen id; an unsaved board has none, and "Not saved" carries that state
+      # The save state lives on the button (Save..., Save); the status text
+      # stays for screen readers and carries "Autosave failed" as a tooltip
       tagAppendAttributes(
-        uiOutput(ns("rack_id_area")),
-        class = "blockr-navbar-id-area"
+        textOutput(ns("save_status"), container = tags$span, inline = TRUE),
+        class = "visually-hidden"
       ),
-      # Recoverable drafts from earlier sessions; renders nothing when there
-      # are none, and is the way in to the recovery list
-      uiOutput(ns("recovery_notice"), inline = TRUE),
-      # Save status
-      tags$div(
-        class = "blockr-navbar-save-section",
-        tagAppendAttributes(
-          textOutput(
-            ns("save_status"),
-            container = tags$span,
-            inline = TRUE
-          ),
-          class = "blockr-navbar-meta"
-        ),
-        # Save on its own until the workflow is saved; the "Save as new
-        # workflow" split only appears once there is a record to fork from
-        tagAppendAttributes(
-          uiOutput(ns("save_controls")),
-          class = "btn-group blockr-navbar-save-group"
-        )
-      ),
-      # New split button: "New" creates in place; caret opens a fresh
-      # board in a new tab
       tagAppendAttributes(
-        uiOutput(ns("new_controls")),
-        class = "btn-group blockr-navbar-new-group"
-      ),
-      # Spacer to push avatar to the right
-      tags$span(class = "manage-project-spacer"),
-      # User avatar
-      uiOutput(ns("user_avatar"), inline = TRUE)
+        uiOutput(ns("user_avatar"), inline = TRUE),
+        `data-navbar-slot` = "account"
+      )
     )
   )
 }
 
-tab_switch_js <- function() {
-  "event.stopPropagation();
-  var dd = this.closest('.blockr-tabbed-dropdown');
-  dd.querySelectorAll('.blockr-tab').forEach(
-    t => t.classList.remove('active')
-  );
-  this.classList.add('active');
-  dd.querySelectorAll('.blockr-tab-panel').forEach(
-    p => p.classList.add('blockr-tab-panel-hidden')
-  );
-  var panel = document.getElementById(this.getAttribute('data-panel'));
-  if (panel) panel.classList.remove('blockr-tab-panel-hidden');"
+# Show one panel of a menu and hide the others: Share opens the sharing
+# panel in place of the save menu, and its back row returns.
+panel_switch_js <- function(panel) {
+  sprintf(
+    "event.stopPropagation();
+    var dd = this.closest('.blockr-tabbed-dropdown');
+    dd.querySelectorAll('.blockr-tab-panel').forEach(
+      p => p.classList.toggle('blockr-tab-panel-hidden', p.id !== '%s')
+    );",
+    panel
+  )
+}
+
+# The design system's one chevron (blockr.ui's Blockr.icons.chevron): 12px, a
+# 1.4px stroke; CSS colours it and turns it while its menu is open
+navbar_chevron <- function() {
+  tags$span(
+    class = "blockr-navbar-chev",
+    HTML(
+      paste0(
+        '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" ',
+        'stroke="currentColor" stroke-width="1.4" stroke-linecap="round" ',
+        'stroke-linejoin="round" aria-hidden="true">',
+        '<polyline points="3 4.5 6 7.5 9 4.5" ',
+        'vector-effect="non-scaling-stroke"></polyline></svg>'
+      )
+    )
+  )
 }

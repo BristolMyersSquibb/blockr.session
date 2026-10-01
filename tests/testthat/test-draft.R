@@ -564,7 +564,13 @@ test_that("the recovery list opens on the bare handle, not on every load", {
       session$flushReact()
 
       expect_identical(modals, 0L)
-      expect_match(notice_text(output$recovery_notice), "1 draft")
+      expect_match(
+        notice_text(output$recovery_notice), "Recover drafts", fixed = TRUE
+      )
+      expect_match(
+        notice_text(output$recovery_notice), "blockr-draft-count\">1<",
+        fixed = TRUE
+      )
 
       session$setInputs(draft_menu = "open")
 
@@ -600,7 +606,13 @@ test_that("the notice disappears once every draft is dealt with", {
     {
       session$flushReact()
 
-      expect_match(notice_text(output$recovery_notice), "1 draft")
+      expect_match(
+        notice_text(output$recovery_notice), "Recover drafts", fixed = TRUE
+      )
+      expect_match(
+        notice_text(output$recovery_notice), "blockr-draft-count\">1<",
+        fixed = TRUE
+      )
 
       session$setInputs(draft_discard = slot$id)
 
