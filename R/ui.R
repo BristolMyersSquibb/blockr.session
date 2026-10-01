@@ -26,6 +26,8 @@ manage_project_ui <- function(id, x) {
         tags$button(
           class = "blockr-navbar-icon-btn",
           type = "button",
+          `aria-label` = "Workflows",
+          `data-blockr-tooltip` = "Workflows",
           `data-bs-toggle` = "dropdown",
           `data-bs-auto-close` = "outside",
           `aria-expanded` = "false",
