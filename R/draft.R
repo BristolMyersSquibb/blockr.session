@@ -427,7 +427,7 @@ recovery_notice <- function(ns, offers) {
   tags$button(
     type = "button",
     class = "btn btn-sm blockr-draft-notice",
-    title = "Unsaved work from an earlier session",
+    `data-blockr-tooltip` = "Unsaved work from an earlier session",
     onclick = shiny_input_js(ns("draft_menu"), "open"),
     bsicons::bs_icon("clock-history"),
     sprintf(" %d draft%s", length(offers), if (length(offers) > 1L) "s" else "")

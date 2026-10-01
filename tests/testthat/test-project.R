@@ -1130,6 +1130,38 @@ test_that("the rack id area shows only for a saved workflow (#81)", {
   )
 })
 
+test_that("the navbar shows the workflow id without a tooltip (#122)", {
+
+  withr::local_options(
+    blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
+  )
+
+  testServer(
+    manage_project_server,
+    {
+      prev_query("?id=loaded-board")
+      session$flushReact()
+
+      area <- xml2::read_html(output$rack_id_area$html)
+      tips <- xml2::xml_find_all(area, "//*[@title or @data-blockr-tooltip]")
+
+      expect_length(tips, 0L)
+    },
+    args = list(
+      board = reactiveValues(board = new_board(), board_id = "fresh-board")
+    )
+  )
+})
+
+test_that("the navbar UI loads the script that draws its tooltips (#122)", {
+
+  deps <- htmltools::findDependencies(
+    manage_project_ui("project", new_board())
+  )
+
+  expect_true("blockr-ui-js" %in% chr_xtr(deps, "name"))
+})
+
 test_that("first save mints the chosen id, not the board id (#81)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
