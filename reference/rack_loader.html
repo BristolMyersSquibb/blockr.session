@@ -12,7 +12,12 @@ under the visitor's own Posit Connect credentials at both phases; a board
 the visitor may not read does not resolve, whatever the user / board_name
 in the URL. Pair it with manage_project() when calling
 blockr.core::serve():
-serve(board, plugins = c(.., manage_project()), loader = rack_loader())."><meta property="og:description" content="A blockr.core::board_loader() for blockr.core::serve() that picks the
+serve(
+  board,
+  plugins = custom_plugins(manage_project()),
+  loader = rack_loader()
+)
+"><meta property="og:description" content="A blockr.core::board_loader() for blockr.core::serve() that picks the
 board to build from the request URL. The board named by the URL handle
 (board_name / user / version) loads from the session_mgmt_backend
 backend; a new handle (minted when the user hits New) yields an empty
@@ -25,7 +30,12 @@ under the visitor's own Posit Connect credentials at both phases; a board
 the visitor may not read does not resolve, whatever the user / board_name
 in the URL. Pair it with manage_project() when calling
 blockr.core::serve():
-serve(board, plugins = c(.., manage_project()), loader = rack_loader())."></head><body>
+serve(
+  board,
+  plugins = custom_plugins(manage_project()),
+  loader = rack_loader()
+)
+"></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -82,8 +92,12 @@ connect), so a user-scoped backend such as <code><a href="user_pins_board.html">
 under the <em>visitor's</em> own Posit Connect credentials at both phases; a board
 the visitor may not read does not resolve, whatever the <code>user</code> / <code>board_name</code>
 in the URL. Pair it with <code><a href="manage_project.html">manage_project()</a></code> when calling
-<code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">blockr.core::serve()</a></code>:
-<code>serve(board, plugins = c(.., manage_project()), loader = rack_loader())</code>.</p>
+<code><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">blockr.core::serve()</a></code>:</p>
+<p></p><div class="sourceCode r"><pre><code><span><span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">serve</a></span><span class="op">(</span></span>
+<span>  <span class="va">board</span>,</span>
+<span>  plugins <span class="op">=</span> <span class="fu"><a href="https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html" class="external-link">custom_plugins</a></span><span class="op">(</span><span class="fu"><a href="../reference/manage_project.html">manage_project</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  loader <span class="op">=</span> <span class="fu"><a href="../reference/rack_loader.html">rack_loader</a></span><span class="op">(</span><span class="op">)</span></span>
+<span><span class="op">)</span></span></code></pre><p></p></div>
     </div>
 
     <div class="section level2">

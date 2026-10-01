@@ -20,7 +20,12 @@ phases; a board the visitor may not read does not resolve, whatever the
 [`manage_project()`](https://bristolmyerssquibb.github.io/blockr.session/reference/manage_project.md)
 when calling
 [`blockr.core::serve()`](https://bristolmyerssquibb.github.io/blockr.core/reference/serve.html):
-`serve(board, plugins = c(.., manage_project()), loader = rack_loader())`.
+
+    serve(
+      board,
+      plugins = custom_plugins(manage_project()),
+      loader = rack_loader()
+    )
 
 ## Usage
 
