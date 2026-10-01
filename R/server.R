@@ -1340,6 +1340,8 @@ save_controls <- function(ns, saved) {
     id = ns("save_btn"),
     class = "blockr-navbar-save-btn",
     type = "button",
+    `aria-label` = "Save",
+    `data-blockr-tooltip` = "Save",
     onclick = sprintf(
       "Shiny.setInputValue('%s', Date.now(), {priority: 'event'})",
       ns("save_btn")
