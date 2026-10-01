@@ -2,6 +2,13 @@
 
 ## blockr.session 0.1.1
 
+- The workflow listing and the draft notice show their tooltips as
+  blockr’s light card rather than the browser’s native box. The card
+  comes from blockr.ui, which the package now imports. The listing’s
+  icon-only buttons and links gain an accessible name, and the links
+  that open a workflow in a new tab gain a tooltip as well. The navbar’s
+  workflow name no longer has one.
+
 - Downloading a single workflow or a single version from a row of the
   workflow listing works again: both buttons drive a hidden download
   link that Shiny had left unregistered while hidden, so clicking did
