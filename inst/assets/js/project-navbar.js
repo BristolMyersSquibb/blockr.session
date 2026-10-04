@@ -1,8 +1,8 @@
 // Project navbar JavaScript handlers
 
 // --- Recent workflows ------------------------------------------------------
-// The name menu lists the workflows this browser opened, newest first. The
-// list is kept in localStorage under the app's path, so two apps on one server
+// The name menu lists the workflows this browser opened, the open one first
+// in semibold, then the others newest first. The list is kept in localStorage under the app's path, so two apps on one server
 // keep their own. The server never reads it: it only says which workflow
 // loaded (add) and which one the URL named but no longer exists (drop). A row
 // asks the server to open its workflow, as a row of the full list does.
@@ -10,7 +10,7 @@
 var BLOCKR_RECENT_KEEP = 10;
 var BLOCKR_RECENT_SHOWN = 8;
 
-// the open workflow, left out of the list since its name is on the button
+// the open workflow, listed first and not a pick
 var blockrRecentCurrent = null;
 
 function blockrRecentKey() {
@@ -56,9 +56,13 @@ function blockrTimeAgo(ms) {
 }
 
 function blockrRecentRender() {
-  var entries = blockrRecentRead().filter(function(e) {
-    return !(blockrRecentCurrent && blockrRecentSame(e, blockrRecentCurrent));
-  }).slice(0, BLOCKR_RECENT_SHOWN);
+  var isCurrent = function(e) {
+    return blockrRecentCurrent !== null && blockrRecentSame(e, blockrRecentCurrent);
+  };
+  var all = blockrRecentRead();
+  var entries = all.filter(isCurrent).concat(
+    all.filter(function(e) { return !isCurrent(e); })
+  ).slice(0, BLOCKR_RECENT_SHOWN);
 
   document.querySelectorAll('.blockr-recent-list').forEach(function(list) {
     var panel = list.closest('.blockr-tab-panel');
@@ -69,8 +73,8 @@ function blockrRecentRender() {
 
     if (!entries.length) {
       var empty = document.createElement('div');
-      empty.className = 'blockr-workflow-empty';
-      empty.textContent = 'Workflows you open show up here';
+      empty.className = 'blockr-recent-empty';
+      empty.textContent = 'None yet';
       list.appendChild(empty);
       return;
     }
@@ -83,6 +87,13 @@ function blockrRecentRender() {
       var tab = row.querySelector('.blockr-open-newtab');
       tab.setAttribute('href', e.href);
       tab.addEventListener('click', function(ev) { ev.stopPropagation(); });
+      if (isCurrent(e)) {
+        row.classList.add('current');
+        row.removeAttribute('tabindex');
+        row.removeAttribute('role');
+        list.appendChild(row);
+        return;
+      }
       row.addEventListener('click', function() {
         Shiny.setInputValue(
           input, { id: e.id, user: e.user || '' }, { priority: 'event' }

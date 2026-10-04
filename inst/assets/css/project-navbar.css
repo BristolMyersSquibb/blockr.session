@@ -82,6 +82,15 @@
   color: inherit;
 }
 
+/* Before any workflow was opened: one italic line under "Recent", 13px like
+   blockr.ui's empty rows, left-aligned with the rows' text. */
+.blockr-recent-empty {
+  padding: 4px 10px 8px;
+  font-size: var(--blockr-font-size-sm);
+  font-style: italic;
+  color: var(--blockr-color-text-muted);
+}
+
 .blockr-recent-list .blockr-workflow-item:focus-visible,
 .blockr-recent-list .blockr-workflow-item:active {
   background-color: var(--blockr-color-bg-hover);
