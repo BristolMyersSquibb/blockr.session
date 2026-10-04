@@ -26,8 +26,8 @@ manage_project_ui <- function(id, x) {
     # dock's can interleave.
     tags$div(
       class = "manage-project-navbar",
-      # The workflow's name: its menu lists every workflow, a new one, and
-      # drafts from earlier sessions
+      # The workflow's name: its menu lists the workflows opened recently, a
+      # new one, and drafts from earlier sessions
       tags$div(
         class = "dropdown blockr-navbar-name",
         `data-navbar-slot` = "title",
@@ -47,40 +47,20 @@ manage_project_ui <- function(id, x) {
         tags$div(
           id = ns("tabbed_dropdown"),
           class = "dropdown-menu blockr-tabbed-dropdown blockr-name-menu",
-          # Sticky search over the full workflow list. Typing filters
-          # server-side; the list renders a window and materializes more as
-          # you scroll (see project-navbar.js).
+          # The workflows this browser opened, newest first. The browser
+          # keeps the list and draws the rows from the template (see
+          # project-navbar.js); the server only reports each workflow that
+          # loads, so opening the menu reads nothing from the backend. Every
+          # workflow is under "All workflows".
           tags$div(
             id = ns("panel_workflows"),
             class = "blockr-tab-panel",
+            tags$div(class = "blockr-workflows-section", "Recent"),
             tags$div(
-              class = "blockr-workflow-search-wrap",
-              tags$div(
-                class = "blockr-workflow-search",
-                bsicons::bs_icon("search", size = "0.9em"),
-                tags$input(
-                  id = ns("workflow_filter"),
-                  type = "text",
-                  class = "blockr-workflow-search-input",
-                  placeholder = "Search workflows...",
-                  autocomplete = "off",
-                  oninput = sprintf(
-                    "Shiny.setInputValue('%s', this.value,
-                    {priority: 'event'})",
-                    ns("workflow_filter")
-                  ),
-                  onkeydown = "blockrWorkflowSearchKey(event, this)"
-                ),
-                tags$span(
-                  class = "blockr-workflow-count",
-                  textOutput(ns("workflow_count"), inline = TRUE)
-                )
-              )
+              class = "blockr-workflows-list blockr-recent-list",
+              `data-load-input` = ns("load_workflow")
             ),
-            tags$div(
-              class = "blockr-workflows-list",
-              uiOutput(ns("recent_workflows"))
-            ),
+            recent_row_template(),
             tags$div(
               class = "blockr-tab-footer",
               tags$a(

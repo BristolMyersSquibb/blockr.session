@@ -1,114 +1,128 @@
 // Project navbar JavaScript handlers
 
-// --- Workflow list: keyboard nav + infinite scroll ------------------------
-// The server renders a window of the (server-filtered) list plus a sentinel at
-// the bottom; scrolling the sentinel into view asks the server for the next
-// batch, which it appends. Search is a server-side Shiny input.
+// --- Recent workflows ------------------------------------------------------
+// The name menu lists the workflows this browser opened, newest first. The
+// list is kept in localStorage under the app's path, so two apps on one server
+// keep their own. The server never reads it: it only says which workflow
+// loaded (add) and which one the URL named but no longer exists (drop). A row
+// asks the server to open its workflow, as a row of the full list does.
 
-function blockrWorkflowPanel(el) {
-  return el.closest('.blockr-tab-panel');
+var BLOCKR_RECENT_KEEP = 10;
+var BLOCKR_RECENT_SHOWN = 8;
+
+// the open workflow, left out of the list since its name is on the button
+var blockrRecentCurrent = null;
+
+function blockrRecentKey() {
+  return 'blockr-recent:' + window.location.pathname;
 }
 
-function blockrWorkflowSearchKey(event, input) {
-  if (['ArrowDown', 'ArrowUp', 'Enter'].indexOf(event.key) === -1) return;
+function blockrRecentRead() {
+  try {
+    var list = JSON.parse(window.localStorage.getItem(blockrRecentKey()));
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+}
 
-  var panel = blockrWorkflowPanel(input);
-  if (!panel) return;
+function blockrRecentWrite(list) {
+  try {
+    window.localStorage.setItem(blockrRecentKey(), JSON.stringify(list));
+  } catch (e) {
+    // storage full or switched off: the menu just stays empty
+  }
+}
 
-  var items = Array.prototype.slice.call(
-    panel.querySelectorAll('.blockr-workflow-item')
+function blockrRecentSame(a, b) {
+  return a.id === b.id && (a.user || '') === (b.user || '');
+}
+
+// The wording of format_time_ago() in R
+function blockrTimeAgo(ms) {
+  var secs = (Date.now() - ms) / 1000;
+  var unit = function(n, word) {
+    n = Math.floor(n);
+    return n + ' ' + word + (n > 1 ? 's' : '') + ' ago';
+  };
+  if (secs < 60) return 'Just now';
+  if (secs < 3600) return unit(secs / 60, 'min');
+  if (secs < 86400) return unit(secs / 3600, 'hour');
+  if (secs < 604800) return unit(secs / 86400, 'day');
+  if (secs < 2592000) return unit(secs / 604800, 'week');
+  return new Date(ms).toLocaleDateString(
+    'en-US', { month: 'short', day: '2-digit', year: 'numeric' }
   );
-  if (!items.length) return;
-
-  var current = -1;
-  for (var i = 0; i < items.length; i++) {
-    if (items[i].classList.contains('blockr-hi')) { current = i; break; }
-  }
-
-  if (event.key === 'Enter') {
-    // Act only on an explicitly highlighted row, so a stray Enter in the search
-    // box never navigates away from the current board.
-    if (current >= 0) {
-      event.preventDefault();
-      items[current].click();
-    }
-    return;
-  }
-
-  event.preventDefault();
-  if (current >= 0) items[current].classList.remove('blockr-hi');
-
-  var next;
-  if (event.key === 'ArrowDown') {
-    next = current < 0 ? 0 : Math.min(current + 1, items.length - 1);
-  } else {
-    next = current <= 0 ? 0 : current - 1;
-  }
-
-  items[next].classList.add('blockr-hi');
-  items[next].scrollIntoView({ block: 'nearest' });
 }
 
-// The IntersectionObserver on the sentinel (a fresh node each render). Root is
-// the scrolling panel, so it fires near the bottom; a still-visible sentinel
-// keeps materializing batches until the panel fills.
-var blockrSentinelObserver = null;
+function blockrRecentRender() {
+  var entries = blockrRecentRead().filter(function(e) {
+    return !(blockrRecentCurrent && blockrRecentSame(e, blockrRecentCurrent));
+  }).slice(0, BLOCKR_RECENT_SHOWN);
 
-function blockrArmWorkflowSentinel() {
-  if (blockrSentinelObserver) blockrSentinelObserver.disconnect();
+  document.querySelectorAll('.blockr-recent-list').forEach(function(list) {
+    var panel = list.closest('.blockr-tab-panel');
+    var tpl = panel && panel.querySelector('.blockr-recent-row-template');
+    var input = list.getAttribute('data-load-input');
 
-  var sentinel = document.querySelector('.blockr-workflow-sentinel');
-  if (!sentinel) return;
+    list.replaceChildren();
 
-  blockrSentinelObserver = new IntersectionObserver(
-    function(entries) {
-      entries.forEach(function(entry) {
-        if (entry.isIntersecting) {
-          Shiny.setInputValue(
-            sentinel.getAttribute('data-input-id'),
-            Date.now(),
-            { priority: 'event' }
-          );
+    if (!entries.length) {
+      var empty = document.createElement('div');
+      empty.className = 'blockr-workflow-empty';
+      empty.textContent = 'Workflows you open show up here';
+      list.appendChild(empty);
+      return;
+    }
+
+    entries.forEach(function(e) {
+      var row = tpl.content.firstElementChild.cloneNode(true);
+      row.querySelector('.blockr-workflow-name').textContent = e.name || e.id;
+      row.querySelector('.blockr-workflow-meta').textContent =
+        blockrTimeAgo(e.opened);
+      var tab = row.querySelector('.blockr-open-newtab');
+      tab.setAttribute('href', e.href);
+      tab.addEventListener('click', function(ev) { ev.stopPropagation(); });
+      row.addEventListener('click', function() {
+        Shiny.setInputValue(
+          input, { id: e.id, user: e.user || '' }, { priority: 'event' }
+        );
+      });
+      row.addEventListener('keydown', function(ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          row.click();
         }
       });
-    },
-    { root: sentinel.closest('.blockr-tab-panel'), rootMargin: '120px' }
-  );
-
-  blockrSentinelObserver.observe(sentinel);
-}
-
-// Re-arm whenever the list re-renders. A MutationObserver on the static list
-// container catches every server render (open, load-more, filter). We use it
-// rather than shiny:value, which is a jQuery event that addEventListener misses.
-function blockrWatchWorkflowLists() {
-  document.querySelectorAll('.blockr-workflows-list').forEach(function(list) {
-    if (list.dataset.blockrWatched) return;
-    list.dataset.blockrWatched = '1';
-    new MutationObserver(blockrArmWorkflowSentinel).observe(
-      list,
-      { childList: true, subtree: true }
-    );
+      list.appendChild(row);
+    });
   });
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', blockrWatchWorkflowLists);
-} else {
-  blockrWatchWorkflowLists();
-}
+Shiny.addCustomMessageHandler('blockr-recent-add', function(msg) {
+  blockrRecentCurrent = msg;
+  var list = blockrRecentRead().filter(function(e) {
+    return !blockrRecentSame(e, msg);
+  });
+  list.unshift({
+    id: msg.id, user: msg.user, name: msg.name, href: msg.href,
+    opened: Date.now()
+  });
+  blockrRecentWrite(list.slice(0, BLOCKR_RECENT_KEEP));
+  blockrRecentRender();
+});
 
-// Focus the search when the dropdown opens, if the Workflows panel is visible.
-document.addEventListener('shown.bs.dropdown', function(event) {
-  blockrWatchWorkflowLists();
+Shiny.addCustomMessageHandler('blockr-recent-drop', function(msg) {
+  blockrRecentWrite(blockrRecentRead().filter(function(e) {
+    return !blockrRecentSame(e, msg);
+  }));
+  blockrRecentRender();
+});
 
-  var root = event.target.closest('.dropdown') || document;
-  var input = root.querySelector(
-    '.blockr-tab-panel:not(.blockr-tab-panel-hidden) .blockr-workflow-search-input'
-  );
-  if (!input) return;
-  input.focus();
-  input.select();
+// Draw on every open, so the menu picks up what other tabs opened meanwhile
+document.addEventListener('show.bs.dropdown', function(event) {
+  var root = event.target.closest('.dropdown');
+  if (root && root.querySelector('.blockr-recent-list')) blockrRecentRender();
 });
 
 // --- Manage-workflows modal: server-windowed table --------------------------
