@@ -306,6 +306,10 @@ manage_project_server <- function(id, board, ...) {
         )
       )
 
+      # Rendered while the menu is closed, so the menu opens at its full
+      # height rather than growing when the rows arrive
+      outputOptions(output, "new_controls", suspendWhenHidden = FALSE)
+
       observeEvent(
         input$load_workflow,
         navigate_to_board(

@@ -346,6 +346,10 @@ draft_recovery <- function(input, output, backend, current_id,
     recovery_notice(session$ns, offers())
   )
 
+  # The offers are listed once at start anyway; rendering the row while the
+  # name menu is closed keeps the menu from growing as it opens
+  outputOptions(output, "recovery_notice", suspendWhenHidden = FALSE)
+
   observeEvent(
     input$draft_menu,
     showModal(recovery_modal(session$ns), session)
