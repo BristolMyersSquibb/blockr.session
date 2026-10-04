@@ -1,30 +1,24 @@
-test_that("workflow menu windows results and filters server-side", {
+test_that("the name menu's recent list hears about each load", {
 
   withr::local_options(
     blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
   )
 
-  records <- lapply(
-    seq_len(25L),
-    function(i) {
-      new_rack_record(
-        id = sprintf("wf-%02d", i),
-        name = if (i <= 5L) sprintf("alpha-%d", i) else sprintf("beta-%d", i),
-        user = "tester",
-        saved = Sys.time()
-      )
-    }
-  )
-
-  n_items <- function(out) {
-    html <- paste(as.character(out), collapse = "")
-    hits <- gregexpr("class=\"blockr-workflow-item\"", html, fixed = TRUE)[[1L]]
-    if (length(hits) == 1L && hits == -1L) 0L else length(hits)
-  }
+  added <- list()
+  dropped <- list()
+  found <- TRUE
 
   local_mocked_bindings(
-    rack_list = function(backend, ...) records,
-    board_query_string = function(x, backend, ...) "?board=test",
+    rack_name = function(id, backend, ...) "Alpha",
+    rack_info = function(id, backend, ...) {
+      if (found) data.frame(created = Sys.time()) else NULL
+    },
+    recent_add = function(id, name, backend, session) {
+      added[[length(added) + 1L]] <<- list(id = id$id, name = name)
+    },
+    recent_drop_missing = function(id, backend, session) {
+      dropped[[length(dropped) + 1L]] <<- id$id
+    },
     .package = "blockr.session"
   )
 
@@ -33,48 +27,65 @@ test_that("workflow menu windows results and filters server-side", {
     {
       session$flushReact()
 
-      expect_length(all_workflows(), 25L)
-      expect_identical(n_shown(), 10L)
-      expect_identical(n_items(output$recent_workflows), 10L)
-      expect_match(
-        paste(as.character(output$recent_workflows), collapse = ""),
-        "blockr-workflow-sentinel"
-      )
+      # an untitled board is not a workflow yet
+      expect_length(added, 0L)
+      expect_length(dropped, 0L)
 
-      session$setInputs(workflow_load_more = 1)
+      prev_query("?id=wf-01")
       session$flushReact()
 
-      expect_identical(n_shown(), 20L)
-      expect_identical(n_items(output$recent_workflows), 20L)
+      expect_identical(added, list(list(id = "wf-01", name = "Alpha")))
 
-      session$setInputs(workflow_filter = "alpha")
-      session$elapse(300)
+      found <<- FALSE
+      prev_query("?id=gone")
       session$flushReact()
 
-      expect_length(filtered_workflows(), 5L)
-      expect_identical(n_shown(), 10L)
-      expect_identical(n_items(output$recent_workflows), 5L)
-      expect_identical(output$workflow_count, "5 / 25")
-      expect_no_match(
-        paste(as.character(output$recent_workflows), collapse = ""),
-        "blockr-workflow-sentinel"
-      )
-
-      session$setInputs(workflow_filter = "zzz")
-      session$elapse(300)
-      session$flushReact()
-
-      expect_length(filtered_workflows(), 0L)
-      expect_identical(n_items(output$recent_workflows), 0L)
-      expect_match(
-        paste(as.character(output$recent_workflows), collapse = ""),
-        "blockr-workflow-noresults"
-      )
+      expect_length(added, 1L)
+      expect_identical(dropped, list("gone"))
     },
     args = list(
       board = reactiveValues(board = new_board(), board_id = "menu-test")
     )
   )
+})
+
+test_that("recent entries open the latest save, and only gone ones drop", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+
+  sent <- list()
+  session <- list(
+    sendCustomMessage = function(type, message) {
+      sent[[length(sent) + 1L]] <<- list(type = type, message = message)
+    }
+  )
+
+  local_mocked_bindings(
+    notify = function(...) invisible(NULL),
+    .package = "blockr.session"
+  )
+
+  id <- as_rack_id(list(id = "wf-01", version = "v2"), backend)
+  recent_add(id, "Alpha", backend, session)
+
+  expect_identical(sent[[1L]]$type, "blockr-recent-add")
+  expect_identical(sent[[1L]]$message$name, "Alpha")
+  expect_identical(sent[[1L]]$message$href, "?id=wf-01")
+
+  local_mocked_bindings(
+    rack_exists = function(id, backend, ...) stop("backend down"),
+    .package = "blockr.session"
+  )
+  recent_drop_missing(id, backend, session)
+  expect_length(sent, 1L)
+
+  local_mocked_bindings(
+    rack_exists = function(id, backend, ...) FALSE,
+    .package = "blockr.session"
+  )
+  recent_drop_missing(id, backend, session)
+  expect_identical(sent[[2L]]$type, "blockr-recent-drop")
+  expect_identical(sent[[2L]]$message, list(id = "wf-01", user = ""))
 })
 
 test_that("manage-workflows modal windows results and filters server-side", {
@@ -350,7 +361,7 @@ test_that("icon-only controls in the workflow lists are named (#122)", {
   doc <- xml2::read_html(
     as.character(
       tagList(
-        workflow_item(wf, backend, ns),
+        recent_row_template(),
         tags$table(
           workflow_modal_row(wf, character(), backend, ns),
           version_subrows(wf, versions, TRUE, NULL, backend, ns)

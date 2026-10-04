@@ -60,87 +60,6 @@
   margin-bottom: 6px;
 }
 
-/* Sticky search on top of the scrollable workflow list: the menu's filter
-   box (30px, 13px, no focus ring, since it holds focus while the panel is
-   open). */
-.blockr-workflow-search-wrap {
-  position: sticky;
-  top: -6px;
-  z-index: 3;
-  background: var(--blockr-color-bg-raised);
-  margin: -6px -6px 6px;
-  padding: 6px;
-  border-bottom: 1px solid var(--blockr-color-border-default);
-}
-
-.blockr-workflow-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 30px;
-  background: var(--blockr-color-bg-field);
-  border: 1px solid var(--blockr-color-border-default);
-  border-radius: var(--blockr-radius-md);
-  padding: 0 9px;
-}
-
-.blockr-workflow-search svg {
-  color: var(--blockr-color-text-muted);
-  flex: none;
-}
-
-.blockr-workflow-search-input {
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: var(--blockr-font-size-sm);
-  width: 100%;
-  color: var(--blockr-color-text-default);
-  font-family: inherit;
-}
-
-.blockr-workflow-search-input::placeholder {
-  color: var(--blockr-color-text-muted);
-}
-
-.blockr-workflow-count {
-  font-size: 11px;
-  color: var(--blockr-color-text-muted);
-  flex: none;
-  font-variant-numeric: tabular-nums;
-}
-
-.blockr-workflow-noresults {
-  color: var(--blockr-color-text-muted);
-  font-style: italic;
-  text-align: center;
-  padding: 10px 12px;
-  font-size: var(--blockr-font-size-sm);
-}
-
-/* Infinite-scroll sentinel: a scroll into view asks the server for more */
-.blockr-workflow-sentinel {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 32px;
-}
-
-.blockr-workflow-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--blockr-color-border-default);
-  border-top-color: var(--blockr-color-text-muted);
-  border-radius: 50%;
-  animation: blockr-workflow-spin 0.7s linear infinite;
-}
-
-@keyframes blockr-workflow-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* Individual workflow item: a menu row with a second line of meta text. */
 .blockr-workflow-item {
   display: flex;
@@ -152,9 +71,30 @@
   transition: background-color var(--blockr-transition);
 }
 
-.blockr-workflow-item:hover,
-.blockr-workflow-item.blockr-hi {
+.blockr-workflow-item:hover {
   background-color: var(--blockr-color-bg-hover);
+}
+
+/* The recent rows are dropdown items, so the arrow keys reach them; keep
+   Bootstrap's item look (nowrap, accent fill when pressed) off them. */
+.blockr-recent-list .blockr-workflow-item {
+  white-space: normal;
+  color: inherit;
+}
+
+/* Before any workflow was opened: one italic line under "Recent", 13px like
+   blockr.ui's empty rows, left-aligned with the rows' text. */
+.blockr-recent-empty {
+  padding: 4px 10px 8px;
+  font-size: var(--blockr-font-size-sm);
+  font-style: italic;
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-recent-list .blockr-workflow-item:focus-visible,
+.blockr-recent-list .blockr-workflow-item:active {
+  background-color: var(--blockr-color-bg-hover);
+  color: inherit;
 }
 
 .blockr-workflow-item-content {

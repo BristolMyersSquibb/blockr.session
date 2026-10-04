@@ -109,9 +109,17 @@ test_that("save persists board to backend", {
   expect_true("save-test" %in% saved$name)
 })
 
-test_that("recent_workflows renders the saved record keyed on its id (#61)", {
+test_that("a first save puts the record on the recent list (#61)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
+
+  added <- character()
+  local_mocked_bindings(
+    recent_add = function(id, name, backend, session) {
+      added <<- c(added, id$id)
+    },
+    .package = "blockr.session"
+  )
 
   test_board <- new_board(
     blocks = c(a = new_dataset_block("iris"))
@@ -121,9 +129,9 @@ test_that("recent_workflows renders the saved record keyed on its id (#61)", {
     manage_project_server,
     {
       first_save(session, "rebel_eyas")
-      html <- as.character(output$recent_workflows)
+      session$flushReact()
 
-      expect_true(any(grepl("rebel_eyas", html, fixed = TRUE)))
+      expect_identical(added, "rebel_eyas")
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "rebel_eyas")
@@ -1157,8 +1165,8 @@ test_that("the navbar shows the workflow id without a tooltip (#122)", {
   tips <- xml2::xml_find_all(
     doc,
     paste0(
-      "//*[contains(@class, 'blockr-navbar-name')]",
-      "//*[@title or @data-blockr-tooltip]"
+      "//*[contains(@class, 'blockr-navbar-name-btn')]",
+      "/descendant-or-self::*[@title or @data-blockr-tooltip]"
     )
   )
 
@@ -1186,13 +1194,17 @@ test_that("the navbar's buttons are named (#125)", {
   )
 
   # The name button's label is the workflow id, an output that is empty
-  # until the server renders it, so the button carries its own name
+  # until the server renders it, so the button carries its own name, as
+  # does the recent rows' icon link
   unlabelled <- xml2::xml_find_all(
     doc,
     "//*[self::a or self::button][not(normalize-space())]"
   )
 
-  expect_identical(xml2::xml_attr(unlabelled, "aria-label"), "Workflows")
+  expect_setequal(
+    xml2::xml_attr(unlabelled, "aria-label"),
+    c("Workflows", "Open in new tab")
+  )
 
   # The save menu's rows are named by their labels
   rows <- xml2::xml_find_all(

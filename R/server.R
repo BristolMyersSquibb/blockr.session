@@ -85,8 +85,10 @@ manage_project_server <- function(id, board, ...) {
 
           if (not_null(info) && nrow(info) > 0L) {
             save_status(format_time_ago(info$created[1L]))
+            recent_add(id, coal(nm, id$id), backend, session)
           } else {
             save_status("Not saved")
+            recent_drop_missing(id, backend, session)
           }
         },
         ignoreNULL = FALSE
@@ -251,80 +253,7 @@ manage_project_server <- function(id, board, ...) {
         tryCatch(rack_records(backend), error = function(e) list())
       })
 
-      workflow_query <- debounce(
-        reactive(coal(input$workflow_filter, "")),
-        250
-      )
-
-      filtered_workflows <- reactive(
-        search_workflows(all_workflows(), workflow_query())
-      )
-
       workflow_batch <- 10L
-      n_shown <- reactiveVal(workflow_batch)
-
-      observeEvent(
-        list(workflow_query(), refresh_trigger()),
-        n_shown(workflow_batch)
-      )
-
-      observeEvent(
-        input$workflow_load_more,
-        {
-          total <- length(filtered_workflows())
-          n_shown(min(n_shown() + workflow_batch, total))
-        }
-      )
-
-      output$workflow_count <- renderText(
-        {
-          total <- length(all_workflows())
-
-          if (total == 0L) {
-            return("")
-          }
-
-          if (nzchar(trimws(workflow_query()))) {
-            paste0(length(filtered_workflows()), " / ", total)
-          } else {
-            as.character(total)
-          }
-        }
-      )
-
-      output$recent_workflows <- renderUI(
-        {
-          if (length(all_workflows()) == 0L) {
-            return(
-              tags$div(class = "blockr-workflow-empty", "No saved workflows")
-            )
-          }
-
-          matches <- filtered_workflows()
-
-          if (length(matches) == 0L) {
-            return(
-              tags$div(
-                class = "blockr-workflow-noresults",
-                "No workflows match your search"
-              )
-            )
-          }
-
-          shown <- matches[seq_len(min(n_shown(), length(matches)))]
-
-          tagList(
-            lapply(shown, workflow_item, backend, session$ns),
-            if (length(matches) > length(shown)) {
-              tags$div(
-                class = "blockr-workflow-sentinel",
-                `data-input-id` = session$ns("workflow_load_more"),
-                tags$div(class = "blockr-workflow-spinner")
-              )
-            }
-          )
-        }
-      )
 
       output$save_status <- renderText(
         save_status()
@@ -376,6 +305,10 @@ manage_project_server <- function(id, board, ...) {
           )
         )
       )
+
+      # Rendered while the menu is closed, so the menu opens at its full
+      # height rather than growing when the rows arrive
+      outputOptions(output, "new_controls", suspendWhenHidden = FALSE)
 
       observeEvent(
         input$load_workflow,
@@ -1326,28 +1259,64 @@ search_workflows <- function(workflows, query) {
   )
 }
 
-workflow_item <- function(wf, backend, ns) {
+# The name menu's recent list lives in the browser (project-navbar.js). The
+# server tells it about each workflow that loaded, so it moves to the top, and
+# about one the URL names that no longer exists, so it leaves the list. A
+# version in the URL is left out: a recent entry opens the latest save.
+recent_add <- function(id, name, backend, session) {
+  session$sendCustomMessage(
+    "blockr-recent-add",
+    list(
+      id = id$id,
+      user = coal(id$user, ""),
+      name = name,
+      href = board_query_string(list(id = id$id, user = id$user), backend)
+    )
+  )
+}
 
-  tags$div(
-    class = "blockr-workflow-item",
-    onclick = shiny_input_obj_js(
-      ns("load_workflow"),
-      id = wf$id,
-      user = coal(wf$user, "")
-    ),
+recent_drop_missing <- function(id, backend, session) {
+
+  exists <- tryCatch(rack_exists(id, backend), error = function(e) NA)
+
+  # a backend that fails to answer is no reason to forget the entry
+  if (!isFALSE(exists)) {
+    return(invisible(NULL))
+  }
+
+  session$sendCustomMessage(
+    "blockr-recent-drop",
+    list(id = id$id, user = coal(id$user, ""))
+  )
+
+  notify(
+    sprintf("Workflow %s no longer exists", id$id),
+    type = "warning",
+    glue = FALSE,
+    session = session
+  )
+}
+
+# One row of the recent list, which project-navbar.js clones and fills in
+recent_row_template <- function() {
+  tags$template(
+    class = "blockr-recent-row-template",
     tags$div(
-      class = "blockr-workflow-item-content",
-      tags$div(class = "blockr-workflow-name", wf$name),
-      tags$div(class = "blockr-workflow-meta", record_time_ago(wf))
-    ),
-    tags$a(
-      class = "blockr-open-newtab",
-      href = board_query_string(wf, backend),
-      target = "_blank",
-      `aria-label` = "Open in new tab",
-      `data-blockr-tooltip` = "Open in new tab",
-      onclick = "event.stopPropagation();",
-      bsicons::bs_icon("box-arrow-up-right", size = "0.75em")
+      class = "dropdown-item blockr-workflow-item",
+      tabindex = "0",
+      role = "button",
+      tags$div(
+        class = "blockr-workflow-item-content",
+        tags$div(class = "blockr-workflow-name"),
+        tags$div(class = "blockr-workflow-meta")
+      ),
+      tags$a(
+        class = "blockr-open-newtab",
+        target = "_blank",
+        `aria-label` = "Open in new tab",
+        `data-blockr-tooltip` = "Open in new tab",
+        bsicons::bs_icon("box-arrow-up-right", size = "0.75em")
+      )
     )
   )
 }

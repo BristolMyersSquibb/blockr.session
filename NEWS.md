@@ -9,6 +9,13 @@
   shortcuts work before the menu has opened. The menus use blockr.ui's menu
   look and chevrons; the views menu on the right comes from blockr.dock.
 
+* The name's menu lists the workflows you opened recently, the open one
+  first in semibold and the others newest first, in place of every saved
+  workflow. The browser keeps the list, so opening the
+  menu reads nothing from the backend; a workflow that no longer exists
+  leaves the list the next time its link is opened. Search and the full
+  listing are under "All workflows".
+
 # blockr.session 0.1.1
 
 * The workflow listing and the draft notice show their tooltips as blockr's
