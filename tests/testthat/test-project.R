@@ -628,6 +628,46 @@ test_that("refuse_incompatible_load is a no-op without a session", {
   expect_silent(refuse_incompatible_load(simpleCondition("x"), NULL))
 })
 
+test_that("loader shows a deserialization error instead of blanking", {
+
+  backend <- pins::board_temp(versioned = TRUE)
+  withr::local_options(blockr.session_mgmt_backend = backend)
+
+  seed <- new_board(blocks = c(a = new_dataset_block("iris")))
+
+  testServer(
+    manage_project_server,
+    first_save(session, "stale"),
+    args = list(
+      board = reactiveValues(board = seed, board_id = "stale")
+    )
+  )
+
+  shown <- NULL
+  local_mocked_bindings(
+    blockr_deser = function(...) stop("unused argument (expose = 1)"),
+    notify_deser_error = function(cnd, session) {
+      shown <<- conditionMessage(cnd)
+      invisible()
+    }
+  )
+
+  fake_session <- list(
+    request = list(),
+    clientData = list(url_search = "?board_name=stale")
+  )
+
+  res <- rack_loader()$resolve(NULL, fake_session, new_board())
+
+  expect_s3_class(res, "board")
+  expect_length(board_block_ids(res), 0)
+  expect_match(shown, "unused argument")
+})
+
+test_that("notify_deser_error is a no-op without a session", {
+  expect_silent(notify_deser_error(simpleCondition("x"), NULL))
+})
+
 test_that("version history marks the URL version as current (#19)", {
 
   backend <- pins::board_temp(versioned = TRUE)

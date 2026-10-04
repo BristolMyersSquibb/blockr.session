@@ -1252,7 +1252,13 @@ rack_loader <- function() {
       return(clear_board(default))
     }
 
-    loaded <- tryCatch(blockr_deser(board_ser), error = function(e) NULL)
+    loaded <- tryCatch(
+      blockr_deser(board_ser),
+      error = function(e) {
+        notify_deser_error(e, session)
+        NULL
+      }
+    )
 
     if (is.null(loaded)) {
       return(clear_board(default))
@@ -1286,6 +1292,40 @@ refuse_incompatible_load <- function(cnd, session) {
     conditionMessage(cnd),
     type = "warning",
     glue = FALSE,
+    session = session
+  )
+}
+
+# A saved workflow can stop deserializing after a package update, e.g. a block
+# constructor no longer accepts an argument the workflow was saved with. Show
+# the error at the WS phase and keep it on screen, since the board it leaves
+# behind is empty. A notification rather than a modal: Shiny's modal needs
+# Bootstrap's JS.
+notify_deser_error <- function(cnd, session) {
+
+  if (is.null(session)) {
+    return(invisible())
+  }
+
+  msg <- conditionMessage(cnd)
+
+  log_error("Could not open workflow: ", msg, use_glue = FALSE)
+
+  showNotification(
+    tagList(
+      tags$strong("This workflow could not be opened."),
+      tags$br(),
+      "The saved workflow has not been changed. The error was:",
+      tags$pre(
+        style = paste(
+          "white-space: pre-wrap; margin: 6px 0 0; padding: 6px 8px;",
+          "font-size: 12px; background: rgba(0, 0, 0, 0.06); border: 0;"
+        ),
+        msg
+      )
+    ),
+    duration = NULL,
+    type = "error",
     session = session
   )
 }
