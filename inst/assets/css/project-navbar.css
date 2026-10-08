@@ -1022,14 +1022,6 @@
   color: var(--blockr-color-text-muted);
 }
 
-/* The avatar in the design system's look */
-.blockr-navbar-avatar {
-  width: 28px;
-  height: 28px;
-  background: color-mix(in srgb, var(--blockr-color-border-accent) 14%, transparent);
-  color: var(--blockr-color-text-accent-strong);
-}
-
 /* The focus outline is for the keyboard; a click leaves none */
 .blockr-navbar-name-btn:focus:not(:focus-visible) {
   outline: none;
