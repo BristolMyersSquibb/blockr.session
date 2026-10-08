@@ -1,15 +1,13 @@
-/* The signed-in user's initials, in the design system's look: accent text on
-   a tint of the accent */
 .blockr-navbar-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: color-mix(in srgb, var(--blockr-color-border-accent) 14%, transparent);
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 50%;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--blockr-color-text-accent-strong);
+  color: white;
   text-transform: uppercase;
 }
