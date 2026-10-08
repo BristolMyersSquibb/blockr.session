@@ -172,8 +172,9 @@ manage_project_ui <- function(id, x) {
           uiOutput(ns("sharing_panel"))
         )
       ),
-      # The save state lives on the button (Save..., Save); the status text
-      # stays for screen readers and carries "Autosave failed" as a tooltip
+      # Whether the workflow is saved shows in the save menu, whose Save asks
+      # for a name until the first save. The status text stays for screen
+      # readers, and autosave that starts failing raises a notification.
       tagAppendAttributes(
         textOutput(ns("save_status"), container = tags$span, inline = TRUE),
         class = "visually-hidden"
