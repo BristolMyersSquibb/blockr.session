@@ -55,7 +55,7 @@ test_that("manage_project ui", {
   expect_s3_class(manage_project_ui("project", new_board()), "shiny.tag.list")
 })
 
-test_that("save-as appears in the name menu only once saved (#67, #81)", {
+test_that("save-as appears in the save menu only once saved (#67, #81)", {
   backend <- pins::board_temp(versioned = TRUE)
   withr::local_options(blockr.session_mgmt_backend = backend)
 
@@ -473,7 +473,7 @@ test_that("New navigates to a fresh `?new=` id the loader honors (#68)", {
   expect_false(identical(fresh_id, "served"))
 })
 
-test_that("the mark menu offers New and a fresh `?new=` new tab (#74)", {
+test_that("the name menu offers New and a fresh `?new=` new tab (#74)", {
   withr::local_options(
     blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
   )

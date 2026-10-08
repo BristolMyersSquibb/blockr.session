@@ -436,7 +436,7 @@ recovery_notice <- function(ns, offers) {
     return(NULL)
   }
 
-  # A row in the mark's menu, with the count as a badge
+  # A row in the name's menu, with the count as a badge
   tags$button(
     type = "button",
     class = "dropdown-item blockr-menu__item blockr-draft-notice",
