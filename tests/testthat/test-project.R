@@ -68,8 +68,8 @@ test_that("save-as appears in the name menu only once saved (#67, #81)", {
       unsaved <- output$save_items
       expect_true(any(grepl("save_btn", unsaved, fixed = TRUE)))
       expect_true(any(grepl("Save\u2026", unsaved, fixed = TRUE)))
-      expect_false(any(grepl("save_as_btn", output$save_items, fixed = TRUE)))
-      expect_false(any(grepl("download_current", output$save_items, fixed = TRUE)))
+      expect_false(any(grepl("save_as_btn", unsaved, fixed = TRUE)))
+      expect_false(any(grepl("download_current", unsaved, fixed = TRUE)))
 
       prev_query("?id=saveas-test")
       session$flushReact()
@@ -77,8 +77,8 @@ test_that("save-as appears in the name menu only once saved (#67, #81)", {
       # saved: Save saves in place, and the menu adds Save as and Download
       saved <- output$save_items
       expect_false(any(grepl("Save\u2026", saved, fixed = TRUE)))
-      expect_true(any(grepl("save_as_btn", output$save_items, fixed = TRUE)))
-      expect_true(any(grepl("download_current", output$save_items, fixed = TRUE)))
+      expect_true(any(grepl("save_as_btn", saved, fixed = TRUE)))
+      expect_true(any(grepl("download_current", saved, fixed = TRUE)))
     },
     args = list(
       board = reactiveValues(board = test_board, board_id = "saveas-test")

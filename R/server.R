@@ -880,7 +880,10 @@ manage_project_server <- function(id, board, ...) {
               class = "dropdown-item blockr-menu__item blockr-share-item",
               type = "button",
               onclick = panel_switch_js(session$ns("panel_sharing")),
-              tags$span(class = "blockr-menu__icon", bsicons::bs_icon("people")),
+              tags$span(
+                class = "blockr-menu__icon",
+                bsicons::bs_icon("people")
+              ),
               tags$span(class = "blockr-menu__label", "Share\u2026")
             )
           )
