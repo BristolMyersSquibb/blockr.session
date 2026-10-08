@@ -9,6 +9,10 @@ reference:
   desc: The navbar plugin that adds project save, history and restore to a board.
   contents:
     - manage_project
+- title: Navbar avatar
+  desc: The signed-in user's initials, as an item for the navbar of a blockr.dock board.
+  contents:
+    - avatar_navbar_item
 - title: Storage backend contract
   desc: The generics and constructors a custom rack storage backend implements.
   contents:

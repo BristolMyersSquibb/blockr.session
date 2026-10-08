@@ -1,5 +1,12 @@
 # blockr.session 0.1.1
 
+* The avatar moves out of the `manage_project()` plugin's piece of the navbar
+  into an item of its own, `avatar_navbar_item()`, which an app appends to the
+  navbar of a blockr.dock board, after the dock's own controls, with
+  `serve(board, navbar = blockr.dock::custom_navbar(avatar_navbar_item()))`.
+  It shows only for a signed-in user, where the plugin fell back to the account
+  the app runs under (#135).
+
 * The workflow listing and the draft notice show their tooltips as blockr's
   light card rather than the browser's native box. The card comes from
   blockr.ui, which the package now imports. The listing's icon-only buttons
