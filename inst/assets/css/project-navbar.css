@@ -270,36 +270,10 @@
   height: 14px;
 }
 
-/* History panel */
-.blockr-history-title {
-  font-size: var(--blockr-font-size-xs);
-  font-weight: var(--blockr-font-weight-semibold);
-  color: var(--blockr-color-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 8px 10px 4px;
-}
-
 .blockr-rack-id-hint {
   margin: 4px 0 0;
   font-size: 0.8rem;
   color: hsl(220, 3%, 45%);
-}
-
-/* --- Save Split Button --- */
-.blockr-navbar-save-group {
-  display: inline-flex;
-}
-
-.blockr-navbar-save-toggle {
-  width: 18px;
-  border-left: none;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-}
-
-.blockr-navbar-save-toggle::after {
-  margin: 0;
 }
 
 /* --- Empty State --- */
@@ -881,10 +855,6 @@
   cursor: pointer;
 }
 
-.blockr-navbar-save-toggle::after {
-  display: none;
-}
-
 .blockr-navbar-save-toggle:hover,
 .blockr-navbar-save-toggle[aria-expanded="true"] {
   background: var(--blockr-color-bg-hover);
@@ -978,10 +948,6 @@
   height: 1px;
   margin: 6px -6px;
   background: var(--blockr-color-border-default);
-}
-
-.blockr-save-menu .blockr-history-title {
-  padding: 4px 10px 2px;
 }
 
 .blockr-save-menu .blockr-history-empty {
