@@ -1,15 +1,14 @@
-# blockr.session (development version)
-
-* The navbar's left side is the workflow: its name is a menu that switches
-  to another workflow, and "Save" beside it opens a save menu. Save (⌘S on a
-  Mac, Ctrl+S elsewhere; "Save…" until the workflow has a name), then, once
-  it is saved, "Save as new workflow…" (⌘⇧S / Ctrl+Shift+S) and Download,
-  "Version history" with the recent versions in a menu beside it, and
-  "Share…" at the foot. The hints come from `blockr.ui::shortcut()`, and the
-  shortcuts work before the menu has opened. The menus use blockr.ui's menu
-  look and chevrons; the views menu on the right comes from blockr.dock.
-
 # blockr.session 0.1.1
+
+* The navbar's piece is now the workflow: its name ("Untitled workflow" until
+  it is first saved) and a save menu beside it. The name's menu switches to
+  another workflow, starts a new one and recovers drafts from earlier
+  sessions, which the bar no longer shows on its own. The save menu holds Save
+  (⌘S on a Mac, Ctrl+S elsewhere; "Save…" until the workflow has a name),
+  then, once the workflow is saved, "Save as new workflow…" (⌘⇧S or
+  Ctrl+Shift+S), Download, the latest versions and "Share…". The shortcuts
+  work before the menu has been opened. The save status is not shown any more,
+  and an autosave that starts failing raises a notification instead.
 
 * The workflow name in the navbar gives way on a narrow bar: it is cut short
   with an ellipsis, with the full name as its tooltip, while the controls
