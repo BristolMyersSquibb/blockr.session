@@ -196,19 +196,8 @@ panel_switch_js <- function(panel) {
   )
 }
 
-# The design system's one chevron (blockr.ui's Blockr.icons.chevron): 12px, a
-# 1.4px stroke; CSS colours it and turns it while its menu is open
+# The design system's one chevron, from blockr.ui; CSS colours it and turns it
+# while its menu is open
 navbar_chevron <- function() {
-  tags$span(
-    class = "blockr-navbar-chev",
-    HTML(
-      paste0(
-        '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" ',
-        'stroke="currentColor" stroke-width="1.4" stroke-linecap="round" ',
-        'stroke-linejoin="round" aria-hidden="true">',
-        '<polyline points="3 4.5 6 7.5 9 4.5" ',
-        'vector-effect="non-scaling-stroke"></polyline></svg>'
-      )
-    )
-  )
+  tags$span(class = "blockr-navbar-chev", blockr.ui::small_icon("chevron"))
 }
