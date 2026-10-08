@@ -182,10 +182,6 @@ manage_project_ui <- function(id, x) {
       tagAppendAttributes(
         textOutput(ns("save_status"), container = tags$span, inline = TRUE),
         class = "visually-hidden"
-      ),
-      tagAppendAttributes(
-        uiOutput(ns("user_avatar"), inline = TRUE),
-        `data-navbar-slot` = "account"
       )
     )
   )

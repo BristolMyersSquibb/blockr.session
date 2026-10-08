@@ -1144,20 +1144,6 @@ manage_project_server <- function(id, board, ...) {
         }
       )
 
-      # User avatar
-      output$user_avatar <- renderUI(
-        {
-          username <- coal(
-            session$user,
-            Sys.getenv("USER"),
-            Sys.getenv("USERNAME"),
-            "User"
-          )
-          initials <- get_initials(username)
-          tags$div(class = "blockr-navbar-avatar", initials)
-        }
-      )
-
       draft_writer(
         board, backend, current_id, save_event, serialize_now, current_query,
         save_status, session

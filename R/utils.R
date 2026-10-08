@@ -66,25 +66,6 @@ record_time_ago <- function(record) {
   format_time_ago(saved)
 }
 
-get_initials <- function(username) {
-
-  if (is.null(username) || username == "") {
-    return("U")
-  }
-
-  parts <- strsplit(username, "[._@ -]")[[1]]
-  parts <- parts[parts != ""]
-
-  if (length(parts) >= 2) {
-    paste0(
-      toupper(substr(parts[1], 1, 1)),
-      toupper(substr(parts[2], 1, 1))
-    )
-  } else {
-    toupper(substr(username, 1, min(2, nchar(username))))
-  }
-}
-
 cnd_to_notif <- function(return_val = NULL, type = "warning",
                          session = get_session()) {
 
