@@ -334,10 +334,14 @@ manage_project_server <- function(id, board, ...) {
 
         req(current_id())
 
+        name <- current_rack_id()
+
         tagList(
           tags$span(
             class = "blockr-navbar-title blockr-navbar-rack-id",
-            current_rack_id()
+            `data-blockr-tooltip` = name,
+            `data-blockr-tooltip-overflow` = NA,
+            name
           ),
           tags$span(class = "blockr-navbar-divider")
         )
