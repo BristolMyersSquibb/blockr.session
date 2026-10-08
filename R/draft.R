@@ -129,9 +129,8 @@ write_draft <- function(state, board, backend, rid, serialize_now) {
     }
   )
 
-  # The status text carries this rather than a notification: a tick that keeps
-  # failing would otherwise raise one toast per interval. Setting a reactiveVal
-  # to the value it already holds is a no-op, so the message lands once.
+  # The status text carries this, and a failure raises a notification as well,
+  # once rather than one per tick that keeps failing (set_draft_status()).
   set_draft_status(
     state, if (is.null(slot)) "Autosave failed" else "Saved as draft"
   )
@@ -196,7 +195,20 @@ draft_board_name <- function(board) {
   )
 }
 
+# The navbar keeps the status text for screen readers only, so autosave that
+# starts failing says so in a notification too: when the status turns to the
+# failure, not again while it stays there.
 set_draft_status <- function(state, text) {
+
+  if (identical(text, "Autosave failed") &&
+        !identical(isolate(state$status()), text)) {
+    notify(
+      "Autosave failed, so unsaved changes are not kept as a draft. Save the ",
+      "workflow to keep them.",
+      type = "warning"
+    )
+  }
+
   state$status(text)
 }
 
@@ -424,13 +436,14 @@ recovery_notice <- function(ns, offers) {
     return(NULL)
   }
 
+  # A row in the name's menu, with the count as a badge
   tags$button(
     type = "button",
-    class = "btn btn-sm blockr-draft-notice",
+    class = "dropdown-item blockr-menu__item blockr-draft-notice",
     `data-blockr-tooltip` = "Unsaved work from an earlier session",
     onclick = shiny_input_js(ns("draft_menu"), "open"),
-    bsicons::bs_icon("clock-history"),
-    sprintf(" %d draft%s", length(offers), if (length(offers) > 1L) "s" else "")
+    tags$span(class = "blockr-menu__label", "Recover drafts"),
+    tags$span(class = "blockr-draft-count", length(offers))
   )
 }
 

@@ -451,7 +451,7 @@ test_that("the draft just recovered from is not offered back", {
   expect_length(draft_offers(records, NULL, backend, skip = slot$id), 0L)
 })
 
-test_that("parking a draft says so, and a failure says that instead", {
+test_that("parking a draft says so, and a failure raises one toast too", {
 
   backend <- local_draft_backend()
 
@@ -492,12 +492,26 @@ test_that("parking a draft says so, and a failure says that instead", {
       session$elapse(30 * 1000)
 
       expect_equal(output$save_status, "Autosave failed")
+      expect_identical(toasts, 1L)
 
       # a tick that keeps failing must not raise one toast per interval
       session$elapse(30 * 1000)
       session$elapse(30 * 1000)
 
-      expect_identical(toasts, 0L)
+      expect_identical(toasts, 1L)
+
+      # Once autosave works again, the next failure raises one again
+      breaks <<- FALSE
+      session$elapse(30 * 1000)
+
+      expect_equal(output$save_status, "Saved as draft")
+
+      breaks <<- TRUE
+      board$board <- draft_board(b = new_subset_block())
+      session$elapse(30 * 1000)
+
+      expect_equal(output$save_status, "Autosave failed")
+      expect_identical(toasts, 2L)
     },
     args = list(
       board = reactiveValues(board = draft_board(), board_id = "status")
@@ -564,7 +578,13 @@ test_that("the recovery list opens on the bare handle, not on every load", {
       session$flushReact()
 
       expect_identical(modals, 0L)
-      expect_match(notice_text(output$recovery_notice), "1 draft")
+      expect_match(
+        notice_text(output$recovery_notice), "Recover drafts", fixed = TRUE
+      )
+      expect_match(
+        notice_text(output$recovery_notice), "blockr-draft-count\">1<",
+        fixed = TRUE
+      )
 
       session$setInputs(draft_menu = "open")
 
@@ -600,7 +620,13 @@ test_that("the notice disappears once every draft is dealt with", {
     {
       session$flushReact()
 
-      expect_match(notice_text(output$recovery_notice), "1 draft")
+      expect_match(
+        notice_text(output$recovery_notice), "Recover drafts", fixed = TRUE
+      )
+      expect_match(
+        notice_text(output$recovery_notice), "blockr-draft-count\">1<",
+        fixed = TRUE
+      )
 
       session$setInputs(draft_discard = slot$id)
 
