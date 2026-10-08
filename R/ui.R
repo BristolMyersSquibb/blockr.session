@@ -19,18 +19,14 @@ manage_project_ui <- function(id, x) {
       stylesheet = "css/project-navbar.css",
       script = "js/project-navbar.js"
     ),
-    # The navbar: the workflow on the left (its name, whose menu switches to
-    # another workflow, and its save menu beside it), then blockr.dock's views
-    # on the right. Each piece carries `data-navbar-slot`; blockr.dock's
-    # navbar orders the slots into one row, so this plugin's pieces and the
-    # dock's can interleave.
+    # The workflow: its name, whose menu switches to another workflow, and its
+    # save menu beside it. The board places this as one piece of its navbar.
     tags$div(
       class = "manage-project-navbar",
       # The workflow's name: its menu lists every workflow, a new one, and
       # drafts from earlier sessions
       tags$div(
         class = "dropdown blockr-navbar-name",
-        `data-navbar-slot` = "title",
         tags$button(
           class = "blockr-navbar-name-btn",
           type = "button",
@@ -111,7 +107,6 @@ manage_project_ui <- function(id, x) {
       # panel. Ctrl+S saves without the menu.
       tags$div(
         class = "dropdown blockr-navbar-save-group",
-        `data-navbar-slot` = "save",
         tags$button(
           class = "blockr-navbar-save-toggle",
           type = "button",

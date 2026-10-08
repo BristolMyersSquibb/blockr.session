@@ -2,12 +2,13 @@
    Project Navbar Styles
    ============================================ */
 
-/* Navbar container - single flex row, in which only the workflow name gives
-   way on a narrow bar */
+/* The plugin's piece of the navbar, one flex row in which only the workflow
+   name gives way on a narrow bar. The name and Save sit 4px apart, as one
+   group. */
 .manage-project-navbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
 }
 
 /* --- Tabbed Dropdown Menu --- */
@@ -779,8 +780,7 @@
 /* ============================================
    The workflow: its name, then its save menu
    ============================================
-   blockr.dock orders the pieces by their `data-navbar-slot`; the rules
-   here only draw them. Every control is 30px, hover is bg-hover. */
+   Every control is 30px, hover is bg-hover. */
 
 .blockr-navbar-name-btn {
   display: inline-flex;
