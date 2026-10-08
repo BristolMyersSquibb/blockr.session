@@ -2,17 +2,11 @@
    Project Navbar Styles
    ============================================ */
 
-/* Full-width navbar container - single flex row */
+/* Navbar container - single flex row */
 .manage-project-navbar {
-  flex: 1;
   display: flex;
   align-items: center;
   gap: 12px;
-}
-
-/* Spacer for future navbar items */
-.manage-project-spacer {
-  flex: 1;
 }
 
 /* --- Tabbed Dropdown Menu --- */
@@ -497,21 +491,6 @@
 
 .blockr-navbar-new-toggle::after {
   margin: 0;
-}
-
-/* --- User Avatar --- */
-.blockr-navbar-avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 50%;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: white;
-  text-transform: uppercase;
 }
 
 /* --- Empty State --- */
