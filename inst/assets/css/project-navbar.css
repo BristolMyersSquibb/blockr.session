@@ -11,6 +11,10 @@
   gap: 4px;
 }
 
+.manage-project-navbar > :not(.blockr-navbar-name) {
+  flex-shrink: 0;
+}
+
 /* --- Tabbed Dropdown Menu --- */
 /* The workflows panel: blockr.ui's menu surface (bg-raised, 1px
    border-default, radius 10, shadow-md), with tabs on top. Its rows are menu
@@ -274,15 +278,6 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 8px 10px 4px;
-}
-
-.blockr-navbar-title {
-  display: block;
-  padding: 6px 10px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #333;
-  line-height: 1.2;
 }
 
 .blockr-rack-id-hint {
@@ -782,8 +777,13 @@
    ============================================
    Every control is 30px, hover is bg-hover. */
 
+/* The name gives way first on a narrow bar. Its label takes a column of the
+   button that fits the whole name where there is room and shrinks to nothing
+   where there is not, so the button's minimum width, and with it the
+   piece's, is its chevron's. */
 .blockr-navbar-name-btn {
-  display: inline-flex;
+  display: inline-grid;
+  grid-template-columns: minmax(0, max-content) auto;
   align-items: center;
   gap: 6px;
   height: 30px;
@@ -800,13 +800,13 @@
   background: var(--blockr-color-bg-hover);
 }
 
+/* Cut short with an ellipsis; its tooltip shows the whole name meanwhile */
 .blockr-navbar-name-btn .blockr-navbar-title {
-  padding: 0;
+  display: block;
   font-size: var(--blockr-font-size-base);
   font-weight: var(--blockr-font-weight-semibold);
   color: var(--blockr-color-text-default);
   line-height: 1.2;
-  max-width: 320px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -832,8 +832,8 @@
 
 /* The name and Save wait for the server's first render of the name, so the
    bar never shows a bare chevron or Save beside an empty name */
-.blockr-navbar-name:has(.blockr-navbar-title:empty),
-.manage-project-navbar:has(.blockr-navbar-title:empty)
+.blockr-navbar-name:has(.blockr-navbar-name-label:empty),
+.manage-project-navbar:has(.blockr-navbar-name-label:empty)
   .blockr-navbar-save-group {
   visibility: hidden;
 }

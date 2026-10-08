@@ -330,10 +330,23 @@ manage_project_server <- function(id, board, ...) {
         save_status()
       )
 
-      # The name button's label: the workflow's id once it has one
-      output$rack_id_area <- renderText(
-        if (is.null(current_id())) "Untitled workflow" else current_rack_id()
-      )
+      # The name button's label: the workflow's id once it has one. It gives
+      # way on a narrow bar, and shows whole in a tooltip while it is cut.
+      output$rack_id_area <- renderUI({
+
+        name <- if (is.null(current_id())) {
+          "Untitled workflow"
+        } else {
+          current_rack_id()
+        }
+
+        tags$span(
+          class = "blockr-navbar-title",
+          `data-blockr-tooltip` = name,
+          `data-blockr-tooltip-overflow` = NA,
+          name
+        )
+      })
 
       # The save menu's rows: Save always, Save as and Download once there
       # is a record to fork from or download

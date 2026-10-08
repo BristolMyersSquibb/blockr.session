@@ -1118,7 +1118,10 @@ test_that("the name reads Untitled until the workflow is saved (#81)", {
     manage_project_server,
     {
       # a never-saved board has no chosen id yet
-      expect_identical(output$rack_id_area, "Untitled workflow")
+      expect_identical(
+        xml2::xml_text(xml2::read_html(output$rack_id_area$html)),
+        "Untitled workflow"
+      )
 
       prev_query("?id=loaded-board")
       session$flushReact()
@@ -1130,27 +1133,38 @@ test_that("the name reads Untitled until the workflow is saved (#81)", {
   )
 })
 
-test_that("the navbar shows the workflow id without a tooltip (#122)", {
+test_that("the navbar's workflow id shows whole in a tooltip once cut (#136)", {
 
   withr::local_options(
     blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
   )
 
-  # The id is the name button's label, rendered as text
+  # The id is the name button's label, and its own tooltip while it is cut
   testServer(
     manage_project_server,
     {
       prev_query("?id=loaded-board")
       session$flushReact()
 
-      expect_false(grepl("<", output$rack_id_area, fixed = TRUE))
+      label <- xml2::read_html(output$rack_id_area$html)
+      tips <- xml2::xml_find_all(label, "//*[@title or @data-blockr-tooltip]")
+
+      expect_length(tips, 1L)
+      expect_identical(xml2::xml_text(tips), "loaded-board")
+      expect_identical(
+        xml2::xml_attr(tips, "data-blockr-tooltip"),
+        "loaded-board"
+      )
+      expect_true(xml2::xml_has_attr(tips, "data-blockr-tooltip-overflow"))
+      expect_false(xml2::xml_has_attr(tips, "title"))
     },
     args = list(
       board = reactiveValues(board = new_board(), board_id = "fresh-board")
     )
   )
 
-  # and neither the button nor the label carries a tooltip
+  # The button around it carries no tooltip of its own, so the "Workflow ID"
+  # title #122 dropped stays gone
   doc <- xml2::read_html(
     as.character(manage_project_ui("project", new_board()))
   )

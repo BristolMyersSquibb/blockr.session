@@ -35,8 +35,8 @@ manage_project_ui <- function(id, x) {
           `data-bs-auto-close` = "outside",
           `aria-expanded` = "false",
           tagAppendAttributes(
-            textOutput(ns("rack_id_area"), inline = TRUE),
-            class = "blockr-navbar-title"
+            uiOutput(ns("rack_id_area"), inline = TRUE),
+            class = "blockr-navbar-name-label"
           ),
           navbar_chevron()
         ),
