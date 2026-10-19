@@ -17,7 +17,6 @@ manage_project_ui <- function(id, x) {
       script = "js/project-navbar.js"
     ),
     blockr.ui::controls_dep(),
-    # Full-width navbar container - single flex row with spacer
     tags$div(
       class = "manage-project-navbar",
       # Hamburger menu with tabbed dropdown
@@ -170,11 +169,7 @@ manage_project_ui <- function(id, x) {
       tagAppendAttributes(
         uiOutput(ns("new_controls")),
         class = "btn-group blockr-navbar-new-group"
-      ),
-      # Spacer to push avatar to the right
-      tags$span(class = "manage-project-spacer"),
-      # User avatar
-      uiOutput(ns("user_avatar"), inline = TRUE)
+      )
     )
   )
 }

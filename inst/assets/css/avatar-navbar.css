@@ -1,0 +1,13 @@
+.blockr-navbar-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--blockr-color-border-accent) 14%, transparent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--blockr-color-text-accent-strong);
+  text-transform: uppercase;
+}
