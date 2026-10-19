@@ -440,8 +440,8 @@ rack_append(id, store, board)
 
 rack_info(id, store)
 #>   version             created ref
-#> 1       2 2026-10-19 13:00:52   2
-#> 2       1 2026-10-19 13:00:52   1
+#> 1       2 2026-10-19 16:37:00   2
+#> 2       1 2026-10-19 16:37:00   1
 ```
 
 The name is stored independently of the payload, so a rename sticks
