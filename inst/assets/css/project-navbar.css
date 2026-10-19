@@ -811,12 +811,17 @@
   transform: rotate(180deg);
 }
 
-/* The name and Save wait for the server's first render of the name, so the
-   bar never shows a bare chevron or Save beside an empty name */
-.blockr-navbar-name:has(.blockr-navbar-name-label:empty),
-.manage-project-navbar:has(.blockr-navbar-name-label:empty)
-  .blockr-navbar-save-group {
+/* The piece waits for the server's first render of the name, so the bar
+   never shows a bare chevron, the status or Save beside an empty name */
+.manage-project-navbar:has(.blockr-navbar-name-label:empty) > * {
   visibility: hidden;
+}
+
+/* The save status, muted, before Save */
+.blockr-navbar-status {
+  font-size: var(--blockr-font-size-xs);
+  color: var(--blockr-color-text-muted);
+  white-space: nowrap;
 }
 
 /* The name's menu: the workflow list, then New and the drafts row */

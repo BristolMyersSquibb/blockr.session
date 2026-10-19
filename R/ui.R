@@ -102,6 +102,12 @@ manage_project_ui <- function(id, x) {
       # Recoverable drafts from earlier sessions: their count, which opens the
       # recovery list. Renders nothing when there are none.
       uiOutput(ns("recovery_notice"), inline = TRUE),
+      # The save status: Not saved, when the workflow was saved, Saved as draft
+      # once autosave has parked changes, or Autosave failed
+      tagAppendAttributes(
+        textOutput(ns("save_status"), container = tags$span, inline = TRUE),
+        class = "blockr-navbar-status"
+      ),
       # Beside the name, everything about keeping this workflow. "Save" opens
       # its menu, like the name and the views: Save, Save as, Download, the
       # latest versions and Share. Share swaps the menu for the sharing
@@ -172,13 +178,6 @@ manage_project_ui <- function(id, x) {
           # Sharing panel (conditionally rendered from server)
           uiOutput(ns("sharing_panel"))
         )
-      ),
-      # Whether the workflow is saved shows in the save menu, whose Save asks
-      # for a name until the first save. The status text stays for screen
-      # readers, and autosave that starts failing raises a notification.
-      tagAppendAttributes(
-        textOutput(ns("save_status"), container = tags$span, inline = TRUE),
-        class = "visually-hidden"
       )
     )
   )
