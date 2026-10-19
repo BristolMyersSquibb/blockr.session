@@ -2,11 +2,16 @@
    Project Navbar Styles
    ============================================ */
 
-/* Navbar container - single flex row */
+/* Navbar container - single flex row, in which only the workflow name gives
+   way on a narrow bar */
 .manage-project-navbar {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.manage-project-navbar > :not(.blockr-navbar-id-area) {
+  flex-shrink: 0;
 }
 
 /* --- Tabbed Dropdown Menu --- */
@@ -316,7 +321,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
+  min-width: 0;
 }
 
 .blockr-navbar-title {
@@ -332,6 +337,8 @@
   font-family: var(--bs-font-monospace, monospace);
   color: #555;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .blockr-rack-id-hint {
@@ -343,6 +350,7 @@
 /* --- Divider --- */
 .blockr-navbar-divider {
   display: block;
+  flex: none;
   width: 1px;
   height: 20px;
   background: hsl(220, 3%, 85%);

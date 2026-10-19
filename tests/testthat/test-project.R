@@ -1130,7 +1130,7 @@ test_that("the rack id area shows only for a saved workflow (#81)", {
   )
 })
 
-test_that("the navbar shows the workflow id without a tooltip (#122)", {
+test_that("the navbar's workflow id shows whole in a tooltip once cut (#136)", {
 
   withr::local_options(
     blockr.session_mgmt_backend = pins::board_temp(versioned = TRUE)
@@ -1145,7 +1145,14 @@ test_that("the navbar shows the workflow id without a tooltip (#122)", {
       area <- xml2::read_html(output$rack_id_area$html)
       tips <- xml2::xml_find_all(area, "//*[@title or @data-blockr-tooltip]")
 
-      expect_length(tips, 0L)
+      expect_length(tips, 1L)
+      expect_identical(xml2::xml_text(tips), "loaded-board")
+      expect_identical(
+        xml2::xml_attr(tips, "data-blockr-tooltip"),
+        "loaded-board"
+      )
+      expect_true(xml2::xml_has_attr(tips, "data-blockr-tooltip-overflow"))
+      expect_false(xml2::xml_has_attr(tips, "title"))
     },
     args = list(
       board = reactiveValues(board = new_board(), board_id = "fresh-board")
