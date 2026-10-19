@@ -117,6 +117,14 @@ board.
   [`manage_project_ui()`](https://bristolmyerssquibb.github.io/blockr.session/reference/manage_project.md)
   : Project management
 
+## Navbar avatar
+
+The signed-in user’s initials, as an item for the navbar of a
+blockr.dock board.
+
+- [`avatar_navbar_item()`](https://bristolmyerssquibb.github.io/blockr.session/reference/avatar_navbar_item.md)
+  : Navbar avatar
+
 ## Storage backend contract
 
 The generics and constructors a custom rack storage backend implements.
