@@ -2,6 +2,11 @@
 
 ## blockr.session 0.1.1
 
+- The workflow name in the navbar gives way on a narrow bar: it is cut
+  short with an ellipsis, with the full name as its tooltip, while the
+  controls beside it keep their width
+  ([\#136](https://github.com/BristolMyersSquibb/blockr.session/issues/136)).
+
 - The avatar moves out of the
   [`manage_project()`](https://bristolmyerssquibb.github.io/blockr.session/reference/manage_project.md)
   plugin’s piece of the navbar into an item of its own,
@@ -18,7 +23,7 @@
   comes from blockr.ui, which the package now imports. The listing’s
   icon-only buttons and links gain an accessible name, and the links
   that open a workflow in a new tab gain a tooltip as well. The navbar’s
-  workflow name no longer has one.
+  workflow name drops its “Workflow ID” tooltip.
 
 - Downloading a single workflow or a single version from a row of the
   workflow listing works again: both buttons drive a hidden download
