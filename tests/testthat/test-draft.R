@@ -439,6 +439,27 @@ test_that("a record draft is offered for its own record and no other", {
   expect_length(draft_offers(records, NULL, backend), 0L)
 })
 
+test_that("a draft's row restores or discards that draft", {
+
+  backend <- local_draft_backend()
+
+  slot <- plant_draft(backend, "mine")
+
+  rec <- rack_records(backend, draft = TRUE)[[1L]]
+  row <- xml2::read_html(as.character(draft_offer_row(rec, NS("p"))))
+
+  buttons <- xml2::xml_find_all(row, "//button")
+  clicks <- xml2::xml_attr(buttons, "onclick")
+
+  expect_length(buttons, 2L)
+  expect_match(clicks[[1L]], "p-draft_restore", fixed = TRUE)
+  expect_match(clicks[[2L]], "p-draft_discard", fixed = TRUE)
+  expect_true(all(grepl(slot$id, clicks, fixed = TRUE)))
+
+  # Discard is an icon button, so it carries its name
+  expect_identical(xml2::xml_attr(buttons[[2L]], "aria-label"), "Discard")
+})
+
 test_that("the draft just recovered from is not offered back", {
 
   backend <- local_draft_backend()

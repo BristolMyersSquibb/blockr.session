@@ -352,10 +352,7 @@ draft_recovery <- function(input, output, backend, current_id,
   )
 
   output$draft_offers <- renderUI(
-    tags$table(
-      class = "blockr-workflow-table",
-      tags$tbody(lapply(offers(), draft_offer_row, session$ns))
-    )
+    tagList(lapply(offers(), draft_offer_row, session$ns))
   )
 
   observeEvent(
@@ -426,25 +423,49 @@ recovery_notice <- function(ns, offers) {
 
   tags$button(
     type = "button",
-    class = "btn btn-sm blockr-draft-notice",
+    class = "blockr-navbar-drafts blockr-draft-notice",
     `data-blockr-tooltip` = "Unsaved work from an earlier session",
     onclick = shiny_input_js(ns("draft_menu"), "open"),
     bsicons::bs_icon("clock-history"),
-    sprintf(" %d draft%s", length(offers), if (length(offers) > 1L) "s" else "")
+    sprintf("%d draft%s", length(offers), if (length(offers) > 1L) "s" else "")
   )
 }
 
 recovery_modal <- function(ns) {
   modalDialog(
-    title = "Unsaved work found",
-    tags$p(
-      class = "blockr-workflow-empty",
-      "These boards hold changes that were never saved. Restoring reloads ",
-      "one of them; anything left alone stays available."
-    ),
-    uiOutput(ns("draft_offers")),
-    footer = modalButton("Close"),
-    easyClose = TRUE
+    title = NULL,
+    size = "l",
+    easyClose = TRUE,
+    footer = NULL,
+    # Laid out as the workflow list ("All workflows") is
+    tags$div(
+      class = "blockr-workflows-modal",
+      tags$div(
+        class = "blockr-wf-header",
+        tags$div(
+          tags$h5("Recover Drafts"),
+          tags$p(
+            class = "blockr-wf-hint",
+            "These boards hold changes that were never saved. Restoring ",
+            "reloads one of them; anything left alone stays available."
+          )
+        )
+      ),
+      tags$div(
+        class = "blockr-wf-table-container",
+        tags$table(
+          class = "blockr-wf-table",
+          tags$thead(
+            tags$tr(
+              tags$th("Name"),
+              tags$th("Last Modified"),
+              tags$th("")
+            )
+          ),
+          uiOutput(ns("draft_offers"), container = tags$tbody)
+        )
+      )
+    )
   )
 }
 
@@ -455,17 +476,22 @@ draft_offer_row <- function(rec, ns) {
     tags$td(class = "blockr-wf-time", record_time_ago(rec)),
     tags$td(
       class = "blockr-wf-action",
-      tags$button(
-        type = "button",
-        class = "btn btn-sm btn-primary",
-        onclick = shiny_input_js(ns("draft_restore"), rec$id),
-        "Restore"
-      ),
-      tags$button(
-        type = "button",
-        class = "btn btn-sm",
-        onclick = shiny_input_js(ns("draft_discard"), rec$id),
-        "Discard"
+      tags$div(
+        class = "blockr-wf-row-actions",
+        tags$button(
+          type = "button",
+          class = "btn btn-sm btn-primary",
+          onclick = shiny_input_js(ns("draft_restore"), rec$id),
+          "Restore"
+        ),
+        tags$button(
+          type = "button",
+          class = "btn btn-sm btn-outline-danger blockr-wf-row-btn",
+          `aria-label` = "Discard",
+          `data-blockr-tooltip` = "Discard",
+          onclick = shiny_input_js(ns("draft_discard"), rec$id),
+          bsicons::bs_icon("trash")
+        )
       )
     )
   )
