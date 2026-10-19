@@ -364,6 +364,13 @@
   color: #111827;
 }
 
+/* A line under the title that says what the list holds */
+.blockr-wf-hint {
+  margin: 4px 0 0;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
 .blockr-wf-search {
   width: 180px;
   padding: 6px 12px;
