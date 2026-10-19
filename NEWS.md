@@ -1,14 +1,12 @@
 # blockr.session 0.1.1
 
 * The navbar's piece is now the workflow: its name ("Untitled workflow" until
-  it is first saved) and a save menu beside it. The name's menu switches to
-  another workflow, starts a new one and recovers drafts from earlier
-  sessions, which the bar no longer shows on its own. The save menu holds Save
-  (⌘S on a Mac, Ctrl+S elsewhere; "Save…" until the workflow has a name),
-  then, once the workflow is saved, "Save as new workflow…" (⌘⇧S or
-  Ctrl+Shift+S), Download, the latest versions and "Share…". The shortcuts
-  work before the menu has been opened. The save status is not shown any more,
-  and an autosave that starts failing raises a notification instead.
+  it is first saved) and a save menu beside it, with the drafts notice and the
+  save status between them. The name's menu switches to another workflow and
+  starts a new one. The save menu holds Save (⌘S on a Mac, Ctrl+S elsewhere;
+  "Save…" until the workflow has a name), then, once the workflow is saved,
+  "Save as new workflow…" (⌘⇧S or Ctrl+Shift+S), Download, the latest versions
+  and "Share…". The shortcuts work before the menu has been opened.
 
 * The workflow name in the navbar gives way on a narrow bar: it is cut short
   with an ellipsis, with the full name as its tooltip, while the controls
