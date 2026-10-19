@@ -2,12 +2,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
+  background: color-mix(in srgb, var(--blockr-color-border-accent) 14%, transparent);
   font-size: 0.75rem;
   font-weight: 600;
-  color: white;
+  color: var(--blockr-color-text-accent-strong);
   text-transform: uppercase;
 }
