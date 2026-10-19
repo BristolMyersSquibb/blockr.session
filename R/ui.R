@@ -92,15 +92,16 @@ manage_project_ui <- function(id, x) {
               )
             )
           ),
-          # New workflow, new in a new tab, and the drafts row when there are
-          # drafts to recover
+          # New workflow, and new in a new tab
           tags$div(
             class = "blockr-menu blockr-name-actions",
-            uiOutput(ns("recovery_notice")),
             uiOutput(ns("new_controls"))
           )
         )
       ),
+      # Recoverable drafts from earlier sessions: their count, which opens the
+      # recovery list. Renders nothing when there are none.
+      uiOutput(ns("recovery_notice"), inline = TRUE),
       # Beside the name, everything about keeping this workflow. "Save" opens
       # its menu, like the name and the views: Save, Save as, Download, the
       # latest versions and Share. Share swaps the menu for the sharing

@@ -15,6 +15,13 @@
   flex-shrink: 0;
 }
 
+/* An output that renders nothing, as the drafts notice with no drafts, takes
+   no room: out of flow, since flexbox counts an empty box in the row's gap.
+   Not `display: none`, which Shiny takes for hidden and stops rendering. */
+.manage-project-navbar > .shiny-html-output:empty {
+  position: absolute;
+}
+
 /* --- Tabbed Dropdown Menu --- */
 /* The workflows panel: blockr.ui's menu surface (bg-raised, 1px
    border-default, radius 10, shadow-md), with tabs on top. Its rows are menu
@@ -828,14 +835,36 @@
   border-top: 1px solid var(--blockr-color-border-default);
 }
 
-.blockr-draft-count {
-  margin-left: auto;
-  padding: 0 6px;
-  border-radius: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  background: var(--blockr-color-bg-warning);
-  color: var(--blockr-color-text-warning);
+/* The drafts notice: their count, which opens the recovery list, drawn as
+   the bar's other controls are */
+.blockr-navbar-drafts {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--blockr-color-text-default);
+  font-size: var(--blockr-font-size-sm);
+  font-weight: var(--blockr-font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.blockr-navbar-drafts:hover {
+  background: var(--blockr-color-bg-hover);
+}
+
+.blockr-navbar-drafts svg {
+  width: 14px;
+  height: 14px;
+  color: var(--blockr-color-text-muted);
+}
+
+.blockr-navbar-drafts:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* Save: the word and a chevron, like the name's button */
