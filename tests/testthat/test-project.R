@@ -1380,3 +1380,27 @@ test_that("a blank id attempts no write (#101)", {
   expect_false(attempted)
   expect_length(pins::pin_list(backend), 0L)
 })
+
+test_that("the navbar piece waits for its name without :has() (#145)", {
+
+  # `.manage-project-navbar:has(.blockr-navbar-name-label:empty) > *` made
+  # Chrome re-check the rule on every DOM change on the page. The piece waits
+  # for its name through data-named instead.
+  css <- paste(
+    readLines(
+      system.file("assets", "css", "project-navbar.css",
+                  package = "blockr.session")
+    ),
+    collapse = "\n"
+  )
+  css <- gsub("(?s)/\\*.*?\\*/", "", css, perl = TRUE)
+  js <- readLines(
+    system.file("assets", "js", "project-navbar.js",
+                package = "blockr.session")
+  )
+
+  expect_false(grepl(".manage-project-navbar:has(", css, fixed = TRUE))
+  expect_true(any(grepl(".manage-project-navbar:not([data-named]) > *",
+                        css, fixed = TRUE)))
+  expect_true(any(grepl("data-named", js, fixed = TRUE)))
+})

@@ -98,6 +98,34 @@ if (document.readyState === 'loading') {
   blockrWatchWorkflowLists();
 }
 
+// --- The piece shows once the name is there -------------------------------
+// The CSS hides the piece while the piece lacks data-named. Set it once the
+// name's output holds something, and drop it again if a render empties it.
+
+function blockrSyncNavbarNamed() {
+  document.querySelectorAll('.manage-project-navbar').forEach(function(bar) {
+    var label = bar.querySelector('.blockr-navbar-name-label');
+    var named = !!label && !label.matches(':empty');
+    bar.toggleAttribute('data-named', named);
+  });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', blockrSyncNavbarNamed);
+} else {
+  blockrSyncNavbarNamed();
+}
+
+// shiny:value fires before the output renders, so look after it has. Shiny
+// fires it on the document for an output with no element on the page.
+if (window.jQuery) {
+  jQuery(document).on('shiny:value shiny:error', function(event) {
+    var el = event.target;
+    if (!el.closest || !el.closest('.blockr-navbar-name-label')) return;
+    setTimeout(blockrSyncNavbarNamed, 0);
+  });
+}
+
 // Focus the search when the dropdown opens, if the Workflows panel is visible.
 document.addEventListener('shown.bs.dropdown', function(event) {
   blockrWatchWorkflowLists();

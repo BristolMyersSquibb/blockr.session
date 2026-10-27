@@ -1,5 +1,10 @@
 # blockr.session 0.1.1
 
+* The navbar no longer slows down every update on a large board. It hid its
+  workflow piece until the name arrived with a `:has()` rule that Chrome
+  re-checked on every change to the page; a script now marks the piece instead
+  (#145).
+
 * The navbar's piece is now the workflow: its name ("Untitled workflow" until
   it is first saved) and a save menu beside it, with the drafts notice and the
   save status between them. The name's menu switches to another workflow and
