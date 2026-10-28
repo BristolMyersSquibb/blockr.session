@@ -819,11 +819,11 @@
 }
 
 /* The piece waits for the server's first render of the name, so the bar
-   never shows a bare chevron, the status or Save beside an empty name.
-   project-navbar.js sets data-named once the name is there. A
-   `:has(.blockr-navbar-name-label:empty)` here made Chrome re-check the rule
-   on every DOM change on the page (#145). */
-.manage-project-navbar:not([data-named]) > * {
+   never shows a bare chevron, the status or Save beside an empty name. Its
+   children inherit the `visibility`. Hiding them with `... > *` instead put
+   the `:has()` on an ancestor of a universal subject, which made Chrome
+   restyle the whole page on every DOM insertion (#145). */
+.manage-project-navbar:has(.blockr-navbar-name-label:empty) {
   visibility: hidden;
 }
 
