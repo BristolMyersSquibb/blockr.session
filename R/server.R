@@ -1245,8 +1245,9 @@ rack_loader <- function() {
 
     handle <- coal(query$id, query$board_name, fail_all = FALSE)
 
+    # no workflow named: serve the board the app was started with
     if (is.null(handle) || !nzchar(handle)) {
-      return(clear_board(default))
+      return(default)
     }
 
     backend <- get_session_backend(
