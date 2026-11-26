@@ -335,18 +335,16 @@ test_that("rack_loader returns a board_loader", {
   expect_true(is_board_loader(rack_loader()))
 })
 
-test_that("loader resolve serves the cleared default without a board ref", {
+test_that("loader resolve serves the default as is without a board ref", {
   initial <- new_board(blocks = c(a = new_dataset_block("iris")))
 
   res <- rack_loader()$resolve(list(QUERY_STRING = ""), NULL, initial)
-  expect_s3_class(res, "board")
-  expect_length(board_block_ids(res), 0)
+  expect_identical(res, initial)
 
   empty_id <- rack_loader()$resolve(
     list(QUERY_STRING = "id="), NULL, initial
   )
-  expect_s3_class(empty_id, "board")
-  expect_length(board_block_ids(empty_id), 0)
+  expect_identical(empty_id, initial)
 })
 
 test_that("loader resolve loads a saved board from the backend", {
